@@ -3,14 +3,19 @@ import Header from './components/Header.jsx'
 
 
 
+
+
 function App() {
 
   return (
     <>
-    <p>hello world</p>
+  
       <Header>
-
       </Header>
+      <section>
+        <p>hellopo</p>
+      </section>
+     
     </>
   )
 }
