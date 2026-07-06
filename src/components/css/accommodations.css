@@ -1,0 +1,373 @@
+.acc-section{
+    --cream: #F5F1E4;
+    --cream-2: #EFE9D6;
+    --forest: #1E3A2B;
+    --forest-dark: #16291E;
+    --gold: #C6A15B;
+    --gold-soft: #D9BD84;
+    --ink: #2A2A22;
+    --leaf: #4C6B4F;
+    --green: #037d4d;
+
+    position: relative;
+    background: var(--cream);
+    padding: 56px 40px 64px;
+    overflow: hidden;
+    font-family: 'Jost', sans-serif;
+    color: var(--ink);
+}
+
+/* ---------- Section header (matches the offer-header style) ---------- */
+.acc-header{
+    text-align: center;
+    margin: 0 auto 8px;
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* fallback so the divider renders even without offers.css on the page */
+.acc-section .lotus-divider{
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.acc-section .lotus-divider .rule{
+    height: 1px;
+    width: 90px;
+}
+.acc-section .lotus-divider .rule.left{
+    background: linear-gradient(to left, transparent, var(--gold));
+}
+.acc-section .lotus-divider .rule.right{
+    background: linear-gradient(to right, transparent, var(--gold));
+}
+
+.acc-title{
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 700;
+    letter-spacing: clamp(2px, 1vw, 4px);
+    font-size: clamp(2rem, 4vw, 3rem);
+    margin: 16px 0 8px;
+    color: var(--forest-dark);
+    text-transform: uppercase;
+}
+
+.acc-sub{
+    font-size: clamp(0.85rem, 2vw, 0.95rem);
+    letter-spacing: 0.5px;
+    color: #5b5b4c;
+    font-weight: 400;
+    margin: 0;
+}
+
+/* ---------- Recommend bar ---------- */
+.acc-recommend-bar{
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: 26px auto 0;
+    max-width: 1100px;
+    flex-wrap: wrap;
+}
+
+.acc-pax-input{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 1px solid var(--gold-soft);
+    border-radius: 999px;
+    padding: 10px 18px;
+    flex: 1;
+    min-width: 220px;
+    max-width: 320px;
+    color: var(--leaf);
+}
+.acc-pax-input svg{ flex-shrink: 0; opacity: 0.65; }
+.acc-pax-input input{
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    color: var(--ink);
+    width: 100%;
+    text-transform: uppercase;
+}
+.acc-pax-input input::placeholder{ color: #a09a80; }
+.acc-pax-input:focus-within{
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(3, 125, 77, 0.12);
+}
+
+.acc-recommend-btn{
+    background: var(--green);
+    color: #F3F5E9;
+    border: 2px solid var(--green);
+    border-radius: 999px;
+    padding: 10px 26px;
+    font-family: 'Jost', sans-serif;
+    font-weight: 700;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s ease;
+}
+.acc-recommend-btn:hover{ background: #02643e; }
+.acc-recommend-btn:active{ transform: scale(0.96); }
+
+/* ---------- Carousel section ---------- */
+.acc-carousel{
+    margin: 30px auto 0;
+    max-width: 1100px;
+    background: var(--forest);
+    border-radius: 28px;
+    padding: 34px 18px 40px;
+    position: relative;
+    box-shadow: 0 14px 24px -12px rgba(20, 40, 25, 0.4);
+}
+
+.acc-scroll-hint{
+    text-align: center;
+    margin: 0 0 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gold-soft);
+    opacity: 0.85;
+}
+
+.acc-carousel-wrap{
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.acc-nav-btn{
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid var(--gold-soft);
+    background: rgba(245, 241, 228, 0.92);
+    color: var(--forest-dark);
+    font-size: 22px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+    transition: transform 0.15s ease, background 0.2s ease;
+    z-index: 6;
+}
+.acc-nav-btn:hover{ background: #fff; }
+.acc-nav-btn:active{ transform: scale(0.9); }
+.acc-nav-btn:disabled{ opacity: 0.35; cursor: default; }
+
+.acc-viewport{
+    flex: 1;
+    overflow: hidden;
+    cursor: grab;
+    touch-action: pan-y;
+    padding: 12px 0 20px;
+}
+.acc-viewport:active{ cursor: grabbing; }
+.acc-viewport:focus-visible{
+    outline: 2px solid var(--gold-soft);
+    outline-offset: 4px;
+    border-radius: 16px;
+}
+
+.acc-track{
+    display: flex;
+    gap: 22px;
+    will-change: transform;
+    transition: transform 0.45s cubic-bezier(0.22, 0.85, 0.32, 1);
+}
+
+/* ---------- Card ---------- */
+.acc-card{
+    flex-shrink: 0;
+    width: 230px;
+    background: var(--cream);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+    transform: scale(calc(1 - var(--dist, 0) * 0.13));
+    opacity: calc(1 - var(--dist, 0) * 0.22);
+    transition: transform 0.45s cubic-bezier(0.22, 0.85, 0.32, 1), opacity 0.45s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+    user-select: none;
+}
+.acc-card.active{
+    transform: scale(1.08);
+    opacity: 1;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
+    z-index: 5;
+    cursor: default;
+}
+
+.acc-card-photo{
+    height: 130px;
+    margin: 10px 10px 0;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    position: relative;
+    overflow: hidden;
+    border: 1.5px dashed rgba(255, 255, 255, 0.55);
+}
+.acc-card-photo svg{
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+}
+.acc-photo-label{
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.acc-card-info{
+    background: var(--forest-dark);
+    color: #F3F5E9;
+    padding: 12px 14px 13px;
+    margin-top: 10px;
+}
+.acc-card-info h3{
+    margin: 0 0 4px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #FBF7EA;
+}
+.acc-card-info .acc-pax{
+    margin: 0;
+    font-size: 0.75rem;
+    opacity: 0.85;
+}
+.acc-card-info .acc-price{
+    margin: 4px 0 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--gold-soft);
+}
+
+.acc-details{
+    background: var(--cream);
+    padding: 10px 14px 12px;
+}
+.acc-details h4{
+    margin: 0 0 8px;
+    text-align: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--forest-dark);
+    border-bottom: 1px solid var(--gold-soft);
+    padding-bottom: 6px;
+}
+.acc-details-content{
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+.acc-mini-photo{
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px dashed rgba(255, 255, 255, 0.6);
+}
+.acc-mini-photo svg{
+    width: 22px;
+    height: 22px;
+}
+.acc-details-content ul{
+    margin: 0;
+    padding: 0 0 0 16px;
+    font-size: 0.7rem;
+    line-height: 1.55;
+    color: var(--ink);
+}
+.acc-details-content li::marker{ color: var(--leaf); }
+
+.acc-book-btn{
+    display: block;
+    width: 100%;
+    border: none;
+    background: var(--green);
+    color: #F3F5E9;
+    font-family: 'Jost', sans-serif;
+    font-weight: 700;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 12px 0;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+.acc-book-btn:hover{ background: #02643e; }
+
+/* ---------- Toast ---------- */
+.acc-toast{
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--forest-dark);
+    color: #F3F5E9;
+    padding: 12px 22px;
+    border-radius: 999px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 50;
+    max-width: 90%;
+    text-align: center;
+}
+.acc-toast.show{
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 760px){
+    .acc-section{ padding: 44px 20px 48px; }
+    .acc-carousel{ padding: 26px 8px 30px; }
+    .acc-card{ width: 190px; }
+    .acc-card-photo{ height: 100px; }
+}
+
+@media (max-width: 480px){
+    .acc-card{ width: 165px; }
+    .acc-card-photo{ height: 86px; }
+    .acc-nav-btn{ width: 36px; height: 36px; }
+}
+
+@media (prefers-reduced-motion: reduce){
+    .acc-track, .acc-card{ transition: none; }
+}

@@ -12,6 +12,11 @@ import WellnessIcon from './WellnessIcon';
 import RiverImage from '../assets/images/river.png';
 import PoolImage from '../assets/images/pool.png';
 import ForestImage from '../assets/images/forest.png';
+import leafSvg from '../assets/svg/leaf.svg';
+import familySvg from '../assets/svg/family.svg';
+import cameraSvg from '../assets/svg/camera.svg';
+import heartSvg from '../assets/svg/heart.svg'
+
 
 const offersData = [
     {
@@ -61,6 +66,34 @@ const resortFeatures = [
     },
 ];
 
+const tags = [
+
+    {
+        title: "Nature-Inspired Escape",
+        description: "Relax and reconnect",
+        icon: leafSvg,
+    },
+    {
+        title: "Family Friendly",
+        description: "Perfect for all ages",
+        icon: familySvg,
+
+    },
+    {
+        title: "Scenic & Serene",
+        description: "Reconnect with nature",
+        icon: cameraSvg,
+    },
+    {
+        title: "Wellness Retreat",
+        description: "Relax yourself",
+        icon: heartSvg,
+    }
+
+];
+   
+
+
 const tagsData = [
     { icon: NatureIcon, label: "Nature" },
     { icon: RelaxationIcon, label: "Relaxation" },
@@ -90,6 +123,16 @@ export default function Offers() {
                                     </div>
                                 </div>
                             </figure>
+                        ))}
+                    </div>
+
+                    <div className="tag-card">
+                        {tags.map(({ icon,title, description }) => (
+                            <div className="tag-item" key={title}>
+                                <span className="tag-icon"><img src={icon} alt="" /></span>
+                                <h3>{title}</h3>
+                                <p>{description}</p>
+                            </div>
                         ))}
                     </div>
                 
