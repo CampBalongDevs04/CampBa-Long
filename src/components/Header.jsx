@@ -29,7 +29,7 @@ function Header() {
             </header>
             <div className ="hero-banner">
                 <div className="hero-content">
-                    <h1 className ="hero-title">Welcome to Camp Balong<span id="hero-title">Nature Farm<span className="hero-dot" aria-hidden="true"></span></span></h1>
+                    <h1 className ="hero-title">Welcome to Camp Ba-long<span id="hero-title">Nature Farm<span className="hero-dot" aria-hidden="true"></span></span></h1>
                     <p className ="hero-subtitle">Where you can connect your inner peace.</p>
                     <button className="hero-button" type="button">BOOK NOW!</button>
                 </div>

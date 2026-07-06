@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What We Offer — Resort Section</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream: #F5F1E4;
+    --cream-2: #EFE9D6;
+    --forest: #1E3A2B;
+    --forest-dark: #16291E;
+    --gold: #C6A15B;
+    --gold-soft: #D9BD84;
+    --ink: #2A2A22;
+    --leaf: #4C6B4F;
+  }
+
+  *{ box-sizing: border-box; }
+
+  body{
+    margin: 0;
+    background: #DCE7DE;
+    font-family: 'Jost', sans-serif;
+    color: var(--ink);
+    padding: 40px 16px;
+  }
+
+  .offer-section{
+    position: relative;
+    max-width: 980px;
+    margin: 0 auto;
+    background: var(--cream);
+    border-radius: 60px 60px 24px 24px;
+    padding: 56px 40px 44px;
+    overflow: hidden;
+    box-shadow: 0 30px 60px -20px rgba(20, 40, 25, 0.35);
+  }
+
+  /* decorative corner leaves */
+  .leaf-deco{
+    position: absolute;
+    width: 150px;
+    height: 150px;
+    pointer-events: none;
+    opacity: 0.9;
+    z-index: 0;
+  }
+  .leaf-deco.tl{ top: -20px; left: -30px; transform: rotate(0deg); }
+  .leaf-deco.tr{ top: -20px; right: -30px; transform: scaleX(-1); }
+  .leaf-deco.bl{ bottom: -30px; left: -30px; transform: scaleY(-1); }
+  .leaf-deco.br{ bottom: -30px; right: -30px; transform: scale(-1); }
+
+  .offer-header{
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .lotus-divider{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .lotus-divider .rule{
+    height: 1px;
+    width: 90px;
+    background: linear-gradient(to var(--dir, right), transparent, var(--gold));
+  }
+  .lotus-divider .rule.left{ --dir: left; background: linear-gradient(to left, transparent, var(--gold)); }
+  .lotus-divider .rule.right{ background: linear-gradient(to right, transparent, var(--gold)); }
+
+  h1.offer-title{
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 700;
+    letter-spacing: 4px;
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    margin: 0 0 12px;
+    color: var(--forest-dark);
+    text-transform: uppercase;
+  }
+
+  .offer-sub{
+    font-size: 0.95rem;
+    letter-spacing: 0.5px;
+    color: #5b5b4c;
+    font-weight: 400;
+  }
+  .offer-sub .highlight{
+    color: var(--leaf);
+    font-weight: 600;
+  }
+
+  .crown-mark{
+    margin-top: 14px;
+    font-size: 0.7rem;
+    color: var(--gold);
+  }
+
+  .cards-grid{
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+    margin-bottom: 40px;
+  }
+
+  .offer-card{
+    background: var(--forest);
+    border-radius: 22px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 14px 24px -12px rgba(20,40,25,0.4);
+    transition: transform 0.35s ease, box-shadow 0.35s ease;
+  }
+  .offer-card:hover{
+    transform: translateY(-6px);
+    box-shadow: 0 22px 34px -14px rgba(20,40,25,0.5);
+  }
+
+  .card-media{
+    position: relative;
+    height: 190px;
+    overflow: hidden;
+  }
+  .card-media img{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.5s ease;
+  }
+  .offer-card:hover .card-media img{
+    transform: scale(1.06);
+  }
+
+  .card-icon{
+    position: absolute;
+    left: 50%;
+    bottom: -26px;
+    transform: translateX(-50%);
+    width: 52px;
+    height: 52px;
+    background: var(--forest);
+    border: 2px solid var(--gold-soft);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+  .card-icon svg{
+    width: 24px;
+    height: 24px;
+    stroke: var(--gold-soft);
+    fill: none;
+  }
+
+  .card-body{
+    padding: 38px 20px 24px;
+    text-align: center;
+    color: var(--cream);
+  }
+
+  .card-body h3{
+    font-family: 'Cormorant Garamond', serif;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-size: 1.25rem;
+    margin: 0 0 8px;
+    color: #FBF7EA;
+  }
+
+  .card-body p{
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: #C9D2C6;
+    margin: 0 0 18px;
+    font-weight: 300;
+  }
+
+  .discover-btn{
+    display: inline-block;
+    font-size: 0.68rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gold-soft);
+    border: 1px solid var(--gold-soft);
+    border-radius: 30px;
+    padding: 9px 22px;
+    text-decoration: none;
+    transition: background 0.25s ease, color 0.25s ease;
+  }
+  .discover-btn:hover{
+    background: var(--gold-soft);
+    color: var(--forest-dark);
+  }
+
+  .tags-row{
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    gap: 48px;
+    flex-wrap: wrap;
+    padding-top: 8px;
+    border-top: 1px solid #dfd8c2;
+  }
+
+  .tag-item{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    letter-spacing: 1px;
+    color: var(--forest-dark);
+    padding-top: 18px;
+  }
+  .tag-item svg{
+    width: 18px;
+    height: 18px;
+    stroke: var(--leaf);
+    fill: none;
+  }
+
+  @media (max-width: 760px){
+    .cards-grid{ grid-template-columns: 1fr; }
+    .offer-section{ border-radius: 34px 34px 18px 18px; padding: 44px 20px 32px; }
+    .lotus-divider .rule{ width: 40px; }
+    .tags-row{ gap: 28px; }
+  }
+</style>
+</head>
+<body>
+
+<section class="offer-section">
+
+  <!-- decorative corner leaves -->
+  <svg class="leaf-deco tl" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
+    <path d="M10,10 C60,0 120,40 130,100 C90,90 40,110 20,140 C15,90 -10,50 10,10 Z" fill="var(--leaf)" opacity="0.55"/>
+    <path d="M10,10 C50,20 90,50 100,90" stroke="var(--forest)" stroke-width="2" fill="none" opacity="0.4"/>
+  </svg>
+  <svg class="leaf-deco tr" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
+    <path d="M10,10 C60,0 120,40 130,100 C90,90 40,110 20,140 C15,90 -10,50 10,10 Z" fill="var(--leaf)" opacity="0.55"/>
+    <path d="M10,10 C50,20 90,50 100,90" stroke="var(--forest)" stroke-width="2" fill="none" opacity="0.4"/>
+  </svg>
+  <svg class="leaf-deco bl" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
+    <path d="M10,10 C60,0 120,40 130,100 C90,90 40,110 20,140 C15,90 -10,50 10,10 Z" fill="var(--leaf)" opacity="0.45"/>
+  </svg>
+  <svg class="leaf-deco br" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
+    <path d="M10,10 C60,0 120,40 130,100 C90,90 40,110 20,140 C15,90 -10,50 10,10 Z" fill="var(--leaf)" opacity="0.45"/>
+  </svg>
+
+  <header class="offer-header">
+    <div class="lotus-divider">
+      <span class="rule left"></span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.4">
+        <path d="M12 3c2 3 2 7 0 10 -2 -3 -2 -7 0 -10Z"/>
+        <path d="M4 12c3 -1.5 6.5 -1.5 8 1 -3 1.5 -6.5 1.5 -8 -1Z"/>
+        <path d="M20 12c-3 -1.5 -6.5 -1.5 -8 1 3 1.5 6.5 1.5 8 -1Z"/>
+        <path d="M12 13v7"/>
+      </svg>
+      <span class="rule right"></span>
+    </div>
+
+    <h1 class="offer-title">What We Offer</h1>
+    <p class="offer-sub">• Unwind. Indulge. Reconnect. <span class="highlight">All in one place</span> •</p>
+  </header>
+
+  <div class="cards-grid">
+
+    <article class="offer-card">
+      <div class="card-media">
+        <img src="https://images.unsplash.com/photo-1544644181-1484b3fdfc62?w=600&q=80&auto=format&fit=crop" alt="Natural theme pool surrounded by greenery">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M2 17c1.5 1 2.5 1 4 0s2.5 -1 4 0 2.5 1 4 0 2.5 -1 4 0 2.5 1 4 0"/><path d="M4 12V6a2 2 0 0 1 2 -2h6l6 6"/></svg>
+        </div>
+      </div>
+      <div class="card-body">
+        <h3>Pool &amp; Running Water</h3>
+        <p>Enjoy nature theme pools</p>
+        <a href="#" class="discover-btn">Discover More</a>
+      </div>
+    </article>
+
+    <article class="offer-card">
+      <div class="card-media">
+        <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80&auto=format&fit=crop" alt="Local foods spread with fresh ingredients">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M6 2v20"/><path d="M6 2c0 4 -2 4 -2 8s2 4 2 4"/><path d="M18 2v20"/><path d="M18 2a4 4 0 0 0 -4 4v4h4"/></svg>
+        </div>
+      </div>
+      <div class="card-body">
+        <h3>Foods</h3>
+        <p>Savor local flavors and fresh ingredients</p>
+        <a href="#" class="discover-btn">Discover More</a>
+      </div>
+    </article>
+
+    <article class="offer-card">
+      <div class="card-media">
+        <img src="https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=600&q=80&auto=format&fit=crop" alt="Hot stone spa treatment">
+        <div class="card-icon">
+          <svg viewBox="0 0 24 24" stroke-width="1.5"><circle cx="12" cy="8" r="2.4"/><path d="M6 20c0 -4 3 -7 6 -7s6 3 6 7"/></svg>
+        </div>
+      </div>
+      <div class="card-body">
+        <h3>Spa</h3>
+        <p>Relax, rejuvenate and refresh your senses</p>
+        <a href="#" class="discover-btn">Discover More</a>
+      </div>
+    </article>
+
+  </div>
+
+  <div class="tags-row">
+    <div class="tag-item">
+      <svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M12 22c-5 -2 -8 -6 -8 -11 0 -3 2 -6 5 -7 0 4 1 6 3 8 2 -2 3 -4 3 -8 3 1 5 4 5 7 0 5 -3 9 -8 11Z"/></svg>
+      <span>Nature</span>
+    </div>
+    <div class="tag-item">
+      <svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M12 3c2 3 2 7 0 10 -2 -3 -2 -7 0 -10Z"/><path d="M4 12c3 -1.5 6.5 -1.5 8 1 -3 1.5 -6.5 1.5 -8 -1Z"/><path d="M20 12c-3 -1.5 -6.5 -1.5 -8 1 3 1.5 6.5 1.5 8 -1Z"/></svg>
+      <span>Relaxation</span>
+    </div>
+    <div class="tag-item">
+      <svg viewBox="0 0 24 24" stroke-width="1.5"><path d="M12 2v4"/><circle cx="12" cy="14" r="7"/><path d="M9 14a3 3 0 0 1 3 -3"/></svg>
+      <span>Wellness</span>
+    </div>
+  </div>
+
+</section>
+
+</body>
+</html>

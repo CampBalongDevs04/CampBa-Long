@@ -1,5 +1,6 @@
 import './App.css'
 import Header from './components/Header.jsx'
+import Offers from './components/offers.jsx'
 
 
 
@@ -12,9 +13,7 @@ function App() {
   
       <Header>
       </Header>
-      <section>
-        <p>hellopo</p>
-      </section>
+      <Offers/>
      
     </>
   )
