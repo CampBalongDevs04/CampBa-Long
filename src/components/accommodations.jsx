@@ -121,6 +121,8 @@ export default function Accommodations() {
     const trackRef = useRef(null);
     const dragRef = useRef({ dragging: false, startX: 0 });
     const wheelLockRef = useRef(false);
+    const currentIndexRef = useRef(defaultIndex);
+    currentIndexRef.current = currentIndex;
     const toastTimerRef = useRef(null);
 
     const goTo = useCallback((index) => {
@@ -156,11 +158,22 @@ export default function Accommodations() {
     useEffect(() => {
         const viewport = viewportRef.current;
         if (!viewport) return;
+        let accumulated = 0;
         const onWheel = (e) => {
-            if (wheelLockRef.current) return;
-            if (Math.abs(e.deltaX) < 10 && Math.abs(e.deltaY) < 10) return;
+            const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+            const dir = delta > 0 ? 1 : -1;
+            const index = currentIndexRef.current;
+            const atEdge =
+                (dir === -1 && index === 0) ||
+                (dir === 1 && index === accommodations.length - 1);
+            // At either end, let the gesture fall through so the page can
+            // still scroll past the carousel.
+            if (atEdge && !wheelLockRef.current) return;
             e.preventDefault();
-            const dir = (e.deltaX || e.deltaY) > 0 ? 1 : -1;
+            if (wheelLockRef.current) return;
+            accumulated += delta;
+            if (Math.abs(accumulated) < 10) return;
+            accumulated = 0;
             setCurrentIndex((i) => Math.max(0, Math.min(accommodations.length - 1, i + dir)));
             wheelLockRef.current = true;
             setTimeout(() => { wheelLockRef.current = false; }, 350);
@@ -279,8 +292,14 @@ export default function Accommodations() {
                                     onClick={() => goTo(i)}
                                 >
                                     <div className="acc-card-photo" style={{ background: acc.photoBg }}>
-                                        <UnitIcon paths={acc.icon} />
-                                        <span className="acc-photo-label">Add photo</span>
+                                        {acc.image ? (
+                                            <img src={acc.image} alt={acc.title} draggable="false" />
+                                        ) : (
+                                            <>
+                                                <UnitIcon paths={acc.icon} />
+                                                <span className="acc-photo-label">Add photo</span>
+                                            </>
+                                        )}
                                     </div>
                                     <div className="acc-card-info">
                                         <h3>{acc.title}</h3>
@@ -291,7 +310,11 @@ export default function Accommodations() {
                                         <h4>Details</h4>
                                         <div className="acc-details-content">
                                             <div className="acc-mini-photo" style={{ background: acc.photoBg }}>
-                                                <UnitIcon paths={acc.icon} />
+                                                {acc.image ? (
+                                                    <img src={acc.image} alt="" draggable="false" />
+                                                ) : (
+                                                    <UnitIcon paths={acc.icon} />
+                                                )}
                                             </div>
                                             <ul>
                                                 {acc.features.map((f) => <li key={f}>{f}</li>)}

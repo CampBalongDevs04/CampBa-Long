@@ -1,6 +1,5 @@
 import './css/Header.css'
 import iconBalong from '../assets/images/logocamp.png'
-
 function Header() {
     return (
         <>
@@ -37,12 +36,12 @@ function Header() {
                             </svg>
                             Book Now
                         </button>
-                        <button className="hero-button hero-button-outline" type="button">
+                        <a className="hero-button hero-button-outline" href="#accommodations">
                             <svg viewBox="0 0 24 24" strokeWidth="1.8" aria-hidden="true">
                                 <path d="M4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16M2 21h20M14 12h.01"/>
                             </svg>
                             Explore Rooms
-                        </button>
+                        </a>
                     </div>
                 </div>
 
