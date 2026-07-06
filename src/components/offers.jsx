@@ -9,6 +9,9 @@ import SpaIcon from './SpaIcon';
 import NatureIcon from './NatureIcon';
 import RelaxationIcon from './RelaxationIcon';
 import WellnessIcon from './WellnessIcon';
+import RiverImage from '../assets/images/river.png';
+import PoolImage from '../assets/images/pool.png';
+import ForestImage from '../assets/images/forest.png';
 
 const offersData = [
     {
@@ -34,6 +37,30 @@ const offersData = [
     }
 ];
 
+const resortFeatures = [
+    {
+        image: PoolImage,
+        altText: "Refreshing pool at Camp Ba-long",
+        icon: PoolIcon,
+        title: "Refreshing Pool",
+        description: "Enjoy the cool, crystal-clear waters and peaceful atmosphere that make every visit refreshing and enjoyable.",
+    },
+    {
+        image: RiverImage,
+        altText: "Scenic river surrounded by nature",
+        icon: NatureIcon,
+        title: "Scenic Nature",
+        description: "Enjoy the fresh air, lush greenery, and soothing sounds of nature. A peaceful escape from the busy world.",
+    },
+    {
+        image: ForestImage,
+        altText: "Relaxing forest ambiance",
+        icon: RelaxationIcon,
+        title: "Relaxing Ambiance",
+        description: "Whether you're here to soak, meditate, or simply relax, our hot springs offer the perfect balance of tranquility and nature.",
+    },
+];
+
 const tagsData = [
     { icon: NatureIcon, label: "Nature" },
     { icon: RelaxationIcon, label: "Relaxation" },
@@ -48,6 +75,25 @@ export default function Offers() {
                 <div className="Welcome-header">
                     <h1 className="Welcome-title">Welcome to Camp Ba-long</h1>
                     <p className="Welcome-description">Where you can connect with your inner peace!</p>
+                    <LotusDividerIcon />
+                    <h1 className="Welcome-message">• A HIDDEN PARADISE IN NATURE •</h1>
+                    <p className="Welcome-description">Immerse yourself in the healing waters , surrounded by lush tropical forest. The perfect place to unwind, rejuvenate your body, and calm your mind.</p>
+                    <div className="Resort-images">
+                        {resortFeatures.map(({ image, altText, icon: Icon, title, description }) => (
+                            <figure className="resort-item" key={title}>
+                                <img src={image} alt={altText} />
+                                <div className="resort-feature">
+                                    <span className="feature-icon"><Icon /></span>
+                                    <div className="feature-text">
+                                        <h3>{title}</h3>
+                                        <p>{description}</p>
+                                    </div>
+                                </div>
+                            </figure>
+                        ))}
+                    </div>
+                
+                
                 </div>
 
 

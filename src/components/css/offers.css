@@ -241,7 +241,7 @@
     color: var(--forest-dark);
     margin: 0 auto;
     padding: 0 20px;
-    background-image: url('../../assets/images/welcome-bg.jpg');
+    
   }
   .Welcome-title{
     font-family: 'Cormorant Garamond', serif;
@@ -258,10 +258,84 @@
     color: #5b5b4c;
     font-weight: 400;
   }
+  .Welcome-message{
+    font-size: clamp(1.2rem, 2vw, 1.5rem);
+    color: var(--gold);
+    font-weight: 600; 
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 10px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    white-space: nowrap;
+    font-family: 'Cormorant Garamond', serif;
+  }
+  .Resort-images{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 70pt; /* matches the 70pt spacing between images in the Canva design */
+    margin-top: 20px;
+    width: min(1100px, calc(100vw - 80px));
+  }
+  .Resort-images img{
+    width: 300px;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 12px;
+  }
+  .Resort-images img:hover{
+    transform: scale(1.05);
+    transition: transform 0.3s ease;
+  }
+  .resort-item{
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .resort-feature{
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    text-align: left;
+  }
+  .resort-feature .feature-icon{
+    flex: 0 0 auto;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--leaf);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .resort-feature .feature-icon svg{
+    width: 26px;
+    height: 26px;
+    stroke: var(--cream);
+    fill: none;
+  }
+  .resort-feature h3{
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 700;
+    font-size: 1.15rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--forest-dark);
+    margin: 0 0 6px;
+  }
+  .resort-feature p{
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: #5b5b4c;
+    font-weight: 400;
+  }
 
   @media (max-width: 760px){
     .cards-grid{ grid-template-columns: 1fr; }
     .offer-section{ border-radius: 34px 34px 18px 18px; padding: 44px 20px 32px; }
     .lotus-divider .rule{ width: 40px; }
     .tags-row{ gap: 28px; }
+    .Resort-images{ gap: 16px; width: 100%; }
+    .Resort-images img{ height: 140px; }
   }
