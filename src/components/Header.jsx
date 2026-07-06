@@ -1,26 +1,53 @@
+import { useState } from 'react'
 import './css/Header.css'
 import iconBalong from '../assets/images/logocamp.png'
+
+const navLinks = [
+    { href: "#home", label: "Home" },
+    { href: "#food", label: "Menu" },
+    { href: "#spa", label: "Spa" },
+    { href: "#my-booking", label: "My Booking" },
+];
+
 function Header() {
+    const [menuOpen, setMenuOpen] = useState(false);
+    const closeMenu = () => setMenuOpen(false);
+
     return (
         <>
-            <header>
-                <a className="site-logo" href="#home" aria-label="Camp Ba-long home">
+            <header className={menuOpen ? "menu-open" : ""}>
+                <a className="site-logo" href="#home" aria-label="Camp Ba-long home" onClick={closeMenu}>
                     <img className="site-logo-icon" src={iconBalong} alt="" />
                     <span className="site-logo-copy">
                         <span className="site-logo-text">Camp Ba-long</span>
-                        <span className="site-logo-tagline">Nature Farm. Where you can connect with your inner peace!</span>
+                        <span className="site-logo-tagline">Nature Farm &amp; Resort</span>
                     </span>
                 </a>
 
-                <nav className="site-navbar">
-                    <a href="#home" id="home">HOME</a>
-                    <a href="#food" id="food">MENU</a>
-                    <a href="#spa" id="spa">SPA</a>
-                    <a href="#my-booking" id="my-booking">MY BOOKING</a>
+                <button
+                    className="nav-toggle"
+                    type="button"
+                    aria-label={menuOpen ? "Close menu" : "Open menu"}
+                    aria-expanded={menuOpen}
+                    aria-controls="site-nav"
+                    onClick={() => setMenuOpen((open) => !open)}
+                >
+                    <span className="nav-toggle-bar" />
+                    <span className="nav-toggle-bar" />
+                    <span className="nav-toggle-bar" />
+                </button>
+
+                <nav id="site-nav" className="site-navbar">
+                    {navLinks.map(({ href, label }) => (
+                        <a className="nav-link" href={href} key={href} onClick={closeMenu}>
+                            {label}
+                        </a>
+                    ))}
+                    <a className="nav-cta" href="#my-booking" onClick={closeMenu}>Book Now</a>
                 </nav>
-                
+
             </header>
-            <div className ="hero-banner">
+            <div className="hero-banner" id="home">
                 <div className="hero-content">
                     <h1 className ="hero-title">
                         Book Your<br />
