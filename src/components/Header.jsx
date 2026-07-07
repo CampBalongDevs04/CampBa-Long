@@ -15,7 +15,7 @@ function Header() {
 
     return (
         <>
-            <header className={menuOpen ? "menu-open" : ""}>
+            <header className={menuOpen ? "site-header menu-open" : "site-header"}>
                 <a className="site-logo" href="#home" aria-label="Camp Ba-long home" onClick={closeMenu}>
                     <img className="site-logo-icon" src={iconBalong} alt="" />
                     <span className="site-logo-copy">

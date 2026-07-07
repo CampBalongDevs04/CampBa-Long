@@ -44,16 +44,7 @@
   .leaf-deco.br{ bottom: -30px; right: -30px; transform: scale(-1); }
 
   .offer-header{
-    /* Reset properties from global header style */
-    position: relative; /* was fixed */
-    background: none;
-    border-bottom: none;
-    box-shadow: none;
-    min-height: unset;
-    padding: 0;
-    backdrop-filter: none;
-    justify-content: center; /* was space-between */
-
+    position: relative;
     z-index: 1;
     text-align: center;
     margin: 0 auto 40px;
@@ -145,7 +136,7 @@
   .card-icon{
     position: absolute;
     left: 50%;
-    bottom: -26px;
+    top: -26px; /* straddles the image/body boundary; lives in .card-body so .card-media's overflow:hidden can't clip it */
     transform: translateX(-50%);
     width: 52px;
     height: 52px;
@@ -165,6 +156,7 @@
   }
 
   .card-body{
+    position: relative; /* anchor for .card-icon */
     padding: 38px 20px 24px;
     text-align: center;
     color: var(--cream);
