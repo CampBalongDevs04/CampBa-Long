@@ -1,0 +1,11 @@
+.food-menu-page{
+    background-color: white;
+    min-height: 100vh;
+}
+
+.Food{
+    font-size: 100px;
+    position: absolute;
+    top: 35%;
+
+}

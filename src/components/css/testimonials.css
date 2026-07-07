@@ -8,10 +8,6 @@
     --ink: #2A2A22;
     --leaf: #4C6B4F;
 }
-body{
-    background-color: var(--forest);
-}
-
 .testimonials-section{
     width: 100%;
     padding: 30px 20px 80px;
