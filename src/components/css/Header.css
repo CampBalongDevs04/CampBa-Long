@@ -6,7 +6,12 @@ html {
     --header-h: 80px;
 }
 
-header {
+/* Anchor navigation (#home, #accommodations, …) must land below the fixed header */
+[id] {
+    scroll-margin-top: calc(var(--header-h) + 16px);
+}
+
+.site-header {
     position: fixed;
     top: 0;
     left: 0;
