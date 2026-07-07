@@ -1,0 +1,11 @@
+.spa-service-page{
+    background-color: rgb(255, 255, 255);
+    min-height: 100vh;
+}
+.Spa{
+    font-size: 100px;
+    position: absolute;
+    top: 35%;
+
+
+}
