@@ -18,8 +18,24 @@
     color: var(--ink);
 }
 
+/* corner leaves (fallback so they render even without offers.css on the page) */
+.acc-section .leaf-deco{
+    position: absolute;
+    width: 150px;
+    height: 150px;
+    pointer-events: none;
+    opacity: 0.9;
+    z-index: 0;
+}
+.acc-section .leaf-deco.tl{ top: -20px; left: -30px; }
+.acc-section .leaf-deco.tr{ top: -20px; right: -30px; transform: scaleX(-1); }
+.acc-section .leaf-deco.bl{ bottom: -30px; left: -30px; transform: scaleY(-1); }
+.acc-section .leaf-deco.br{ bottom: -30px; right: -30px; transform: scale(-1); }
+
 /* ---------- Section header (matches the offer-header style) ---------- */
 .acc-header{
+    position: relative;
+    z-index: 1;
     text-align: center;
     margin: 0 auto 8px;
     max-width: 800px;
@@ -65,6 +81,8 @@
 
 /* ---------- Recommend bar ---------- */
 .acc-recommend-bar{
+    position: relative;
+    z-index: 1;
     display: flex;
     justify-content: center;
     gap: 12px;
@@ -79,8 +97,8 @@
     gap: 8px;
     background: #fff;
     border: 1px solid var(--gold-soft);
-    border-radius: 10px;
-    padding: 10px 18px;
+    border-radius: 30px; /* pill shape, matches the theme buttons */
+    padding: 10px 20px;
     flex: 1;
     min-width: 220px;
     max-width: 320px;
@@ -108,8 +126,8 @@
     background: var(--green);
     color: #F3F5E9;
     border: 2px solid var(--green);
-    border-radius: 10px;
-    padding: 10px 26px;
+    border-radius: 30px;
+    padding: 10px 28px;
     font-family: 'Jost', sans-serif;
     font-weight: 700;
     font-size: 0.75rem;
@@ -123,16 +141,45 @@
 
 /* ---------- Carousel section ---------- */
 .acc-carousel{
+    position: relative;
+    z-index: 1;
     margin: 30px auto 0;
     max-width: 1100px;
-    background: var(--forest);
-    border-radius: 15px;
-    padding: 34px 18px 40px;
+    background: linear-gradient(165deg, #29503a 0%, var(--forest) 45%, var(--forest-dark) 100%);
+    border-radius: 22px;
+    padding: 34px 18px 30px;
+    box-shadow: 0 24px 44px -18px rgba(20, 40, 25, 0.55);
+    overflow: hidden;
+}
+/* thin gold frame inset inside the panel */
+.acc-carousel::before{
+    content: '';
+    position: absolute;
+    inset: 10px;
+    border: 1px solid rgba(217, 189, 132, 0.32);
+    border-radius: 14px;
+    pointer-events: none;
+    z-index: 0;
+}
+/* soft gold glow at the top of the panel */
+.acc-carousel::after{
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 70% 45% at 50% 0%, rgba(217, 189, 132, 0.14), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+}
+.acc-carousel > *{
     position: relative;
-    box-shadow: 0 14px 24px -12px rgba(20, 40, 25, 0.4);
+    z-index: 1;
 }
 
 .acc-scroll-hint{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
     text-align: center;
     margin: 0 0 20px;
     font-size: 0.7rem;
@@ -140,8 +187,18 @@
     letter-spacing: 2px;
     text-transform: uppercase;
     color: var(--gold-soft);
-    opacity: 0.85;
+    opacity: 0.9;
 }
+/* small gold rules on either side of the hint, echoing the lotus divider */
+.acc-scroll-hint::before,
+.acc-scroll-hint::after{
+    content: '';
+    height: 1px;
+    width: 56px;
+    flex-shrink: 0;
+}
+.acc-scroll-hint::before{ background: linear-gradient(to left, var(--gold-soft), transparent); }
+.acc-scroll-hint::after{ background: linear-gradient(to right, var(--gold-soft), transparent); }
 
 .acc-carousel-wrap{
     position: relative;
@@ -154,8 +211,8 @@
     height: 42px;
     border-radius: 50%;
     border: 1px solid var(--gold-soft);
-    background: rgba(245, 241, 228, 0.92);
-    color: var(--forest-dark);
+    background: rgba(22, 41, 30, 0.75);
+    color: var(--gold-soft);
     font-size: 22px;
     line-height: 1;
     display: flex;
@@ -163,13 +220,14 @@
     justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
-    transition: transform 0.15s ease, background 0.2s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    transition: transform 0.15s ease, background 0.2s ease, color 0.2s ease;
     z-index: 6;
 }
-.acc-nav-btn:hover{ background: #fff; }
+.acc-nav-btn:hover{ background: var(--gold-soft); color: var(--forest-dark); }
 .acc-nav-btn:active{ transform: scale(0.9); }
 .acc-nav-btn:disabled{ opacity: 0.35; cursor: default; }
+.acc-nav-btn:disabled:hover{ background: rgba(22, 41, 30, 0.75); color: var(--gold-soft); }
 
 .acc-viewport{
     flex: 1;
@@ -177,6 +235,9 @@
     cursor: grab;
     touch-action: pan-y;
     padding: 12px 0 20px;
+    /* cards melt into the panel edges instead of getting cut off */
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+    mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
 }
 .acc-viewport:active{ cursor: grabbing; }
 .acc-viewport:focus-visible{
@@ -197,25 +258,31 @@
     flex-shrink: 0;
     width: 230px;
     background: var(--cream);
-    border-radius: 10px;
+    border: 1px solid transparent;
+    border-radius: 14px;
     overflow: hidden;
     box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
-    transform: scale(calc(1 - var(--dist, 0) * 0.04));
-    opacity: calc(1 - var(--dist, 0) * 0.22);
-    transition: transform 0.45s cubic-bezier(0.22, 0.85, 0.32, 1), opacity 0.45s ease, box-shadow 0.3s ease;
+    transform: scale(calc(1 - var(--dist, 0) * 0.05));
+    opacity: calc(1 - var(--dist, 0) * 0.25);
+    filter: saturate(calc(1 - var(--dist, 0) * 0.25));
+    transition: transform 0.45s cubic-bezier(0.22, 0.85, 0.32, 1), opacity 0.45s ease,
+        box-shadow 0.3s ease, border-color 0.3s ease, filter 0.45s ease;
     cursor: pointer;
     user-select: none;
 }
 .acc-card.active{
-    transform: scale(1.03);
+    transform: scale(1.04);
     opacity: 1;
-    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
+    filter: none;
+    border-color: var(--gold-soft);
+    /* gold ring + deep shadow to crown the active card */
+    box-shadow: 0 0 0 4px rgba(217, 189, 132, 0.18), 0 18px 36px rgba(0, 0, 0, 0.45);
     z-index: 5;
     cursor: default;
 }
 
 .acc-card-photo{
-    height: 130px;
+    height: 138px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -230,13 +297,31 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform 0.6s ease;
+}
+.acc-card.active .acc-card-photo img,
+.acc-card:hover .acc-card-photo img{
+    transform: scale(1.07);
+}
+/* subtle dark vignette so the photo blends into the info panel below */
+.acc-card-photo::after{
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(22, 41, 30, 0.08) 0%, transparent 30%, transparent 55%, rgba(22, 41, 30, 0.5) 100%);
+    pointer-events: none;
+    z-index: 1;
 }
 .acc-card-photo svg{
     width: 42px;
     height: 42px;
     flex-shrink: 0;
+    position: relative;
+    z-index: 2;
 }
 .acc-photo-label{
+    position: relative;
+    z-index: 2;
     font-size: 0.55rem;
     font-weight: 700;
     letter-spacing: 1.2px;
@@ -244,10 +329,29 @@
     color: rgba(255, 255, 255, 0.82);
 }
 
+/* gold "Most Popular" ribbon on the featured unit */
+.acc-badge{
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 3;
+    background: linear-gradient(135deg, var(--gold-soft), var(--gold));
+    color: var(--forest-dark);
+    font-size: 0.52rem;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
 .acc-card-info{
     background: var(--forest-dark);
     color: #F3F5E9;
     padding: 12px 14px 13px;
+    border-top: 2px solid var(--gold);
+    position: relative;
 }
 .acc-card-info h3{
     margin: 0 0 4px;
@@ -260,12 +364,15 @@
 }
 .acc-card-info .acc-pax{
     margin: 0;
-    font-size: 0.75rem;
-    opacity: 0.85;
+    font-size: 0.72rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    opacity: 0.8;
 }
 .acc-card-info .acc-price{
-    margin: 4px 0 0;
-    font-size: 0.85rem;
+    margin: 5px 0 0;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.05rem;
     font-weight: 700;
     letter-spacing: 0.5px;
     color: var(--gold-soft);
@@ -273,73 +380,109 @@
 
 .acc-details{
     background: var(--cream);
-    padding: 10px 14px 12px;
+    padding: 11px 14px 12px;
 }
+/* serif heading with gold rules fading out on both sides (lotus-divider echo) */
 .acc-details h4{
-    margin: 0 0 8px;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 0 0 9px;
     font-family: 'Cormorant Garamond', serif;
     font-size: 0.85rem;
     font-weight: 700;
     letter-spacing: 2px;
     text-transform: uppercase;
     color: var(--forest-dark);
-    border-bottom: 1px solid var(--gold-soft);
-    padding-bottom: 6px;
+    white-space: nowrap;
 }
-.acc-details-content{
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
+.acc-details h4::before,
+.acc-details h4::after{
+    content: '';
+    height: 1px;
+    flex: 1;
+    min-width: 12px;
 }
-.acc-mini-photo{
-    width: 50px;
-    height: 50px;
-    border-radius: 5px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-}
-.acc-mini-photo img{
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-.acc-mini-photo svg{
-    width: 22px;
-    height: 22px;
-}
-.acc-details-content ul{
+.acc-details h4::before{ background: linear-gradient(to left, var(--gold), transparent); }
+.acc-details h4::after{ background: linear-gradient(to right, var(--gold), transparent); }
+
+/* two-column amenity checklist */
+.acc-feature-list{
+    list-style: none;
     margin: 0;
-    padding: 0 0 0 16px;
-    font-size: 0.7rem;
-    line-height: 1.55;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 10px;
+}
+.acc-feature-list li{
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 0.67rem;
+    line-height: 1.35;
+    letter-spacing: 0.2px;
     color: var(--ink);
 }
-.acc-details-content li::marker{ color: var(--leaf); }
+.acc-feature-list li svg{
+    width: 11px;
+    height: 11px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--green);
+}
+/* an odd last item stretches across both columns, keeps the grid tidy */
+.acc-feature-list li:last-child:nth-child(odd){
+    grid-column: 1 / -1;
+}
 
+/* pill button, same language as the offers "Discover" button */
 .acc-book-btn{
     display: block;
     width: calc(100% - 28px);
     margin: 2px auto 14px;
-    border: 1.5px solid #dab84b;
-    border-radius: 8px;
-    background: #EFE9D6;
-    color: #dab84b;
-    font-family: 'Cormorant Garamond', serif;
+    border: 1px solid var(--gold);
+    border-radius: 30px;
+    background: transparent;
+    color: var(--forest-dark);
+    font-family: 'Jost', sans-serif;
     font-weight: 700;
-    font-size: 1rem;
-    letter-spacing: 1.5px;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
     text-transform: uppercase;
-    padding: 8px 0;
+    padding: 9px 0;
     cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease, transform 0.15s ease;
 }
 .acc-book-btn:hover{ background: var(--green); color: #fff; border-color: var(--green); }
 .acc-book-btn:active{ transform: scale(0.97); }
+
+/* ---------- Pagination dots ---------- */
+.acc-dots{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 18px;
+}
+.acc-dot{
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    border-radius: 10px;
+    border: 1px solid var(--gold-soft);
+    background: transparent;
+    opacity: 0.55;
+    cursor: pointer;
+    transition: width 0.3s ease, background 0.25s ease, opacity 0.25s ease;
+}
+.acc-dot:hover{ opacity: 0.9; }
+.acc-dot.on{
+    width: 24px;
+    background: var(--gold-soft);
+    opacity: 1;
+}
 
 /* ---------- Toast ---------- */
 .acc-toast{
@@ -347,10 +490,11 @@
     bottom: 24px;
     left: 50%;
     transform: translateX(-50%) translateY(20px);
-    background: #565858;
+    background: var(--forest-dark);
     color: #F3F5E9;
+    border: 1px solid var(--gold-soft);
     padding: 12px 22px;
-    border-radius: 10px;
+    border-radius: 30px;
     font-family: 'Jost', sans-serif;
     font-size: 0.85rem;
     font-weight: 500;
@@ -370,17 +514,26 @@
 /* ---------- Responsive ---------- */
 @media (max-width: 760px){
     .acc-section{ padding: 44px 20px 48px; }
-    .acc-carousel{ padding: 26px 8px 30px; }
+    .acc-section .leaf-deco{ width: 100px; height: 100px; }
+    .acc-carousel{ padding: 26px 8px 24px; }
+    .acc-carousel::before{ inset: 7px; }
+    .acc-scroll-hint::before, .acc-scroll-hint::after{ width: 30px; }
     .acc-card{ width: 190px; }
-    .acc-card-photo{ height: 100px; }
+    .acc-card-photo{ height: 104px; }
+    /* cards are too narrow for two columns here */
+    .acc-feature-list{ grid-template-columns: 1fr; gap: 5px; }
 }
 
 @media (max-width: 480px){
     .acc-card{ width: 165px; }
-    .acc-card-photo{ height: 86px; }
+    .acc-card-photo{ height: 90px; }
     .acc-nav-btn{ width: 36px; height: 36px; }
+    .acc-viewport{
+        -webkit-mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent);
+        mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent);
+    }
 }
 
 @media (prefers-reduced-motion: reduce){
-    .acc-track, .acc-card{ transition: none; }
+    .acc-track, .acc-card, .acc-card-photo img{ transition: none; }
 }
