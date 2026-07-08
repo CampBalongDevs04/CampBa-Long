@@ -9,7 +9,7 @@ import transpoSvg from '../assets/svg/transpo.svg'
 import routeSvg from '../assets/svg/route.svg'
 import parkingSvg from '../assets/svg/parking.svg'
 
-// icon: an imported .svg file (Vite resolves it to a URL, rendered as <img>)
+
 const contactDetails = [
     {
         icon: addressSvg,
@@ -74,7 +74,7 @@ export default function Location(){
                         {contactDetails.map(({icon, label, lines}, index) => (
                             <div className = "location-detail" key = {index}>
                                 <span className = "location-detail-icon">
-                                    {icon && <img src = {icon} alt = "" />}
+                                    {icon && <img src = {icon} alt = "icon" />}
                                 </span>
                                 <div className = "location-detail-text">
                                     <h3 className = "location-detail-label">{label}</h3>
@@ -103,7 +103,7 @@ export default function Location(){
                     {locationFeatures.map(({icon, title, text}, index) => (
                         <div className = "location-feature" key = {index}>
                             <span className = "location-feature-icon">
-                                {icon && <img src = {icon} alt = "" />}
+                                {icon && <img src = {icon} alt = "icon" />}
                             </span>
                             <h3 className = "location-feature-title">{title}</h3>
                             <p className = "location-feature-text">{text}</p>

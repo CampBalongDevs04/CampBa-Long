@@ -4,6 +4,7 @@ import Offers from '../components/offers.jsx'
 import Accommodations from '../components/accommodations.jsx'
 import Testimonials from '../components/testimonials.jsx'
 import Location from '../components/location.jsx'
+import Contact from '../components/contact.jsx'
 
 function Home() {
     return (
@@ -80,6 +81,8 @@ function Home() {
             <Accommodations />
             <Testimonials />
             <Location />
+            <Contact />
+            
         </>
     )
 }
