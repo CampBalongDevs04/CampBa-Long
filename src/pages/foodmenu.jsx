@@ -1,30 +1,60 @@
-function FoodMenuPage({ onBack }) {
-    return (
-        <main style={{ minHeight: '100vh', background: '#fff', padding: '2rem 1.5rem 3rem' }}>
-            <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                <button
-                    type="button"
-                    onClick={onBack}
-                    style={{
-                        border: '1px solid #d1d5db',
-                        background: '#fff',
-                        padding: '0.7rem 1rem',
-                        borderRadius: '999px',
-                        cursor: 'pointer',
-                        marginBottom: '1.5rem',
-                        fontWeight: 600,
-                    }}
-                >
-                    ← Back to Home
-                </button>
+import { useState } from 'react'
+import './foodmenu.css'
+import foodItems from './foodmenuData'
 
-                <h1 style={{ fontSize: '2rem', marginBottom: '0.75rem', color: '#1f2937' }}>Food Menu</h1>
-                <p style={{ fontSize: '1rem', lineHeight: 1.7, color: '#6b7280' }}>
-                    This is your dedicated food page. The header stays visible while the rest of the page is a clean white canvas for your menu content.
-                </p>
-            </div>
-        </main>
-    )
+const categories = ['All', 'Seafood', 'Grilled', 'Stew', 'Soup', 'Appetizer', 'Vegetarian', 'Dessert']
+
+function FoodMenuPage({ onBack }) {
+  const [selectedCategory, setSelectedCategory] = useState('All')
+
+  const filteredItems = selectedCategory === 'All'
+    ? foodItems
+    : foodItems.filter((item) => item.category === selectedCategory)
+
+  return (
+    <main className="foodmenu-page">
+      <div className="foodmenu-container">
+        <div className="foodmenu-top">
+          <button type="button" className="foodmenu-back" onClick={onBack}>
+            ← Back to Home
+          </button>
+          <h1 className="foodmenu-title">OUR FOOD MENU</h1>
+          <p className="foodmenu-subtitle">Savor local flavors and fresh ingredients</p>
+          <div className="foodmenu-filters">
+            {categories.map((category) => (
+              <button
+                key={category}
+                type="button"
+                className={`foodmenu-filter ${selectedCategory === category ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(category)}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="foodmenu-grid">
+          {filteredItems.map(({ category, title, description, badge, price }) => (
+            <article className="food-card" key={title}>
+              <div className="food-card-badge">{badge}</div>
+              <div className="food-card-icon-wrap">
+                <span aria-hidden="true">🍃</span>
+              </div>
+              <div className="food-card-body">
+                <div>
+                  <p className="food-card-category">{category}</p>
+                  <h2 className="food-card-name">{title}</h2>
+                  <p className="food-card-text">{description}</p>
+                </div>
+                <span className="food-card-price">{price}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </main>
+  )
 }
 
 export default FoodMenuPage
