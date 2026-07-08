@@ -3,6 +3,7 @@ import '../components/css/Header.css'
 import Offers from '../components/offers.jsx'
 import Accommodations from '../components/accommodations.jsx'
 import Testimonials from '../components/testimonials.jsx'
+import Location from '../components/location.jsx'
 
 function Home() {
     return (
@@ -78,6 +79,7 @@ function Home() {
             <Offers />
             <Accommodations />
             <Testimonials />
+            <Location />
         </>
     )
 }
