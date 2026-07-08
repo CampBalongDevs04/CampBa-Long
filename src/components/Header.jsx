@@ -3,7 +3,7 @@ import './css/Header.css'
 import iconBalong from '../assets/images/logocamp.png'
 
 const navLinks = [
-    { href: "#home", label: "Home", action: 'home' },
+    { href: "#home", label: "Home" },
     { href: "#food", label: "Menu" },
     { href: "#spa", label: "Spa" },
     { href: "#my-booking", label: "My Booking" },
@@ -13,10 +13,10 @@ function Header({ showHero = true, onNavigateHome }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const closeMenu = () => setMenuOpen(false);
 
-    const handleNavClick = (event, action) => {
+    const handleHeaderLinkClick = (event, href) => {
         closeMenu();
 
-        if (action === 'home' && onNavigateHome) {
+        if (href === '#home' && !showHero && onNavigateHome) {
             event.preventDefault();
             onNavigateHome();
         }
@@ -29,13 +29,7 @@ function Header({ showHero = true, onNavigateHome }) {
                     className="site-logo"
                     href="#home"
                     aria-label="Camp Ba-long home"
-                    onClick={(event) => {
-                        closeMenu();
-                        if (onNavigateHome) {
-                            event.preventDefault();
-                            onNavigateHome();
-                        }
-                    }}
+                    onClick={(event) => handleHeaderLinkClick(event, '#home')}
                 >
                     <img className="site-logo-icon" src={iconBalong} alt="" />
                     <span className="site-logo-copy">
@@ -58,8 +52,8 @@ function Header({ showHero = true, onNavigateHome }) {
                 </button>
 
                 <nav id="site-nav" className="site-navbar">
-                    {navLinks.map(({ href, label, action }) => (
-                        <a className="nav-link" href={href} key={href} onClick={(event) => handleNavClick(event, action)}>
+                    {navLinks.map(({ href, label }) => (
+                        <a className="nav-link" href={href} key={href} onClick={(event) => handleHeaderLinkClick(event, href)}>
                             {label}
                         </a>
                     ))}

@@ -18,11 +18,7 @@ function App() {
 
   return (
     <>
-      <Header
-        showHero={activePage === 'home'}
-        onNavigateHome={goHome}
-        onOpenFoodMenu={openFoodMenu}
-      />
+      <Header showHero={activePage === 'home'} onNavigateHome={goHome} />
 
       {activePage === 'foodmenu' ? (
         <FoodMenuPage onBack={goHome} />
