@@ -100,7 +100,7 @@ const tagsData = [
     { icon: WellnessIcon, label: "Wellness" },
 ];
 
-export default function Offers() {
+export default function Offers({ onFoodSelect }) {
     return(
         <>
             <section className="offer-section">
@@ -153,7 +153,11 @@ export default function Offers() {
     
                 <div className="cards-grid">
                     {offersData.map((offer) => (
-                        <OfferCard key={offer.title} {...offer} />
+                        <OfferCard
+                            key={offer.title}
+                            {...offer}
+                            onDiscoverClick={offer.title === 'Foods' ? onFoodSelect : undefined}
+                        />
                     ))}
                 </div>
     

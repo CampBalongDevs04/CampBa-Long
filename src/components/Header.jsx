@@ -3,20 +3,40 @@ import './css/Header.css'
 import iconBalong from '../assets/images/logocamp.png'
 
 const navLinks = [
-    { href: "#home", label: "Home" },
+    { href: "#home", label: "Home", action: 'home' },
     { href: "#food", label: "Menu" },
     { href: "#spa", label: "Spa" },
     { href: "#my-booking", label: "My Booking" },
 ];
 
-function Header() {
+function Header({ showHero = true, onNavigateHome }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const closeMenu = () => setMenuOpen(false);
+
+    const handleNavClick = (event, action) => {
+        closeMenu();
+
+        if (action === 'home' && onNavigateHome) {
+            event.preventDefault();
+            onNavigateHome();
+        }
+    };
 
     return (
         <>
             <header className={menuOpen ? "site-header menu-open" : "site-header"}>
-                <a className="site-logo" href="#home" aria-label="Camp Ba-long home" onClick={closeMenu}>
+                <a
+                    className="site-logo"
+                    href="#home"
+                    aria-label="Camp Ba-long home"
+                    onClick={(event) => {
+                        closeMenu();
+                        if (onNavigateHome) {
+                            event.preventDefault();
+                            onNavigateHome();
+                        }
+                    }}
+                >
                     <img className="site-logo-icon" src={iconBalong} alt="" />
                     <span className="site-logo-copy">
                         <span className="site-logo-text">Camp Ba-long</span>
@@ -38,8 +58,8 @@ function Header() {
                 </button>
 
                 <nav id="site-nav" className="site-navbar">
-                    {navLinks.map(({ href, label }) => (
-                        <a className="nav-link" href={href} key={href} onClick={closeMenu}>
+                    {navLinks.map(({ href, label, action }) => (
+                        <a className="nav-link" href={href} key={href} onClick={(event) => handleNavClick(event, action)}>
                             {label}
                         </a>
                     ))}
@@ -47,6 +67,7 @@ function Header() {
                 </nav>
 
             </header>
+            {showHero && (
             <div className="hero-banner" id="home">
                 <div className="hero-content">
                     <h1 className ="hero-title">
@@ -114,6 +135,7 @@ function Header() {
                     </div>
                 </div>
             </div>
+            )}
         </>
     )
 }
