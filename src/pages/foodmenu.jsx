@@ -2,14 +2,17 @@ import { useState } from 'react'
 import './foodmenu.css'
 import foodItems from './foodmenuData'
 
-const categories = ['All', 'Seafood', 'Grilled', 'Stew', 'Soup', 'Appetizer', 'Vegetarian', 'Dessert']
+const categories = ['All', 'Seafood', 'Grilled', 'Stew', 'Soup', 'Appetizer', 'Dessert']
 
 function FoodMenuPage({ onBack }) {
   const [selectedCategory, setSelectedCategory] = useState('All')
 
   const filteredItems = selectedCategory === 'All'
     ? foodItems
-    : foodItems.filter((item) => item.category === selectedCategory)
+    : foodItems.filter((item) => {
+        const itemCategories = Array.isArray(item.categories) ? item.categories : [item.category]
+        return itemCategories.includes(selectedCategory)
+      })
 
   return (
     <main className="foodmenu-page">
@@ -35,22 +38,27 @@ function FoodMenuPage({ onBack }) {
         </div>
 
         <div className="foodmenu-grid">
-          {filteredItems.map(({ category, title, description, badge, price }) => (
-            <article className="food-card" key={title}>
-              <div className="food-card-badge">{badge}</div>
-              <div className="food-card-icon-wrap">
-                <span aria-hidden="true">🍃</span>
-              </div>
-              <div className="food-card-body">
-                <div>
-                  <p className="food-card-category">{category}</p>
-                  <h2 className="food-card-name">{title}</h2>
-                  <p className="food-card-text">{description}</p>
+          {filteredItems.map((item) => {
+            const { category, title, description, badge, price, categories } = item
+            const displayCategory = Array.isArray(categories) ? categories.join(' • ') : category
+
+            return (
+              <article className="food-card" key={title}>
+                <div className="food-card-badge">{badge}</div>
+                <div className="food-card-icon-wrap">
+                  <span aria-hidden="true">🍃</span>
                 </div>
-                <span className="food-card-price">{price}</span>
-              </div>
-            </article>
-          ))}
+                <div className="food-card-body">
+                  <div>
+                    <p className="food-card-category">{displayCategory}</p>
+                    <h2 className="food-card-name">{title}</h2>
+                    <p className="food-card-text">{description}</p>
+                  </div>
+                  <span className="food-card-price">{price}</span>
+                </div>
+              </article>
+            )
+          })}
         </div>
       </div>
     </main>
