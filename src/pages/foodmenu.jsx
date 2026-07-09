@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './foodmenu.css'
 import foodItems from './foodmenuData'
 
@@ -6,6 +6,10 @@ const categories = ['All', 'Seafood', 'Grilled', 'Stew', 'Soup', 'Appetizer', 'D
 
 function FoodMenuPage({ onBack }) {
   const [selectedCategory, setSelectedCategory] = useState('All')
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [])
 
   const filteredItems = selectedCategory === 'All'
     ? foodItems

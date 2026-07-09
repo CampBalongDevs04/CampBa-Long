@@ -59,7 +59,8 @@
 .foodmenu-grid {
   display: grid;
   gap: 2rem;
-  justify-content: center;
+  justify-content: start;
+  justify-items: start;
   grid-template-columns: repeat(auto-fit, minmax(320px, 360px));
 }
 
