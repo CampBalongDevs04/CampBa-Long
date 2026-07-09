@@ -1,11 +1,123 @@
+html{
+    scroll-behavior: smooth;
+}
+:root{
+    --header-h: 80px;
+     --cream: #F5F1E4;
+    --cream-2: #EFE9D6;
+    --forest: #1E3A2B;
+    --forest-dark: #16291E;
+    --gold: #C6A15B;
+    --gold-soft: #D9BD84;
+    --ink: #2A2A22;
+    --leaf: #4C6B4F;
+
+}
+[id] {
+    scroll-margin-top: calc(var(--header-h) + 16px);
+}
+
 .spa-service-page{
     background-color: rgb(255, 255, 255);
     min-height: 100vh;
 }
-.Spa{
-    font-size: 100px;
+.spa-hero-banner{
+    position: relative;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: calc(100vh - var(--header-h));
+    margin-top: var(--header-h);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 64px 50px 36px;
+    overflow: hidden;
+}
+.spa-hero-banner::before{
+    content: '';
     position: absolute;
-    top: 35%;
-
-
+    inset: 0;
+    background-image: linear-gradient(90deg, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.16)), url('../../../assets/images/spa-hero-benner.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: blur(6px);
+    transform: scale(1.1);
+    z-index: 0;
+}
+.spa-hero-content{
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 760px;
+    margin-top: auto;
+    margin-bottom: auto;
+}
+.spa-title{
+    margin: 0;
+    font-family: 'Cormorant Garamond', serif;
+    color: rgb(243, 245, 233);
+    font-size: 75px;
+    line-height: 0.95;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.123);
+}
+.spa-subtitle{
+    max-width: 480px;
+    margin: 18px 0 0;
+    font-family: 'Cormorant Garamond', serif;
+    color: rgb(243, 245, 233);
+    font-size: 22px;
+    line-height: 1.4;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.22);
+}
+.spa-hero-buttons{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin-top: 22px;
+}
+.spa-hero-button{
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 30px;
+    border: 2px solid #037d4d;
+    border-radius: 25px;
+    background: #037d4d;
+    color: rgb(243, 245, 233);
+    font-family:Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.329);
+    transition: background-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+.spa-hero-button:hover{
+    background-color: #02643e;
+    transform: translateY(-2px);
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.28);
+}
+.spa-hero-button:focus-visible{
+    outline: 3px solid rgb(243, 245, 233);
+    outline-offset: 4px;
+}
+.spa-hero-button:active{
+    transform: translateY(0);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+}
+.spa-hero-button svg{
+    width: 22px;
+    height: 22px;
+    stroke: currentColor;
+    fill: none;
+    flex-shrink: 0;
+}
+.spa-how-to-reserve{
+    background-color: var(--forest);
+    width: 100%;
+    padding: 30px 20px 80px;
 }
