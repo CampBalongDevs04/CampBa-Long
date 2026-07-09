@@ -5,6 +5,7 @@ import Accommodations from '../components/accommodations.jsx'
 import Testimonials from '../components/testimonials.jsx'
 import Location from '../components/location.jsx'
 import Contact from '../components/contact.jsx'
+import Footer from '../components/footer.jsx'
 
 function Home() {
     return (
@@ -82,7 +83,7 @@ function Home() {
             <Testimonials />
             <Location />
             <Contact />
-            
+            <Footer />
         </>
     )
 }
