@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import './foodmenu.css'
+import LeafDeco from '../components/LeafDeco'
 import foodItems from './foodmenuData'
 
 const categories = ['All', 'Seafood', 'Grilled', 'Stew', 'Soup', 'Appetizer', 'Dessert']
@@ -21,6 +22,10 @@ function FoodMenuPage({ onBack }) {
   return (
     <main className="foodmenu-page">
       <div className="foodmenu-container">
+        <LeafDeco className="tl" />
+        <LeafDeco className="tr" />
+        <LeafDeco className="bl" />
+        <LeafDeco className="br" />
         <div className="foodmenu-top">
           <button type="button" className="foodmenu-back" onClick={onBack}>
             ← Back to Home

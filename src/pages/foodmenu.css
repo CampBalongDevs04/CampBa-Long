@@ -1,14 +1,31 @@
 .foodmenu-page {
+  position: relative;
+  overflow: hidden;
   min-height: 100vh;
   background: #f9f5ea;
   padding: 3rem 1.5rem 4rem;
 }
 
 .foodmenu-container {
+  position: relative;
+  z-index: 1;
   max-width: 1180px;
   margin: 0 auto;
   padding: 0 1rem;
 }
+
+.leaf-deco{
+  position: absolute;
+  width: clamp(180px, 24vw, 260px);
+  height: clamp(180px, 24vw, 260px);
+  pointer-events: none;
+  opacity: 0.9;
+  z-index: 0;
+}
+.leaf-deco.tl{ top: -60px; left: -90px; transform: rotate(0deg); }
+.leaf-deco.tr{ top: -60px; right: -90px; transform: scaleX(-1); }
+.leaf-deco.bl{ bottom: -80px; left: -90px; transform: scaleY(-1); }
+.leaf-deco.br{ bottom: -80px; right: -90px; transform: scale(-1); }
 
 .foodmenu-top {
   text-align: center;
