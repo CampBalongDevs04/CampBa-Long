@@ -4,6 +4,7 @@ import Offers from '../components/offers.jsx'
 import Accommodations from '../components/accommodations.jsx'
 import Testimonials from '../components/testimonials.jsx'
 import Location from '../components/location.jsx'
+import { FAQDemo } from '../components/Usage.tsx'
 import Contact from '../components/contact.jsx'
 import Footer from '../components/footer.jsx'
 
@@ -82,6 +83,7 @@ function Home() {
             <Accommodations />
             <Testimonials />
             <Location />
+            <FAQDemo />
             <Contact />
             <Footer />
         </>

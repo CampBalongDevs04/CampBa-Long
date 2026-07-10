@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import './components/css/spaService.css'
+import Footer from '../components/footer'
 
 
 function SpaService() {
@@ -27,6 +28,7 @@ function SpaService() {
             <section className="spa-how-to-reserve">
 
             </section>
+            <Footer />
         </main>
     )
 }
