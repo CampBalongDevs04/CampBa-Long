@@ -48,7 +48,7 @@
     display: grid;
     grid-template-columns: minmax(280px, 420px) 1fr;
     gap: 40px;
-    align-items: start;
+    align-items: stretch;
 }
 
 /* ---------- Left: info panel ---------- */
@@ -142,6 +142,10 @@
     flex-direction: column;
     gap: 7px;
 }
+/* Let the message field absorb leftover height so the form fills its column */
+.contact-field:has(textarea){
+    flex: 1;
+}
 .contact-field label{
     font-family: 'Jost', sans-serif;
     font-weight: 600;
@@ -168,6 +172,7 @@
 .contact-field textarea{
     resize: vertical;
     min-height: 120px;
+    flex: 1;
 }
 .contact-field input::placeholder,
 .contact-field textarea::placeholder{
@@ -199,6 +204,46 @@
     background: var(--gold);
     border-color: var(--gold);
     color: var(--forest-dark);
+}
+.Admin-Hours{
+    background-color: var(--cream-2);
+    border-radius: 15px;
+    border-top: 3px solid var(--gold);
+    padding: 24px 26px;
+    margin-top: auto;
+    text-align: center;
+    box-shadow: 0 14px 24px -12px rgba(10, 22, 14, 0.55);
+}
+.Admin-title{
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 700;
+    letter-spacing: clamp(2px, 1vw, 4px);
+    font-size: clamp(1.1rem, 2vw, 1.5rem);
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 0 0 4px;
+}
+.Admin-text{
+    font-family: 'Jost', sans-serif;
+    font-size: 0.92rem;
+    letter-spacing: 0.4px;
+    line-height: 1.7;
+    color: var(--leaf);
+    margin: 0 0 12px;
+}
+.Note {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.82rem;
+    letter-spacing: 0.4px;
+    line-height: 1.7;
+    color: var(--forest-dark);
+    margin: 0;
+}
+.note-bold{
+    font-weight: 700;
+}
+.Admin-time{
+    font-weight: 700;
 }
 
 /* ---------- Responsive ---------- */

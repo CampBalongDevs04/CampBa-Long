@@ -1,5 +1,10 @@
 import './css/contact.css'
 import LotusDividerIcon from './LotusDividerIcon'
+import emailSvg from '../assets/svg/email.svg'
+import phoneSvg from '../assets/svg/phone.svg'
+import timeSvg from '../assets/svg/time.svg'
+
+
 
 
 
@@ -24,7 +29,7 @@ export default function Contact(){
 
                         <div className="contact-detail">
                             <div className="contact-detail-icon">
-                                {/* drop an SVG icon here */}
+                                <img src={phoneSvg} alt ="phone icon" />
                             </div>
                             <div className="contact-detail-text">
                                 <p className="contact-detail-label">Phone</p>
@@ -34,7 +39,7 @@ export default function Contact(){
 
                         <div className="contact-detail">
                             <div className="contact-detail-icon">
-                                {/* drop an SVG icon here */}
+                               <img src={emailSvg} alt="email icon" />
                             </div>
                             <div className="contact-detail-text">
                                 <p className="contact-detail-label">Email</p>
@@ -44,12 +49,23 @@ export default function Contact(){
 
                         <div className="contact-detail">
                             <div className="contact-detail-icon">
-                                {/* drop an SVG icon here */}
+                                <img src ={timeSvg} alt="time icon" />
                             </div>
                             <div className="contact-detail-text">
                                 <p className="contact-detail-label">Hours</p>
                                 <p className="contact-detail-info">Open daily, 8:00 AM &ndash; 8:00 PM</p>
                             </div>
+                        </div>
+
+                        <div className="Admin-Hours">
+                            <h3 className="Admin-title">Admin Hours</h3>
+                            <p className="Admin-text">Monday - Sunday 8AM - 5PM</p>
+                            <p className="Note">
+                                <span className="note-bold">Note: </span>
+                                Booking confirmations and other administrative requests are processed only during
+                                <span className="Admin-time"> 8:00 AM &ndash; 5:00 PM. </span>
+                                Requests made outside these hours will be handled on the next business day.
+                            </p>
                         </div>
                     </div>
 
