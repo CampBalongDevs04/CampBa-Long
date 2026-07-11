@@ -1,12 +1,13 @@
-<<<<<<< HEAD
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router'
 import './foodmenu.css'
 import LeafDeco from '../components/LeafDeco'
 import foodItems from './foodmenuData'
 
 const categories = ['All', 'Seafood', 'Grilled', 'Stew', 'Soup', 'Appetizer', 'Dessert']
 
-function FoodMenuPage({ onBack }) {
+function FoodMenuPage() {
+  const navigate = useNavigate()
   const [selectedCategory, setSelectedCategory] = useState('All')
 
   useEffect(() => {
@@ -28,7 +29,7 @@ function FoodMenuPage({ onBack }) {
         <LeafDeco className="bl" />
         <LeafDeco className="br" />
         <div className="foodmenu-top">
-          <button type="button" className="foodmenu-back" onClick={onBack}>
+          <button type="button" className="foodmenu-back" onClick={() => navigate('/')}>
             ← Back to Home
           </button>
           <h1 className="foodmenu-title">OUR FOOD MENU</h1>
@@ -76,21 +77,3 @@ function FoodMenuPage({ onBack }) {
 }
 
 export default FoodMenuPage
-=======
-import './components/css/foodmenu.css'
-import Footer from '../components/footer'
-
-
-function FoodMenu() {
-    return (
-        <main className="page food-menu-page">
-            <h1 className ="Food">Food Page</h1>
-
-
-            <Footer />
-        </main>
-    )
-}
-
-export default FoodMenu
->>>>>>> origin/master
