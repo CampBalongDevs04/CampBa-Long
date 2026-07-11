@@ -16,6 +16,7 @@ function App() {
         <Route path="/spa" element={<SpaService />} />
         <Route path="/my-booking" element={<MyBooking />} />
       </Routes>
+
     </>
   )
 }

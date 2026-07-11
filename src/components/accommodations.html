@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Accommodations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --forest-dark:#0f3d2e;
+    --forest:#1b4d3a;
+    --forest-mid:#1f6b4a;
+    --mint:#8fe6ab;
+    --mint-soft:#aef0c2;
+    --cream:#fffdf6;
+    --page-bg:#eef6ef;
+    --ink:#16352a;
+    --muted:#5c7d6c;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Inter',sans-serif;
+    background:var(--page-bg);
+    color:var(--ink);
+  }
+
+  .page{
+    max-width:760px;
+    margin:0 auto;
+    padding-bottom:48px;
+  }
+
+  /* ---------- Banner ---------- */
+  .hero-banner{
+    position:relative;
+    height:130px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    background:
+      radial-gradient(circle at 15% 30%, rgba(143,230,171,0.18), transparent 55%),
+      radial-gradient(circle at 85% 70%, rgba(143,230,171,0.14), transparent 50%),
+      linear-gradient(120deg, #06140e, var(--forest-dark) 45%, var(--forest) 100%);
+  }
+  .hero-banner::before,
+  .hero-banner::after{
+    content:"";
+    position:absolute;
+    border-radius:50%;
+    background:rgba(143,230,171,0.10);
+  }
+  .hero-banner::before{ width:180px; height:180px; left:-60px; top:-70px; }
+  .hero-banner::after{ width:140px; height:140px; right:-40px; bottom:-80px; }
+  .hero-banner h1{
+    position:relative;
+    z-index:1;
+    margin:0;
+    font-family:'Poppins',sans-serif;
+    font-weight:800;
+    letter-spacing:4px;
+    font-size:clamp(22px, 5vw, 32px);
+    color:#fdfff8;
+    text-transform:uppercase;
+  }
+
+  /* ---------- Recommend bar ---------- */
+  .recommend-bar{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    padding:18px 20px 0;
+    flex-wrap:wrap;
+  }
+  .pax-input-wrap{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:var(--cream);
+    border:1px solid #d9ecdf;
+    border-radius:999px;
+    padding:8px 16px;
+    flex:1;
+    min-width:200px;
+    max-width:300px;
+  }
+  .pax-input-wrap svg{ flex-shrink:0; opacity:0.55; }
+  .pax-input-wrap input{
+    border:none;
+    outline:none;
+    background:transparent;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    letter-spacing:0.5px;
+    color:var(--ink);
+    width:100%;
+    text-transform:uppercase;
+  }
+  .pax-input-wrap input::placeholder{ color:#9db8a8; }
+  .recommend-btn{
+    background:var(--forest-mid);
+    color:#fff;
+    border:none;
+    border-radius:999px;
+    padding:10px 22px;
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:12px;
+    letter-spacing:1px;
+    cursor:pointer;
+    transition:background .2s, transform .15s;
+  }
+  .recommend-btn:hover{ background:#175c3f; }
+  .recommend-btn:active{ transform:scale(0.96); }
+
+  /* ---------- Carousel section ---------- */
+  .carousel-section{
+    margin:18px 20px 0;
+    background:linear-gradient(160deg, var(--mint) 0%, var(--mint-soft) 100%);
+    border-radius:28px;
+    padding:30px 14px 36px;
+    position:relative;
+  }
+  .scroll-hint{
+    text-align:center;
+    margin:0 0 18px;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--forest-dark);
+    opacity:0.65;
+  }
+
+  .carousel-wrap{
+    position:relative;
+    display:flex;
+    align-items:center;
+  }
+
+  .nav-btn{
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    border:none;
+    background:rgba(255,255,255,0.85);
+    color:var(--forest-dark);
+    font-size:20px;
+    line-height:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+    box-shadow:0 4px 10px rgba(15,61,46,0.18);
+    transition:transform .15s, background .2s;
+    z-index:6;
+  }
+  .nav-btn:hover{ background:#fff; }
+  .nav-btn:active{ transform:scale(0.9); }
+  .nav-btn:disabled{ opacity:0.35; cursor:default; }
+  .nav-btn.prev{ margin-right:-6px; }
+  .nav-btn.next{ margin-left:-6px; }
+
+  .viewport{
+    flex:1;
+    overflow:hidden;
+    cursor:grab;
+    touch-action:pan-y;
+    padding:10px 0 18px;
+  }
+  .viewport:active{ cursor:grabbing; }
+  .viewport:focus-visible{ outline:2px solid var(--forest-mid); outline-offset:4px; border-radius:16px; }
+
+  .track{
+    display:flex;
+    gap:18px;
+    will-change:transform;
+    transition:transform .45s cubic-bezier(.22,.85,.32,1);
+  }
+
+  /* ---------- Card ---------- */
+  .card{
+    flex-shrink:0;
+    width:190px;
+    background:var(--cream);
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:0 10px 22px rgba(15,61,46,0.16);
+    transform:scale(calc(1 - var(--dist, 0) * 0.13));
+    opacity:calc(1 - var(--dist, 0) * 0.22);
+    transition:transform .45s cubic-bezier(.22,.85,.32,1), opacity .45s, box-shadow .3s;
+    cursor:pointer;
+    user-select:none;
+  }
+  .card.active{
+    transform:scale(1.1);
+    opacity:1;
+    box-shadow:0 16px 32px rgba(15,61,46,0.28);
+    z-index:5;
+    cursor:default;
+  }
+
+  .card-photo{
+    height:120px;
+    margin:10px 10px 0;
+    border-radius:14px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    position:relative;
+    overflow:hidden;
+    border:1.5px dashed rgba(255,255,255,0.55);
+  }
+  .card-photo svg{
+    width:38px;
+    height:38px;
+    flex-shrink:0;
+  }
+  .card-photo .photo-label{
+    font-family:'Inter',sans-serif;
+    font-size:8.5px;
+    font-weight:700;
+    letter-spacing:1.2px;
+    text-transform:uppercase;
+    color:rgba(255,255,255,0.82);
+  }
+
+  .card-info{
+    background:var(--forest);
+    color:#fff;
+    padding:10px 12px 12px;
+    margin-top:8px;
+  }
+  .card-info h3{
+    margin:0 0 4px;
+    font-family:'Poppins',sans-serif;
+    font-size:13.5px;
+    font-weight:700;
+    letter-spacing:0.2px;
+  }
+  .card-info .pax{
+    margin:0;
+    font-size:11px;
+    opacity:0.85;
+  }
+  .card-info .price{
+    margin:4px 0 0;
+    font-size:12.5px;
+    font-weight:700;
+    color:var(--mint);
+  }
+
+  .details-box{
+    background:var(--cream);
+    padding:10px 12px;
+  }
+  .details-box h4{
+    margin:0 0 8px;
+    text-align:center;
+    font-family:'Poppins',sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:1px;
+    color:var(--forest-dark);
+    border-bottom:1px solid #e2efe4;
+    padding-bottom:6px;
+  }
+  .details-content{
+    display:flex;
+    gap:8px;
+    align-items:flex-start;
+  }
+  .mini-photo{
+    width:46px;
+    height:46px;
+    border-radius:10px;
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:1.5px dashed rgba(255,255,255,0.6);
+  }
+  .mini-photo svg{
+    width:20px;
+    height:20px;
+  }
+  .details-content ul{
+    margin:0;
+    padding:0 0 0 14px;
+    font-size:10.5px;
+    line-height:1.55;
+    color:var(--ink);
+  }
+  .details-content li::marker{ color:var(--forest-mid); }
+
+  .book-btn{
+    display:block;
+    width:100%;
+    border:none;
+    background:var(--forest-mid);
+    color:#fff;
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:11.5px;
+    letter-spacing:1px;
+    padding:11px 0;
+    cursor:pointer;
+    transition:background .2s;
+  }
+  .book-btn:hover{ background:#175c3f; }
+
+  /* ---------- Toast ---------- */
+  .toast{
+    position:fixed;
+    bottom:24px;
+    left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--forest-dark);
+    color:#fdfff8;
+    padding:12px 22px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:500;
+    box-shadow:0 8px 24px rgba(0,0,0,0.25);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s, transform .25s;
+    z-index:50;
+    max-width:90%;
+    text-align:center;
+  }
+  .toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+  }
+
+  @media (max-width:480px){
+    .card{ width:160px; }
+    .card-photo{ height:82px; font-size:28px; }
+    .recommend-bar{ padding:16px 14px 0; }
+    .carousel-section{ margin:14px 10px 0; padding:24px 8px 28px; }
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .track, .card{ transition:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <header class="hero-banner">
+    <h1>Accommodations</h1>
+  </header>
+
+  <div class="recommend-bar">
+    <label class="pax-input-wrap">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="paxInput" type="number" min="1" placeholder="How many pax?">
+    </label>
+    <button class="recommend-btn" id="recommendBtn">RECOMMEND</button>
+  </div>
+
+  <section class="carousel-section">
+    <p class="scroll-hint">Drag, scroll, or use the arrows to browse available units</p>
+    <div class="carousel-wrap">
+      <button class="nav-btn prev" id="prevBtn" aria-label="Previous">‹</button>
+      <div class="viewport" id="viewport" tabindex="0">
+        <div class="track" id="track"></div>
+      </div>
+      <button class="nav-btn next" id="nextBtn" aria-label="Next">›</button>
+    </div>
+  </section>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ---------------------------------------------------------------
+  // DATA — swap card.photo / card.miniPhoto emoji for real <img>
+  // tags pointing at your Supabase Storage URLs when you wire this
+  // up to the live site.
+  // ---------------------------------------------------------------
+  function icon(paths){
+    return `<svg viewBox="0 0 48 48" fill="none" stroke="rgba(255,255,255,0.92)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+  }
+
+  const ICONS = {
+    table: icon('<line x1="6" y1="20" x2="42" y2="20"/><line x1="11" y1="20" x2="7" y2="35"/><line x1="37" y1="20" x2="41" y2="35"/><line x1="5" y1="27" x2="18" y2="27"/><line x1="30" y1="27" x2="43" y2="27"/>'),
+    tent: icon('<path d="M8 36 L24 12 L40 36 Z"/><line x1="24" y1="12" x2="24" y2="36"/><path d="M19 36 L24 24 L29 36"/>'),
+    small: icon('<path d="M10 24 L24 10 L38 24"/><rect x="14" y="24" width="20" height="14" rx="1.5"/><rect x="21" y="29" width="6" height="9"/>'),
+    medium: icon('<path d="M6 22 L24 8 L42 22"/><rect x="10" y="22" width="28" height="16" rx="1.5"/><rect x="13" y="26" width="6" height="6"/><rect x="20" y="29" width="8" height="9"/>'),
+    large: icon('<path d="M4 20 L24 6 L44 20"/><rect x="8" y="20" width="32" height="18" rx="1.5"/><rect x="11" y="25" width="6" height="6"/><rect x="31" y="25" width="6" height="6"/><rect x="20" y="29" width="8" height="9"/>'),
+    pavilion: icon('<path d="M4 18 L24 6 L44 18"/><line x1="24" y1="6" x2="24" y2="14"/><line x1="10" y1="18" x2="10" y2="40"/><line x1="24" y1="18" x2="24" y2="40"/><line x1="38" y1="18" x2="38" y2="40"/><line x1="6" y1="40" x2="42" y2="40"/>')
+  };
+
+  const accommodations = [
+    {
+      id:'table', title:'Table', paxMin:4, paxMax:6, price:250,
+      photo:ICONS.table, photoBg:'linear-gradient(135deg,#cfead8,#9fd6b4)',
+      features:['Picnic table','Bench seats x2','Shade umbrella','Garden view']
+    },
+    {
+      id:'tent', title:'Camping Tent', paxMin:1, paxMax:3, price:350,
+      photo:ICONS.tent, photoBg:'linear-gradient(135deg,#bfe3c9,#7fc89a)',
+      features:['Dome tent setup','Sleeping mats x2','Flashlight','Forest view','Fire pit access']
+    },
+    {
+      id:'small', title:'A-House Small', paxMin:1, paxMax:2, price:400,
+      photo:ICONS.small, photoBg:'linear-gradient(135deg,#d8c79b,#b89a63)',
+      features:['Bed mattress','2 Pillows','Electric fan','River view','Table']
+    },
+    {
+      id:'medium', title:'A-House Medium', paxMin:3, paxMax:5, price:1300,
+      photo:ICONS.medium, photoBg:'linear-gradient(135deg,#d8c79b,#a9844f)',
+      features:['Bed mattress','5 Pillows','3 Blankets','Electric fan','Tent','Table & Chair'],
+      featured:true
+    },
+    {
+      id:'large', title:'A-House Large', paxMin:6, paxMax:8, price:1800,
+      photo:ICONS.large, photoBg:'linear-gradient(135deg,#e0d2a6,#bc9a5b)',
+      features:['Bed mattress','6 Pillows','4 Blankets','Electric fan','Tent','Table & Chairs']
+    },
+    {
+      id:'pavilion', title:'Pavilion', paxMin:15, paxMax:30, price:2500,
+      photo:ICONS.pavilion, photoBg:'linear-gradient(135deg,#bcdac8,#86b89e)',
+      features:['Long table seating','Roofed shelter','Ceiling fans','Power outlets','Group capacity']
+    }
+  ];
+
+  const track = document.getElementById('track');
+  const viewport = document.getElementById('viewport');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const toastEl = document.getElementById('toast');
+
+  let currentIndex = accommodations.findIndex(a => a.featured);
+  if(currentIndex < 0) currentIndex = 0;
+
+  // ---- build cards ----
+  accommodations.forEach((acc, i) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.index = i;
+
+    const paxLabel = acc.paxMin === acc.paxMax
+      ? `${acc.paxMin} pax`
+      : `${acc.paxMin}-${acc.paxMax} pax`;
+
+    card.innerHTML = `
+      <div class="card-photo" style="background:${acc.photoBg}">${acc.photo}<span class="photo-label">Add photo</span></div>
+      <div class="card-info">
+        <h3>${acc.title}</h3>
+        <p class="pax">${paxLabel}</p>
+        <p class="price">PHP ${acc.price.toLocaleString()}</p>
+      </div>
+      <div class="details-box">
+        <h4>DETAILS</h4>
+        <div class="details-content">
+          <div class="mini-photo" style="background:${acc.photoBg}">${acc.photo}</div>
+          <ul>${acc.features.map(f => `<li>${f}</li>`).join('')}</ul>
+        </div>
+      </div>
+      <button class="book-btn">BOOK NOW!</button>
+    `;
+
+    card.addEventListener('click', (e) => {
+      if(e.target.classList.contains('book-btn')){
+        showToast(`Selected "${acc.title}" — hook this button up to your multi-step booking flow.`);
+        return;
+      }
+      goTo(i);
+    });
+
+    track.appendChild(card);
+  });
+
+  const cards = Array.from(track.children);
+
+  // ---- carousel positioning ----
+  function update(){
+    const containerWidth = viewport.clientWidth;
+    const activeCard = cards[currentIndex];
+    const cardCenter = activeCard.offsetLeft + activeCard.offsetWidth / 2;
+    const offset = containerWidth / 2 - cardCenter;
+    track.style.transform = `translateX(${offset}px)`;
+
+    cards.forEach((card, i) => {
+      const dist = Math.abs(i - currentIndex);
+      card.style.setProperty('--dist', dist);
+      card.classList.toggle('active', i === currentIndex);
+    });
+
+    prevBtn.disabled = currentIndex === 0;
+    nextBtn.disabled = currentIndex === cards.length - 1;
+  }
+
+  function goTo(index){
+    currentIndex = Math.max(0, Math.min(cards.length - 1, index));
+    update();
+  }
+
+  prevBtn.addEventListener('click', () => goTo(currentIndex - 1));
+  nextBtn.addEventListener('click', () => goTo(currentIndex + 1));
+
+  viewport.addEventListener('keydown', (e) => {
+    if(e.key === 'ArrowRight') goTo(currentIndex + 1);
+    if(e.key === 'ArrowLeft') goTo(currentIndex - 1);
+  });
+
+  // ---- drag / swipe ----
+  let dragging = false, startX = 0;
+  viewport.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    startX = e.clientX;
+    viewport.setPointerCapture(e.pointerId);
+  });
+  viewport.addEventListener('pointerup', (e) => {
+    if(!dragging) return;
+    dragging = false;
+    const delta = e.clientX - startX;
+    if(delta > 45) goTo(currentIndex - 1);
+    else if(delta < -45) goTo(currentIndex + 1);
+  });
+  viewport.addEventListener('pointercancel', () => { dragging = false; });
+
+  // ---- mouse wheel horizontal browsing ----
+  let wheelLock = false;
+  viewport.addEventListener('wheel', (e) => {
+    if(wheelLock) return;
+    if(Math.abs(e.deltaX) < 10 && Math.abs(e.deltaY) < 10) return;
+    e.preventDefault();
+    const dir = (e.deltaX || e.deltaY) > 0 ? 1 : -1;
+    goTo(currentIndex + dir);
+    wheelLock = true;
+    setTimeout(() => wheelLock = false, 350);
+  }, { passive:false });
+
+  window.addEventListener('resize', update);
+
+  // ---- recommend by pax ----
+  document.getElementById('recommendBtn').addEventListener('click', () => {
+    const input = document.getElementById('paxInput');
+    const val = parseInt(input.value, 10);
+
+    if(!val || val < 1){
+      showToast('Enter how many pax first.');
+      return;
+    }
+
+    // exact fits, prefer the tightest capacity
+    let candidates = accommodations
+      .map((a, i) => ({ a, i }))
+      .filter(({a}) => val >= a.paxMin && val <= a.paxMax)
+      .sort((x, y) => (x.a.paxMax - x.a.paxMin) - (y.a.paxMax - y.a.paxMin));
+
+    let match;
+    if(candidates.length){
+      match = candidates[0];
+    } else {
+      // no exact fit: smallest unit that can still hold everyone
+      const bigEnough = accommodations
+        .map((a, i) => ({ a, i }))
+        .filter(({a}) => a.paxMax >= val)
+        .sort((x, y) => x.a.paxMax - y.a.paxMax);
+      match = bigEnough[0] || { a: accommodations[accommodations.length - 1], i: accommodations.length - 1 };
+    }
+
+    goTo(match.i);
+    showToast(`Recommended: ${match.a.title} for ${val} pax.`);
+  });
+
+  // ---- toast ----
+  let toastTimer;
+  function showToast(msg){
+    clearTimeout(toastTimer);
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2600);
+  }
+
+  update();
+</script>
+
+</body>
+</html>

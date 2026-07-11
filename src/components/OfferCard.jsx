@@ -1,4 +1,4 @@
-export default function OfferCard({ imageUrl, altText, icon: Icon, title, description, link = "#" }) {
+export default function OfferCard({ imageUrl, altText, icon: Icon, title, description, link = '#', onDiscoverClick }) {
     return (
         <article className="offer-card">
             <div className="card-media">
@@ -10,7 +10,18 @@ export default function OfferCard({ imageUrl, altText, icon: Icon, title, descri
                 </div>
                 <h3>{title}</h3>
                 <p>{description}</p>
-                <a href={link} className="discover-btn">Discover More</a>
+                <a
+                    href={link}
+                    className="discover-btn"
+                    onClick={(event) => {
+                        if (onDiscoverClick) {
+                            event.preventDefault()
+                            onDiscoverClick()
+                        }
+                    }}
+                >
+                    Discover More
+                </a>
             </div>
         </article>
     );
