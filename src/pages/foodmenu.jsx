@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useEffect, useState } from 'react'
 import './foodmenu.css'
 import LeafDeco from '../components/LeafDeco'
@@ -75,3 +76,21 @@ function FoodMenuPage({ onBack }) {
 }
 
 export default FoodMenuPage
+=======
+import './components/css/foodmenu.css'
+import Footer from '../components/footer'
+
+
+function FoodMenu() {
+    return (
+        <main className="page food-menu-page">
+            <h1 className ="Food">Food Page</h1>
+
+
+            <Footer />
+        </main>
+    )
+}
+
+export default FoodMenu
+>>>>>>> origin/master

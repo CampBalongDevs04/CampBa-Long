@@ -9,15 +9,6 @@
     --leaf: #4C6B4F;
   }
 
-  *{ box-sizing: border-box; }
-
-  body{
-    margin: 0;
-    background: #DCE7DE;
-    font-family: 'Jost', sans-serif;
-    color: var(--ink);
-  }
-
   .offer-section{
     position: relative;
     background: var(--cream);

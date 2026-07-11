@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import './css/accommodations.css';
 import LotusDividerIcon from './LotusDividerIcon';
+import LeafDeco from './LeafDeco';
+
+
+//---ACCOMMODATIONS---//
+import smallHouse from '../assets/temp/A-House-Small.png';
+import mediumHouse from '../assets/temp/A-House-Medium.png';
+import largeHouse from '../assets/temp/A-House-Family.png';
+
 
 function UnitIcon({ paths }) {
     return (
@@ -17,6 +25,9 @@ function UnitIcon({ paths }) {
     );
 }
 
+// NOTE: These SVG icons are only PLACEHOLDERS shown while a card has no
+// `image` yet. Once you add `image:` to every accommodation below, this
+// whole ICONS block (and the UnitIcon component above) can be deleted.
 const ICONS = {
     table: (
         <>
@@ -70,38 +81,48 @@ const ICONS = {
     ),
 };
 
-// Swap the icon/photoBg pairs for real <img> tags pointing at your
-// Supabase Storage URLs when this is wired up to the live site.
+// To show a real photo on a card, uncomment its `image:` line below and
+// make sure the matching import at the top of this file is uncommented too.
+// `photoBg` stays as the fallback background while the photo loads.
 const accommodations = [
     {
         id: 'table', title: 'Table', paxMin: 4, paxMax: 6, price: 250,
         icon: ICONS.table, photoBg: 'linear-gradient(135deg,#4C6B4F,#1E3A2B)',
+        // image: TablePhoto, // <- actual Table photo goes here
         features: ['Picnic table', 'Bench seats x2', 'Shade umbrella', 'Garden view'],
     },
     {
         id: 'tent', title: 'Camping Tent', paxMin: 1, paxMax: 3, price: 350,
         icon: ICONS.tent, photoBg: 'linear-gradient(135deg,#5d7a5a,#24422f)',
+        // image: TentPhoto, // <- actual Camping Tent photo goes here
         features: ['Dome tent setup', 'Sleeping mats x2', 'Flashlight', 'Forest view', 'Fire pit access'],
     },
     {
         id: 'small', title: 'A-House Small', paxMin: 1, paxMax: 2, price: 400,
         icon: ICONS.small, photoBg: 'linear-gradient(135deg,#C6A15B,#8a6b34)',
+        image: smallHouse,
+        // image: AHouseSmallPhoto, // <- actual A-House Small photo goes here
         features: ['Bed mattress', '2 Pillows', 'Electric fan', 'River view', 'Table'],
     },
     {
         id: 'medium', title: 'A-House Medium', paxMin: 3, paxMax: 5, price: 1300,
         icon: ICONS.medium, photoBg: 'linear-gradient(135deg,#D9BD84,#96733a)',
+        image: mediumHouse,
+        // image: AHouseMediumPhoto, // <- actual A-House Medium photo goes here
         features: ['Bed mattress', '5 Pillows', '3 Blankets', 'Electric fan', 'Tent', 'Table & Chair'],
         featured: true,
     },
     {
         id: 'large', title: 'A-House Large', paxMin: 6, paxMax: 8, price: 1800,
         icon: ICONS.large, photoBg: 'linear-gradient(135deg,#C6A15B,#7a5c2a)',
+        image: largeHouse,
+        // image: AHouseLargePhoto, // <- actual A-House Large photo goes here
         features: ['Bed mattress', '6 Pillows', '4 Blankets', 'Electric fan', 'Tent', 'Table & Chairs'],
     },
     {
         id: 'pavilion', title: 'Pavilion', paxMin: 15, paxMax: 30, price: 2500,
         icon: ICONS.pavilion, photoBg: 'linear-gradient(135deg,#4C6B4F,#16291E)',
+        // image: PavilionPhoto, // <- actual Pavilion photo goes here
         features: ['Long table seating', 'Roofed shelter', 'Ceiling fans', 'Power outlets', 'Group capacity'],
     },
 ];
@@ -236,6 +257,12 @@ export default function Accommodations() {
 
     return (
         <section className="acc-section" id="accommodations">
+            {/* decorative corner leaves — same motif as the What We Offer section */}
+            <LeafDeco className="tl" />
+            <LeafDeco className="tr" />
+            <LeafDeco className="bl" />
+            <LeafDeco className="br" />
+
             <div className="acc-header">
                 <LotusDividerIcon />
                 <h1 className="acc-title">Accommodations</h1>
@@ -292,6 +319,7 @@ export default function Accommodations() {
                                     onClick={() => goTo(i)}
                                 >
                                     <div className="acc-card-photo" style={{ background: acc.photoBg }}>
+                                        {acc.featured && <span className="acc-badge">Most Popular</span>}
                                         {acc.image ? (
                                             <img src={acc.image} alt={acc.title} draggable="false" />
                                         ) : (
@@ -307,19 +335,17 @@ export default function Accommodations() {
                                         <p className="acc-price">PHP {acc.price.toLocaleString()}</p>
                                     </div>
                                     <div className="acc-details">
-                                        <h4>Details</h4>
-                                        <div className="acc-details-content">
-                                            <div className="acc-mini-photo" style={{ background: acc.photoBg }}>
-                                                {acc.image ? (
-                                                    <img src={acc.image} alt="" draggable="false" />
-                                                ) : (
-                                                    <UnitIcon paths={acc.icon} />
-                                                )}
-                                            </div>
-                                            <ul>
-                                                {acc.features.map((f) => <li key={f}>{f}</li>)}
-                                            </ul>
-                                        </div>
+                                        <h4>What&apos;s Included</h4>
+                                        <ul className="acc-feature-list">
+                                            {acc.features.map((f) => (
+                                                <li key={f}>
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                        <path d="M20 6L9 17l-5-5" />
+                                                    </svg>
+                                                    {f}
+                                                </li>
+                                            ))}
+                                        </ul>
                                     </div>
                                     <button
                                         className="acc-book-btn"
@@ -340,6 +366,18 @@ export default function Accommodations() {
                     >
                         ›
                     </button>
+                </div>
+
+                {/* gold pagination dots */}
+                <div className="acc-dots">
+                    {accommodations.map((a, i) => (
+                        <button
+                            key={a.id}
+                            className={`acc-dot${i === currentIndex ? ' on' : ''}`}
+                            onClick={() => goTo(i)}
+                            aria-label={`Go to ${a.title}`}
+                        />
+                    ))}
                 </div>
             </div>
 
