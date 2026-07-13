@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import './css/offers.css';
 import OfferCard from './OfferCard';
+import OfferGalleryModal from './OfferGalleryModal';
 import TagItem from './TagItem';
 import LeafDeco from './LeafDeco';
 import LotusDividerIcon from './LotusDividerIcon';
@@ -100,7 +102,9 @@ const tagsData = [
     { icon: WellnessIcon, label: "Wellness" },
 ];
 
-export default function Offers({ onFoodSelect }) {
+export default function Offers() {
+    const [selectedOffer, setSelectedOffer] = useState(null);
+
     return(
         <>
             <section className="offer-section">
@@ -114,7 +118,9 @@ export default function Offers({ onFoodSelect }) {
                     <div className="Resort-images">
                         {resortFeatures.map(({ image, altText, icon: Icon, title, description }) => (
                             <figure className="resort-item" key={title}>
-                                <img src={image} alt={altText} />
+                                <div className="resort-media">
+                                    <img src={image} alt={altText} />
+                                </div>
                                 <div className="resort-feature">
                                     <span className="feature-icon"><Icon /></span>
                                     <div className="feature-text">
@@ -156,7 +162,7 @@ export default function Offers({ onFoodSelect }) {
                         <OfferCard
                             key={offer.title}
                             {...offer}
-                            onDiscoverClick={offer.title === 'Foods' ? onFoodSelect : undefined}
+                            onDiscoverClick={() => setSelectedOffer(offer)}
                         />
                     ))}
                 </div>
@@ -166,6 +172,13 @@ export default function Offers({ onFoodSelect }) {
                         <TagItem key={tag.label} {...tag} />
                     ))}
                 </div>
+
+                {selectedOffer && (
+                    <OfferGalleryModal
+                        offer={selectedOffer}
+                        onClose={() => setSelectedOffer(null)}
+                    />
+                )}
 
                 
 

@@ -1,0 +1,157 @@
+/* ---------- Admin login ---------- */
+.admin-login-section{
+    background-color: #1d3025;
+    min-height: 100vh;
+    width: 100%;
+    padding: 140px 20px 80px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.admin-login-card{
+    width: 100%;
+    max-width: 420px;
+    background: var(--cream);
+    border-radius: 15px;
+    border-top: 3px solid var(--gold);
+    padding: 40px 36px 36px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 14px 24px -12px rgba(10, 22, 14, 0.55);
+    text-align: center;
+}
+
+.admin-login-logo{
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    margin: 0 auto 10px;
+}
+
+.admin-login-eyebrow{
+    font-family: 'Jost', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 0 0 6px;
+}
+
+.admin-login-title{
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 700;
+    font-size: clamp(1.7rem, 4vw, 2.2rem);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--forest-dark);
+    margin: 0 0 4px;
+}
+
+.admin-login-subtext{
+    font-family: 'Jost', sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 0.4px;
+    line-height: 1.6;
+    color: var(--leaf);
+    margin: 0;
+}
+
+.admin-login-card .lotus-divider{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin: 18px 0 22px;
+}
+.admin-login-card .lotus-divider .rule{
+    flex: 1;
+    height: 1px;
+    background: rgba(198, 161, 91, 0.45);
+}
+
+.admin-login-form{
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    text-align: left;
+}
+
+.admin-login-field{
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+.admin-login-field label{
+    font-family: 'Jost', sans-serif;
+    font-weight: 600;
+    font-size: 0.78rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--forest-dark);
+}
+.admin-login-field input{
+    width: 100%;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.92rem;
+    letter-spacing: 0.3px;
+    color: var(--ink);
+    background: #FDFCF7;
+    border: 1px solid rgba(198, 161, 91, 0.45);
+    border-radius: 8px;
+    padding: 13px 16px;
+    outline: none;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.admin-login-field input::placeholder{
+    color: rgba(42, 42, 34, 0.4);
+}
+.admin-login-field input:focus{
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(198, 161, 91, 0.2);
+}
+
+.admin-login-btn{
+    font-family: 'Jost', sans-serif;
+    font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--cream);
+    background: var(--forest-dark);
+    border: 1px solid var(--forest-dark);
+    border-radius: 999px;
+    padding: 13px 32px;
+    margin-top: 6px;
+    cursor: pointer;
+    transition: background 0.25s ease, color 0.25s ease;
+}
+.admin-login-btn:hover{
+    background: var(--gold);
+    border-color: var(--gold);
+    color: var(--forest-dark);
+}
+
+.admin-login-error{
+    font-family: 'Jost', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.4px;
+    color: #9C3B2E;
+    background: rgba(156, 59, 46, 0.08);
+    border: 1px solid rgba(156, 59, 46, 0.3);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin: 16px 0 0;
+    text-align: center;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 640px){
+    .admin-login-section{
+        padding: 120px 14px 60px;
+    }
+    .admin-login-card{
+        padding: 32px 22px 28px;
+    }
+}
