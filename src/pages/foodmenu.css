@@ -4,6 +4,7 @@
   min-height: 100vh;
   background: #f9f5ea;
   padding: 3rem 1.5rem 4rem;
+  font-family: 'Carmorant Gramound', serif;
 }
 
 .foodmenu-container {
@@ -79,6 +80,26 @@
   justify-content: start;
   justify-items: start;
   grid-template-columns: repeat(auto-fit, minmax(320px, 360px));
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.foodmenu-grid.slide-in {
+  opacity: 0;
+  transform: translateX(24px);
+  animation: slideInFromRight 0.45s ease forwards;
+}
+
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .food-card {

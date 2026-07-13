@@ -58,10 +58,27 @@ const foodItems = [
 function FoodMenuPage() {
   const navigate = useNavigate()
   const [selectedCategory, setSelectedCategory] = useState('All')
+  const [animateList, setAnimateList] = useState(false)
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
   }, [])
+
+  useEffect(() => {
+    if (!animateList) return
+
+    const timer = window.setTimeout(() => {
+      setAnimateList(false)
+    }, 450)
+
+    return () => window.clearTimeout(timer)
+  }, [animateList])
+
+  const handleCategoryClick = (category) => {
+    if (category === selectedCategory) return
+    setSelectedCategory(category)
+    setAnimateList(true)
+  }
 
   const filteredItems = selectedCategory === 'All'
     ? foodItems
@@ -90,7 +107,7 @@ function FoodMenuPage() {
                 key={category}
                 type="button"
                 className={`foodmenu-filter ${selectedCategory === category ? 'active' : ''}`}
-                onClick={() => setSelectedCategory(category)}
+                onClick={() => handleCategoryClick(category)}
               >
                 {category}
               </button>
@@ -98,7 +115,7 @@ function FoodMenuPage() {
           </div>
         </div>
 
-        <div className="foodmenu-grid">
+        <div className={`foodmenu-grid ${animateList ? 'slide-in' : ''}`}>
           {filteredItems.map((item) => {
             const { category, title, description, badge, price, categories } = item
             const displayCategory = Array.isArray(categories) ? categories.join(' • ') : category
