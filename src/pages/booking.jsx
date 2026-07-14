@@ -5,6 +5,7 @@ import BookingCalendar from './components/BookingCalendar'
 import TimeSelector, { timeOptions } from './components/timeSelector'
 import ScheduleNote from './components/scheduleNote'
 import AccomodationList from './components/accomodationList'
+import PaxInput from './components/paxInput'
 
 export default function Booking(){
     const location = useLocation()
@@ -12,6 +13,8 @@ export default function Booking(){
     const [selectedAccomodation, setSelectedAccomodation] = useState(
         location.state?.accomodationId ?? null
     )
+    const [pax, setPax] = useState(null)
+    const [guest, setGuest] = useState({ fullName: '', mobile: '', email: '' })
 
     return(
         <main className="page booking-page">
@@ -36,6 +39,15 @@ export default function Booking(){
                         selectedAccomodation={selectedAccomodation}
                         onSelectAccomodation={setSelectedAccomodation}
                     />
+
+                    <PaxInput
+                        pax={pax}
+                        onPaxChange={setPax}
+                        selectedAccomodation={selectedAccomodation}
+                        guest={guest}
+                        onGuestChange={setGuest}
+                    />
+
 
                 </section>
             </div>
