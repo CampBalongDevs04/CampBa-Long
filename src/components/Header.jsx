@@ -48,7 +48,7 @@ function Header() {
                         {label}
                     </NavLink>
                 ))}
-                <Link className="nav-cta" to="/my-booking" onClick={closeMenu}>Book Now</Link>
+                <Link className="nav-cta" to="/booking" onClick={closeMenu}>Book Now</Link>
             </nav>
         </header>
     )

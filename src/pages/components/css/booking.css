@@ -1,0 +1,122 @@
+html{
+    scroll-behavior: smooth;
+
+}
+:root{
+    --header-h: 80px;
+     --cream: #F5F1E4;
+    --cream-2: #EFE9D6;
+    --forest: #1E3A2B;
+    --forest-dark: #16291E;
+    --gold: #C6A15B;
+    --gold-soft: #D9BD84;
+    --ink: #2A2A22;
+    --leaf: #4C6B4F;
+
+}
+[id] {
+    scroll-margin-top: calc(var(--header-h) + 16px);
+}
+.booking-page{
+    background-color: rgb(253, 253, 253);
+    min-height: 100vh;
+}
+.booking-header{
+    position: relative;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: calc(100vh - var(--header-h));
+    margin-top: var(--header-h);
+}
+.booking-calendar-section{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 32px;
+    padding: 40px 100px;
+}
+.booking-time-selector{
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 648px; /* matches the two 300px calendar panels + 48px gap */
+    font-family: 'Cormorant Garamond', serif;
+}
+.title-selector{
+    margin: 0 0 12px;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--forest);
+}
+.time-choices{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+.time-card{
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background-color: var(--cream);
+    border: 1px solid var(--gold-soft);
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.time-card:hover{
+    border-color: var(--gold);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+}
+.time-card.selected{
+    border-color: var(--leaf);
+    box-shadow: 0 6px 18px rgba(76, 107, 79, 0.25);
+}
+.time-card-circle{
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid var(--gold-soft);
+    background-color: transparent;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.time-card.selected .time-card-circle{
+    background-color: #3DA35D;
+    border-color: #3DA35D;
+}
+.time-card-info{
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.time-card-label{
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--forest);
+}
+.time-card-time{
+    font-size: 14px;
+    color: var(--ink);
+}
+.time-card-desc{
+    font-size: 13px;
+    font-style: italic;
+    color: var(--leaf);
+}
+.book-title {
+    
+    font-family: 'Cormorant Garamond', serif;
+    color: var(--gold);
+    font-size: 75px;
+    line-height: 0.95;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.123);
+    text-transform: uppercase;
+    text-align: left;
+    padding-left: 100px;
+    padding-top: 40px;    
+}
