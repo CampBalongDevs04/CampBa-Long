@@ -1,0 +1,315 @@
+.booking-calendar {
+    box-sizing: border-box;
+    width: fit-content;
+    max-width: 100%;
+    font-family: 'Cormorant Garamond', serif;
+    color: var(--ink);
+}
+
+/* ---- two separate calendar cards with a gap ---- */
+.cal-panels {
+    display: flex;
+    gap: 48px;
+    flex-wrap: wrap;
+}
+
+.cal-panel {
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    width: 300px;
+    background: var(--cream);
+    border: 1px solid var(--gold-soft);
+    border-radius: 14px;
+    padding: 18px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+
+.cal-panel-title {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--gold-soft);
+}
+
+.cal-panel-label {
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--leaf);
+}
+
+.cal-panel-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--forest);
+}
+
+/* date text matches each calendar's selection color */
+.cal-panel-checkin .cal-panel-value {
+    color: var(--forest);
+}
+
+.cal-panel-checkout .cal-panel-value {
+    color: var(--gold);
+}
+
+/* ---- month header ---- */
+.cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.cal-month-label {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--forest);
+    letter-spacing: 0.5px;
+}
+
+.cal-nav {
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--gold-soft);
+    border-radius: 50%;
+    background: #fff;
+    color: var(--forest);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.cal-nav:hover:not(:disabled) {
+    background: var(--cream-2);
+}
+
+.cal-nav:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+/* ---- grid ---- */
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+}
+
+.cal-weekdays {
+    margin-bottom: 4px;
+}
+
+.cal-weekday {
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--leaf);
+    padding: 3px 0;
+}
+
+.cal-cell {
+    position: relative;
+    aspect-ratio: 1 / 1;
+}
+
+.cal-day {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--ink);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.cal-day:hover:not(:disabled):not(.cal-disabled) {
+    background: var(--gold-soft);
+    color: var(--forest-dark);
+}
+
+.cal-today:not(.cal-disabled) {
+    outline: 1px solid var(--gold);
+    outline-offset: -1px;
+}
+
+/* ---- disabled days (past dates, Mondays, dates before check-in) ---- */
+.cal-disabled {
+    color: #b8b4a6;
+    background: #eceade;
+    cursor: not-allowed;
+    text-decoration: line-through;
+}
+
+/* ---- Monday maintenance tooltip ---- */
+.cal-maintenance::after {
+    content: attr(data-hint);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) scale(0.95);
+    background: var(--forest-dark);
+    color: var(--cream);
+    font-size: 13px;
+    font-family: 'Cormorant Garamond', serif;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    padding: 6px 12px;
+    border-radius: 8px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.cal-maintenance::before {
+    content: '';
+    position: absolute;
+    bottom: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: var(--forest-dark);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.cal-maintenance:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) scale(1);
+}
+
+.cal-maintenance:hover::before {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* ---- selection states ---- */
+/* check-in: forest green */
+.cal-panel-checkin .cal-selected {
+    background: var(--forest);
+    color: var(--cream);
+    font-weight: 600;
+}
+
+.cal-panel-checkin .cal-selected:hover:not(:disabled) {
+    background: var(--forest-dark);
+    color: var(--cream);
+}
+
+/* check-out: gold */
+.cal-panel-checkout .cal-selected {
+    background: var(--gold);
+    color: #fff;
+    font-weight: 600;
+}
+
+.cal-panel-checkout .cal-selected:hover:not(:disabled) {
+    background: #b08d48;
+    color: #fff;
+}
+
+.cal-in-range:not(.cal-disabled):not(.cal-selected) {
+    background: var(--cream-2);
+    border-radius: 0;
+    color: var(--forest);
+}
+
+/* ---- same-day check-out panel (Day Time schedule) ---- */
+.cal-panel-sameday {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 12px;
+}
+
+.cal-sameday-title {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #1E8449;
+    max-width: 180px;
+}
+
+.cal-sameday-icon {
+    width: 120px;
+    height: 120px;
+    color: #1E8449;
+}
+
+.cal-sameday-date {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--ink);
+}
+
+.cal-sameday-note {
+    margin: 0;
+    font-size: 15px;
+    color: #1E8449;
+    max-width: 240px;
+}
+
+/* ---- footer ---- */
+.cal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 14px;
+}
+
+.cal-note {
+    margin: 0;
+    font-size: 13px;
+    font-style: italic;
+    color: var(--leaf);
+}
+
+.cal-clear {
+    background: none;
+    border: 1px solid var(--gold);
+    border-radius: 999px;
+    padding: 4px 14px;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--forest);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s ease;
+}
+
+.cal-clear:hover {
+    background: var(--cream-2);
+}
+
+/* ---- small screens: stack the two calendars ---- */
+@media (max-width: 720px) {
+    .cal-panels {
+        flex-direction: column;
+    }
+
+    .cal-footer {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

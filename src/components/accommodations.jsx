@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
 import './css/accommodations.css';
 import LotusDividerIcon from './LotusDividerIcon';
 import LeafDeco from './LeafDeco';
@@ -134,6 +135,7 @@ function paxLabel({ paxMin, paxMax }) {
 }
 
 export default function Accommodations() {
+    const navigate = useNavigate();
     const [currentIndex, setCurrentIndex] = useState(defaultIndex);
     const [paxValue, setPaxValue] = useState('');
     const [toast, setToast] = useState({ message: '', visible: false });
@@ -211,14 +213,26 @@ export default function Accommodations() {
     };
 
     const handlePointerDown = (e) => {
-        dragRef.current = { dragging: true, startX: e.clientX };
-        e.currentTarget.setPointerCapture(e.pointerId);
+        dragRef.current = { dragging: false, pressed: true, startX: e.clientX };
+    };
+
+    // Capturing the pointer on pointerdown retargets the eventual click to the
+    // viewport, which swallows clicks on the cards and the "Book Now!" button.
+    // Only capture once the pointer has actually moved (a real drag).
+    const handlePointerMove = (e) => {
+        const drag = dragRef.current;
+        if (!drag.pressed || drag.dragging) return;
+        if (Math.abs(e.clientX - drag.startX) > 8) {
+            drag.dragging = true;
+            e.currentTarget.setPointerCapture(e.pointerId);
+        }
     };
 
     const handlePointerUp = (e) => {
-        if (!dragRef.current.dragging) return;
-        dragRef.current.dragging = false;
-        const delta = e.clientX - dragRef.current.startX;
+        const drag = dragRef.current;
+        dragRef.current = { ...drag, dragging: false, pressed: false };
+        if (!drag.dragging) return;
+        const delta = e.clientX - drag.startX;
         if (delta > 45) goTo(currentIndex - 1);
         else if (delta < -45) goTo(currentIndex + 1);
     };
@@ -252,7 +266,7 @@ export default function Accommodations() {
     };
 
     const handleBook = (acc) => {
-        showToast(`Selected "${acc.title}" — booking coming soon.`);
+        navigate('/booking', { state: { accomodationId: acc.id } });
     };
 
     return (
@@ -307,8 +321,9 @@ export default function Accommodations() {
                         tabIndex={0}
                         onKeyDown={handleKeyDown}
                         onPointerDown={handlePointerDown}
+                        onPointerMove={handlePointerMove}
                         onPointerUp={handlePointerUp}
-                        onPointerCancel={() => { dragRef.current.dragging = false; }}
+                        onPointerCancel={() => { dragRef.current = { dragging: false, pressed: false, startX: 0 }; }}
                     >
                         <div className="acc-track" ref={trackRef}>
                             {accommodations.map((acc, i) => (
