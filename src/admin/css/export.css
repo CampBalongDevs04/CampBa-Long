@@ -1,0 +1,122 @@
+/* ---------- Export report card ---------- */
+.export-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+    width: 100%;
+    background: var(--cream);
+    border-radius: 15px;
+    border-top: 3px solid var(--gold);
+    padding: 26px 28px;
+    box-shadow: 0 10px 20px -12px rgba(10, 22, 14, 0.45);
+}
+
+.export-card-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 240px;
+    flex: 1;
+}
+
+.export-card-title {
+    margin: 0;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(1.3rem, 2.4vw, 1.7rem);
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--forest-dark);
+}
+
+.export-card-description {
+    margin: 0;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.88rem;
+    letter-spacing: 0.4px;
+    line-height: 1.6;
+    color: var(--leaf);
+}
+
+.export-card-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.export-btn {
+    font-family: 'Jost', sans-serif;
+    font-weight: 600;
+    font-size: 0.76rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--forest-dark);
+    background: transparent;
+    border: 1px solid var(--gold);
+    border-radius: 999px;
+    padding: 11px 26px;
+    cursor: pointer;
+    transition: background 200ms ease, color 200ms ease, transform 200ms ease;
+}
+
+.export-btn:hover,
+.export-btn:focus-visible {
+    background: var(--gold);
+    color: var(--cream);
+    transform: translateY(-1px);
+}
+
+/* ---------- Custom range calendar card ---------- */
+.export-card-calendar {
+    align-items: flex-start;
+}
+
+.export-card-calendar .export-card-copy {
+    gap: 10px;
+}
+
+.export-range-btn {
+    align-self: flex-start;
+    margin-top: 8px;
+}
+
+.export-range-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.export-range-btn:disabled:hover {
+    background: transparent;
+    color: var(--forest-dark);
+    transform: none;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 640px) {
+    .export-card {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 22px 20px;
+    }
+
+    .export-card-buttons {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .export-btn {
+        text-align: center;
+        padding: 12px 10px;
+    }
+
+    .export-card-calendar {
+        align-items: center;
+    }
+
+    .export-range-btn {
+        align-self: stretch;
+        grid-column: 1 / -1;
+    }
+}

@@ -146,6 +146,83 @@
     text-align: center;
 }
 
+/* ---------- Admin dashboard ---------- */
+.admin-dash-section{
+    background-color: #1d3025;
+    min-height: 100vh;
+    width: 100%;
+    box-sizing: border-box;
+    padding: calc(var(--admin-header-h) + 40px) clamp(20px, 4vw, 48px) 60px;
+}
+
+.admin-dash-content{
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+}
+
+.admin-dash-heading{
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.admin-dash-eyebrow{
+    font-family: 'Jost', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 0;
+}
+
+.admin-dash-title{
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 700;
+    font-size: clamp(1.8rem, 4vw, 2.4rem);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--cream);
+    margin: 0;
+}
+
+.admin-dash-back{
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Jost', sans-serif;
+    font-weight: 600;
+    font-size: 0.78rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--cream);
+    background: transparent;
+    border: 1px solid rgba(198, 161, 91, 0.45);
+    border-radius: 999px;
+    padding: 9px 20px;
+    margin-bottom: -8px;
+    cursor: pointer;
+    transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+.admin-dash-back:hover{
+    background: var(--gold);
+    border-color: var(--gold);
+    color: var(--forest-dark);
+}
+
+.admin-dash-placeholder{
+    font-family: 'Jost', sans-serif;
+    font-size: 0.95rem;
+    letter-spacing: 0.4px;
+    color: var(--cream-2);
+    margin: 0;
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 640px){
     .admin-login-section{
@@ -153,5 +230,8 @@
     }
     .admin-login-card{
         padding: 32px 22px 28px;
+    }
+    .admin-dash-section{
+        padding: calc(var(--admin-header-h) + 28px) 14px 48px;
     }
 }

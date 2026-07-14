@@ -1,7 +1,5 @@
 import { useEffect } from 'react';
 
-// import the gallery photos here, then replace the null values below
-// e.g. import PoolImage from '../assets/images/pool.png';
 
 const imagePoolandRiver = [
     {

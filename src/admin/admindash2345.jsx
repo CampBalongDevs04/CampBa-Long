@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import './css/admin.css'
 import Header from '../components/Header.jsx'
+import AdminNavbar from './items/navbar.jsx'
+import Units from './items/units.jsx'
+import Export from './items/export.jsx'
+import AdminSidebar from './items/sidebar.jsx'
+import Tab from './items/tab.jsx'
 import LotusDividerIcon from '../components/LotusDividerIcon.jsx'
 import logoCamp from '../assets/images/logocamp.png'
 
@@ -8,11 +13,35 @@ import logoCamp from '../assets/images/logocamp.png'
 const ADMIN_PASSCODE = 'campbalong2025'
 const ADMIN_EMAIL ='campbalong@gmail.com'
 
+const ADMIN_PROFILE = {
+  name: 'Camp Ba-long Admin',
+  role: 'Admin In-Charge',
+  email: ADMIN_EMAIL,
+}
+
+const SECTION_LABELS = {
+  overview: 'Overview',
+  bookings: 'Bookings',
+  units: 'Units',
+  menu: 'Food Menu',
+  spa: 'Spa',
+  cms: 'CMS',
+  export: 'Export Reports',
+}
+
 function AdminDash() {
   const [unlocked, setUnlocked] = useState(false)
   const [input, setInput] = useState('')
   const [inputEmail, setInputEmail] = useState('')
   const [error, setError] = useState('')
+  const [activeSection, setActiveSection] = useState('overview')
+
+  const handleLogout = () => {
+    setUnlocked(false)
+    setInput('')
+    setInputEmail('')
+    setActiveSection('overview')
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -71,11 +100,65 @@ function AdminDash() {
 
   return (
     <>
-        <Header />
-        <div style={{ padding: 24 }}>
-        <h1>Admin Dashboard</h1>
-        <p>Welcome, admin. Build your dashboard content here.</p>
-        </div>
+        <AdminNavbar onLogout={handleLogout} />
+        <AdminSidebar
+            activeItem={activeSection}
+            onSelect={setActiveSection}
+            onLogout={handleLogout}
+            profile={ADMIN_PROFILE}
+        />
+        <main className="admin-dash-section has-sidebar">
+            {activeSection === 'overview' ? (
+                <div className="admin-dash-content">
+                    <div className="admin-dash-heading">
+                        <p className="admin-dash-eyebrow">Camp Ba-long</p>
+                        <h1 className="admin-dash-title">Overview</h1>
+                    </div>
+                    <Units />
+                    <Tab />
+                </div>
+            ) : activeSection === 'export' ? (
+                <div className="admin-dash-content">
+                    <button
+                        type="button"
+                        className="admin-dash-back"
+                        onClick={() => setActiveSection('overview')}
+                    >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12" />
+                            <path d="M12 19l-7-7 7-7" />
+                        </svg>
+                        Back to Overview
+                    </button>
+                    <div className="admin-dash-heading">
+                        <p className="admin-dash-eyebrow">Camp Ba-long</p>
+                        <h1 className="admin-dash-title">Export Reports</h1>
+                    </div>
+                    <Export />
+                </div>
+            ) : (
+                <div className="admin-dash-content">
+                    <button
+                        type="button"
+                        className="admin-dash-back"
+                        onClick={() => setActiveSection('overview')}
+                    >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12" />
+                            <path d="M12 19l-7-7 7-7" />
+                        </svg>
+                        Back to Overview
+                    </button>
+                    <div className="admin-dash-heading">
+                        <p className="admin-dash-eyebrow">Camp Ba-long</p>
+                        <h1 className="admin-dash-title">{SECTION_LABELS[activeSection] || activeSection}</h1>
+                    </div>
+                    <p className="admin-dash-placeholder">
+                        Build the "{SECTION_LABELS[activeSection] || activeSection}" section content here.
+                    </p>
+                </div>
+            )}
+        </main>
     </>
   )
 }
