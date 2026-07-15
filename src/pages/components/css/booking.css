@@ -28,12 +28,19 @@ html{
     min-height: calc(100vh - var(--header-h));
     margin-top: var(--header-h);
 }
+.booking-layout{
+    display: flex;
+    align-items: flex-start;
+    gap: 32px;
+    padding: 40px 100px;
+}
 .booking-calendar-section{
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 32px;
-    padding: 40px 100px;
+    flex: 1;
+    min-width: 0;
 }
 .booking-time-selector{
     box-sizing: border-box;
@@ -109,7 +116,7 @@ html{
     color: var(--leaf);
 }
 .book-title {
-    
+
     font-family: 'Cormorant Garamond', serif;
     color: var(--gold);
     font-size: 75px;
@@ -118,5 +125,27 @@ html{
     text-transform: uppercase;
     text-align: left;
     padding-left: 100px;
-    padding-top: 40px;    
+    padding-top: 40px;
+}
+
+/* ---- small screens: drop the fixed 100px gutters so the
+   calendar, guest info and payment sections fit the viewport ---- */
+/* ---- tablets and below: stack the summary under the booking form ---- */
+@media (max-width: 900px){
+    .booking-layout{
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+@media (max-width: 768px){
+    .booking-layout{
+        padding: 24px 16px;
+    }
+
+    .book-title{
+        font-size: 48px;
+        padding-left: 16px;
+        padding-top: 24px;
+    }
 }
