@@ -89,8 +89,6 @@ export default function AccomodationList({ selectedAccomodation, onSelectAccomod
 
     return(
         <div className="accomodation-list">
-            <h3 className="accomodation-list-title">Accomodations</h3>
-
             <div className="accomodation-carousel">
                 <button
                     type="button"

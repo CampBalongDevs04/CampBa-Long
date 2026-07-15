@@ -1,0 +1,130 @@
+.booking-summary{
+    box-sizing: border-box;
+    position: sticky;
+    top: calc(var(--header-h) + 16px);
+    align-self: flex-start;
+    width: 400px;
+    flex-shrink: 0;
+    padding: 28px 30px;
+    background-color: #FFFFFF;
+    border: 1px solid rgba(217, 189, 132, 0.55);
+    border-top: 4px solid var(--forest);
+    border-radius: 18px;
+    box-shadow: 0 8px 24px rgba(30, 58, 43, 0.08);
+    font-family: 'Cormorant Garamond', serif;
+}
+.summary-title{
+    margin: 0 0 16px;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--forest);
+}
+.summary-section{
+    padding: 12px 0;
+    border-top: 1px solid var(--cream-2);
+}
+.summary-section-label{
+    margin: 0 0 8px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--gold);
+}
+.summary-row{
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding: 4px 0;
+}
+.summary-row-label{
+    flex-shrink: 0;
+    font-size: 16px;
+    color: var(--leaf);
+}
+.summary-row-value{
+    font-size: 16px;
+    font-weight: 600;
+    text-align: right;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+}
+.summary-row-empty{
+    font-weight: 400;
+    font-style: italic;
+    color: rgba(42, 42, 34, 0.45);
+}
+.summary-total{
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-top: 4px;
+    padding-top: 12px;
+    border-top: 2px solid var(--gold-soft);
+}
+.summary-total-label{
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--forest);
+}
+.summary-total-value{
+    font-size: 21px;
+    font-weight: 700;
+    color: var(--forest);
+}
+.summary-receipt-ok{
+    color: var(--leaf);
+}
+.summary-receipt-link{
+    margin-left: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--gold);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.summary-receipt-link:hover{
+    color: var(--forest);
+}
+.summary-total-hint{
+    margin: 8px 0 0;
+    font-size: 13.5px;
+    font-style: italic;
+    line-height: 1.4;
+    color: var(--leaf);
+}
+.summary-secure{
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 18px;
+    padding: 12px 14px;
+    background-color: rgba(76, 107, 79, 0.08);
+    border: 1px solid rgba(76, 107, 79, 0.25);
+    border-radius: 12px;
+}
+.summary-secure-icon{
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    margin-top: 1px;
+    color: var(--leaf);
+}
+.summary-secure-text{
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--forest);
+}
+
+/* ---- mobile: leave the sticky behaviour to desktop; the summary
+   sits in normal flow below every other booking component ---- */
+@media (max-width: 900px){
+    .booking-summary{
+        position: static;
+        width: 100%;
+    }
+}
