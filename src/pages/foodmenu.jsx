@@ -1,5 +1,4 @@
-import { useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import './foodmenu.css'
 import Footer from '../components/footer'
 import food1 from '../assets/images/food1.png'
@@ -51,32 +50,191 @@ const coldDrinkItems = [
   { image: food16, name: 'Blue Lemonade', desc: 'Family Serving / Single', price: 'PHP 130.00' },
 ]
 
-function MenuFoodRow({ items, rowRef }) {
-  const scroll = (direction) => {
-    const el = rowRef.current
-    if (!el) return
-    el.scrollBy({ left: direction * el.clientWidth * 0.8, behavior: 'smooth' })
+function SubcategoryToggle({ label, expanded, onToggle }) {
+  return (
+    <button
+      type="button"
+      className={`menu-subcategory-label${expanded ? '' : ' is-collapsed'}`}
+      onClick={onToggle}
+      aria-expanded={expanded}
+    >
+      {label}
+      <span className="menu-subcategory-chevron">⌄</span>
+    </button>
+  )
+}
+
+function CategoryTitle({ children, plain }) {
+  return (
+    <h2 className={`menu-category-title${plain ? ' plain' : ''}`}>
+      <span className="menu-category-title-mark" aria-hidden="true">✦</span>
+      {children}
+      <span className="menu-category-title-mark" aria-hidden="true">✦</span>
+    </h2>
+  )
+}
+
+function FoodOrderModal({ item, onClose }) {
+  const [quantity, setQuantity] = useState(1)
+  const [confirmed, setConfirmed] = useState(false)
+
+  useEffect(() => {
+    const handleKey = (event) => {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKey)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', handleKey)
+      document.body.style.overflow = ''
+    }
+  }, [onClose])
+
+  useEffect(() => {
+    if (!confirmed) return
+    const timer = setTimeout(onClose, 1400)
+    return () => clearTimeout(timer)
+  }, [confirmed, onClose])
+
+  const decrease = () => setQuantity((current) => Math.max(1, current - 1))
+  const increase = () => setQuantity((current) => current + 1)
+
+  const unitPrice = Number(item.price.replace(/[^0-9.]/g, '')) || 0
+  const total = unitPrice * quantity
+
+  return (
+    <div className="food-order-overlay" onClick={onClose}>
+      <div
+        className="food-order-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Order ${item.name}`}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button type="button" className="food-order-close" onClick={onClose} aria-label="Close">
+          &times;
+        </button>
+
+        {confirmed ? (
+          <div className="food-order-confirmed">
+            <span className="food-order-confirmed-icon" aria-hidden="true">✓</span>
+            <p>Added to your booking receipt!</p>
+          </div>
+        ) : (
+          <div className="food-order-body">
+            <div className="food-order-image">
+              <img src={item.image} alt={item.name} />
+            </div>
+            <div className="food-order-details">
+              <h3 className="food-order-name">{item.name}</h3>
+              <p className="food-order-desc">{item.desc}</p>
+              <p className="food-order-price">{item.price}</p>
+
+              <div className="food-order-quantity">
+                <button
+                  type="button"
+                  onClick={decrease}
+                  aria-label="Decrease quantity"
+                  disabled={quantity <= 1}
+                >
+                  −
+                </button>
+                <span>{quantity}</span>
+                <button type="button" onClick={increase} aria-label="Increase quantity">
+                  +
+                </button>
+              </div>
+
+              <p className="food-order-total">Total: PHP {total.toFixed(2)}</p>
+
+              <button type="button" className="food-order-confirm" onClick={() => setConfirmed(true)}>
+                Add to Booking Receipt
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function MenuFoodRow({ items, onAddToOrder }) {
+  const total = items.length
+  // Three back-to-back copies of the items give a buffer cycle on either
+  // side, so the track can always slide one more step in either direction.
+  const combined = [...items, ...items, ...items]
+
+  const trackRef = useRef(null)
+  const skipTransitionRef = useRef(true)
+  const [position, setPosition] = useState(total)
+
+  const applyOffset = useCallback((animate) => {
+    const track = trackRef.current
+    const target = track?.children[position]
+    if (!track || !target) return
+    const trackRect = track.getBoundingClientRect()
+    const targetRect = target.getBoundingClientRect()
+    const shift = targetRect.left - trackRect.left
+    track.style.transition = animate ? '' : 'none'
+    track.style.transform = `translateX(${-shift}px)`
+    if (!animate) {
+      // Force layout so the browser commits the jump before transitions resume.
+      void track.offsetHeight
+      track.style.transition = ''
+    }
+  }, [position])
+
+  useLayoutEffect(() => {
+    applyOffset(!skipTransitionRef.current)
+    skipTransitionRef.current = false
+  }, [applyOffset])
+
+  useEffect(() => {
+    const handleResize = () => applyOffset(false)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [applyOffset])
+
+  const handleTransitionEnd = () => {
+    if (position >= total * 2) {
+      skipTransitionRef.current = true
+      setPosition((current) => current - total)
+    } else if (position < total) {
+      skipTransitionRef.current = true
+      setPosition((current) => current + total)
+    }
   }
+
+  const showPrev = () => setPosition((current) => current - 1)
+  const showNext = () => setPosition((current) => current + 1)
 
   return (
     <div className="menu-row-wrap">
-      <button type="button" className="menu-arrow" onClick={() => scroll(-1)} aria-label="Scroll left">
+      <button type="button" className="menu-arrow" onClick={showPrev} aria-label="Show previous item">
         ‹
       </button>
-      <div className="menu-row" ref={rowRef}>
-        {items.map((item) => (
-          <article className="menu-food-card" key={item.name}>
-            <div className="menu-food-image">
-              <img src={item.image} alt={item.name} />
-            </div>
-            <h3 className="menu-food-name">{item.name}</h3>
-            <p className="menu-food-desc">{item.desc}</p>
-            <p className="menu-food-price">{item.price}</p>
-            <button type="button" className="menu-food-add">ADD TO ORDER</button>
-          </article>
-        ))}
+      <div className="menu-row">
+        <div className="menu-row-track" ref={trackRef} onTransitionEnd={handleTransitionEnd}>
+          {combined.map((item, i) => (
+            <article className="menu-food-card" key={`${item.name}-${i}`}>
+              <div className="menu-food-image">
+                <img src={item.image} alt={item.name} />
+              </div>
+              <h3 className="menu-food-name">{item.name}</h3>
+              <p className="menu-food-desc">{item.desc}</p>
+              <p className="menu-food-price">{item.price}</p>
+              <button
+                type="button"
+                className="menu-food-add"
+                onClick={() => onAddToOrder(item)}
+              >
+                ADD TO ORDER
+              </button>
+            </article>
+          ))}
+        </div>
       </div>
-      <button type="button" className="menu-arrow" onClick={() => scroll(1)} aria-label="Scroll right">
+      <button type="button" className="menu-arrow" onClick={showNext} aria-label="Show next item">
         ›
       </button>
     </div>
@@ -84,12 +242,20 @@ function MenuFoodRow({ items, rowRef }) {
 }
 
 function FoodMenuPage() {
-  const navigate = useNavigate()
   const howToOrderRef = useRef(null)
-  const breakfastRowRef = useRef(null)
-  const beverageRowRef = useRef(null)
-  const lunchRowRef = useRef(null)
-  const coldDrinkRowRef = useRef(null)
+
+  const [expanded, setExpanded] = useState({
+    breakfast: true,
+    beverages: true,
+    lunch: true,
+    coldDrinks: true,
+  })
+
+  const [orderItem, setOrderItem] = useState(null)
+
+  const toggleSection = (key) => {
+    setExpanded((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
 
   const scrollToHowToOrder = () => {
     howToOrderRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -103,9 +269,6 @@ function FoodMenuPage() {
     <>
     <main className="foodmenu-page">
       <section className="foodmenu-hero">
-        <button type="button" className="foodmenu-back" onClick={() => navigate('/')}>
-          ← Back to Home
-        </button>
         <div className="foodmenu-hero-inner">
           <div className="foodmenu-hero-text">
             <h1 className="foodmenu-hero-title">
@@ -125,7 +288,6 @@ function FoodMenuPage() {
       </section>
 
       <section className="howto-order" ref={howToOrderRef}>
-        <h2 className="howto-order-title">HOW TO ORDER</h2>
         <div className="howto-order-panel">
           <div className="howto-order-image">
             <img src={food2} alt="Chef preparing a dish" />
@@ -140,7 +302,8 @@ function FoodMenuPage() {
           </div>
         </div>
         <p className="howto-order-note">
-          Note: Food orders are subject to availability and may be modified before the preparation cutoff time.
+          <span className="howto-order-note-icon" aria-hidden="true">!</span>
+          <span><strong>Note:</strong> Food orders are subject to availability and may be modified before the preparation cutoff time.</span>
         </p>
       </section>
 
@@ -149,19 +312,28 @@ function FoodMenuPage() {
           className="menu-category-banner"
           style={{ backgroundImage: `url(${food3})` }}
         >
-          <h2 className="menu-category-title">BREAKFAST</h2>
+          <CategoryTitle>BREAKFAST</CategoryTitle>
         </div>
-        <MenuFoodRow items={breakfastItems} rowRef={breakfastRowRef} />
+        <div className="menu-category-toggle-row">
+          <SubcategoryToggle
+            label="Foods"
+            expanded={expanded.breakfast}
+            onToggle={() => toggleSection('breakfast')}
+          />
+        </div>
+        {expanded.breakfast && <MenuFoodRow items={breakfastItems} onAddToOrder={setOrderItem} />}
       </section>
 
       <section className="menu-category">
         <div className="menu-category-header">
-          <span className="menu-subcategory-label">
-            Coffee <span className="menu-subcategory-chevron">⌄</span>
-          </span>
-          <h2 className="menu-category-title plain">BEVERAGES</h2>
+          <CategoryTitle plain>BEVERAGES</CategoryTitle>
+          <SubcategoryToggle
+            label="Coffee"
+            expanded={expanded.beverages}
+            onToggle={() => toggleSection('beverages')}
+          />
         </div>
-        <MenuFoodRow items={beverageItems} rowRef={beverageRowRef} />
+        {expanded.beverages && <MenuFoodRow items={beverageItems} onAddToOrder={setOrderItem} />}
       </section>
 
       <section className="menu-category">
@@ -169,22 +341,34 @@ function FoodMenuPage() {
           className="menu-category-banner"
           style={{ backgroundImage: `url(${food10})` }}
         >
-          <h2 className="menu-category-title">LUNCH</h2>
+          <CategoryTitle>LUNCH</CategoryTitle>
         </div>
-        <MenuFoodRow items={lunchItems} rowRef={lunchRowRef} />
+        <div className="menu-category-toggle-row">
+          <SubcategoryToggle
+            label="Foods"
+            expanded={expanded.lunch}
+            onToggle={() => toggleSection('lunch')}
+          />
+        </div>
+        {expanded.lunch && <MenuFoodRow items={lunchItems} onAddToOrder={setOrderItem} />}
       </section>
 
       <section className="menu-category">
         <div className="menu-category-header">
-          <span className="menu-subcategory-label">
-            Cold Drinks <span className="menu-subcategory-chevron">⌄</span>
-          </span>
-          <h2 className="menu-category-title plain">BEVERAGES</h2>
+          <CategoryTitle plain>BEVERAGES</CategoryTitle>
+          <SubcategoryToggle
+            label="Cold Drinks"
+            expanded={expanded.coldDrinks}
+            onToggle={() => toggleSection('coldDrinks')}
+          />
         </div>
-        <MenuFoodRow items={coldDrinkItems} rowRef={coldDrinkRowRef} />
+        {expanded.coldDrinks && <MenuFoodRow items={coldDrinkItems} onAddToOrder={setOrderItem} />}
       </section>
     </main>
     <Footer />
+    {orderItem && (
+      <FoodOrderModal item={orderItem} onClose={() => setOrderItem(null)} />
+    )}
   </>
   )
 }
