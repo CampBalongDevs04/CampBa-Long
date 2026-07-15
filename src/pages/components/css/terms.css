@@ -13,14 +13,6 @@
     font-family: 'Cormorant Garamond', serif;
 }
 
-.terms-title{
-    margin: 0;
-    font-size: 17px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    color: var(--forest);
-}
-
 .terms-card{
     box-sizing: border-box;
     width: 100%;
@@ -99,12 +91,14 @@
 /* Confirm booking — muted until the guest agrees, then green */
 .terms-confirm{
     box-sizing: border-box;
-    min-height: 48px;
-    padding: 12px 28px;
+    width: 100%;
+    min-height: 52px;
+    padding: 14px 28px;
     font-family: inherit;
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 700;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
     color: var(--leaf);
     background-color: var(--cream-2);
     border: 1px solid var(--gold-soft);
@@ -137,8 +131,3 @@
     outline-offset: 3px;
 }
 
-@media (max-width: 560px){
-    .terms-confirm{
-        width: 100%; /* full-width tap target on phones */
-    }
-}

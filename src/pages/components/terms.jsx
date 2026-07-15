@@ -9,8 +9,6 @@ const policies = [
 export default function Terms({ agreed, onAgreeChange, onConfirm }){
     return(
         <div className="terms">
-            <h3 className="terms-title">Terms &amp; Resort Policy</h3>
-
             <div className="terms-card">
                 <p className="terms-warning">Please read first before paying</p>
 

@@ -141,6 +141,30 @@ export default function BookingSummary({ checkIn, checkOut, schedule, selectedAc
                         : unit ? 'Price TBA' : '—'}
                 </span>
             </div>
+            <p className="summary-total-hint">
+                50% of the unit rate, payable upfront. The balance is settled
+                on-site at check-in.
+            </p>
+
+            <div className="summary-secure">
+                <svg
+                    className="summary-secure-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                >
+                    <path d="M12 3 5 6v5c0 4.5 3 8.2 7 9.5 4-1.3 7-5 7-9.5V6l-7-3z" />
+                    <path d="m9.5 12 2 2 3.5-3.5" />
+                </svg>
+                <p className="summary-secure-text">
+                    Your details are used only for this reservation. We review
+                    every receipt manually and confirm by email or SMS.
+                </p>
+            </div>
         </aside>
     )
 }

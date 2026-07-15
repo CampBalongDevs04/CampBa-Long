@@ -64,8 +64,6 @@ export default function Payment({ receipt, onReceiptChange }){
 
     return(
         <div className="payment">
-            <h3 className="payment-title">Payment Options</h3>
-
             <div className="payment-grid">
                 {paymentOptions.map((option) => (
                     <div className="payment-card" key={option.id}>

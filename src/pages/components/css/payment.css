@@ -13,14 +13,6 @@
     font-family: 'Cormorant Garamond', serif;
 }
 
-.payment-title{
-    margin: 0;
-    font-size: 17px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    color: var(--forest);
-}
-
 /* One card per payment method, side by side */
 .payment-grid{
     box-sizing: border-box;

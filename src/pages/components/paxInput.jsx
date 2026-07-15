@@ -57,8 +57,6 @@ export default function PaxInput({ pax, onPaxChange, selectedAccomodation, guest
 
     return(
         <div className="guest-info">
-            <h3 className="guest-info-title">Guest Information</h3>
-
             <div className="pax-form">
                 <div className="pax-field pax-field-full">
                     <label className="pax-field-label" htmlFor="guest-fullname">Full Name</label>

@@ -13,14 +13,6 @@
     font-family: 'Cormorant Garamond', serif;
 }
 
-.guest-info-title{
-    margin: 0;
-    font-size: 17px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    color: var(--forest);
-}
-
 /* Guest details form — two columns, left aligned */
 .pax-form{
     box-sizing: border-box;
