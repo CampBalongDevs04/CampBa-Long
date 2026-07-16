@@ -6,6 +6,12 @@ import Units from './items/units.jsx'
 import Export from './items/export.jsx'
 import AdminSidebar from './items/sidebar.jsx'
 import Tab from './items/tab.jsx'
+import All from './items/overview-ALL.jsx'
+import Upcomming from './items/overview-UPCOMMING.jsx'
+import Active from './items/overview-ACTIVE.jsx'
+import Completed from './items/overview-COMPLETED.jsx'
+import Paid from './items/overview-PAIDFULL.jsx'
+import DP from './items/overview-DOWNPAYMENT.jsx'
 import LotusDividerIcon from '../components/LotusDividerIcon.jsx'
 import logoCamp from '../assets/images/logocamp.png'
 
@@ -35,6 +41,8 @@ function AdminDash() {
   const [inputEmail, setInputEmail] = useState('')
   const [error, setError] = useState('')
   const [activeSection, setActiveSection] = useState('overview')
+  const [activeBookingTab, setActiveBookingTab] = useState('all')
+
 
   const handleLogout = () => {
     setUnlocked(false)
@@ -115,7 +123,13 @@ function AdminDash() {
                         <h1 className="admin-dash-title">Overview</h1>
                     </div>
                     <Units />
-                    <Tab />
+                    <Tab active={activeBookingTab} onChange={setActiveBookingTab} />
+                    {activeBookingTab === 'down-payment' && <DP />}
+                    {activeBookingTab === 'paid-full' && <Paid />}
+                    {activeBookingTab === 'completed' && <Completed />} 
+                    {activeBookingTab === 'active' && <Active />}
+                    {activeBookingTab === 'upcomming' && <Upcomming /> }
+                    {activeBookingTab === 'all' && <All />}
                 </div>
             ) : activeSection === 'export' ? (
                 <div className="admin-dash-content">
