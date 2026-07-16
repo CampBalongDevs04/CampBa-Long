@@ -17,6 +17,13 @@ import food13 from '../assets/images/food13.png'
 import food14 from '../assets/images/food14.png'
 import food15 from '../assets/images/food15.png'
 import food16 from '../assets/images/food16.png'
+import food17 from '../assets/images/food17.png'
+import food18 from '../assets/images/food18.png'
+import food19 from '../assets/images/food19.png'
+import food20 from '../assets/images/food20.png'
+import food21 from '../assets/images/food21.png'
+import food22 from '../assets/images/food22.png'
+import food23 from '../assets/images/food23.png'
 
 const orderSteps = [
   'Complete your booking first.',
@@ -50,7 +57,15 @@ const coldDrinkItems = [
   { image: food16, name: 'Blue Lemonade', desc: 'Family Serving / Single', price: 'PHP 130.00' },
 ]
 const dinnerItems = [
-  //input the details here - gab 
+  { image: food18, name: 'Pork Chicken Adobo', desc: 'Pork / Chicken / Soy Sauce / Vinegar / Paminta / Onion / Garlic', price: 'PHP 125.00' },
+  { image: food19, name: 'Menudo', desc: 'Pork / Liver / Potato / Carrot / Bell Pepper / Tomato Sauce', price: 'PHP 140.00' },
+  { image: food20, name: 'Monggo', desc: 'Mung Beans / Sitaw / Ampalaya / Malunggay / Pork', price: 'PHP 110.00' },
+]
+
+const dinnerDrinkItems = [
+  { image: food21, name: "Sago't Gulaman Special", desc: 'Single Serving', price: 'PHP 65.00' },
+  { image: food22, name: 'Calamansi Juice', desc: 'Family Serving', price: 'PHP 130.00' },
+  { image: food23, name: 'Creamy Melon Vanilla', desc: 'Family Serving', price: 'PHP 150.00' },
 ]
 
 function SubcategoryToggle({ label, expanded, onToggle }) {
@@ -252,6 +267,8 @@ function FoodMenuPage() {
     beverages: true,
     lunch: true,
     coldDrinks: true,
+    dinner: true,
+    dinnerDrinks: true,
   })
 
   const [orderItem, setOrderItem] = useState(null)
@@ -371,23 +388,31 @@ function FoodMenuPage() {
       <section className="menu-category">
         <div
           className="menu-category-banner"
-          style={{ backgroundImage: `url(${food10})` }}
+          style={{ backgroundImage: `url(${food17})` }}
         >
           <CategoryTitle>DINNER</CategoryTitle>
         </div>
         <div className="menu-category-toggle-row">
           <SubcategoryToggle
             label="Foods"
-            expanded={expanded.lunch}
-            onToggle={() => toggleSection('lunch')}
+            expanded={expanded.dinner}
+            onToggle={() => toggleSection('dinner')}
           />
         </div>
-        {expanded.lunch && <MenuFoodRow items={lunchItems} onAddToOrder={setOrderItem} />}
+        {expanded.dinner && <MenuFoodRow items={dinnerItems} onAddToOrder={setOrderItem} />}
       </section>
 
-      
-
-
+      <section className="menu-category">
+        <div className="menu-category-header">
+          <CategoryTitle plain>BEVERAGES</CategoryTitle>
+          <SubcategoryToggle
+            label="Drinks"
+            expanded={expanded.dinnerDrinks}
+            onToggle={() => toggleSection('dinnerDrinks')}
+          />
+        </div>
+        {expanded.dinnerDrinks && <MenuFoodRow items={dinnerDrinkItems} onAddToOrder={setOrderItem} />}
+      </section>
 
 
     </main>

@@ -466,6 +466,7 @@
 
 .menu-food-add {
   align-self: flex-start;
+  margin-top: auto;
   border: none;
   background: #037d4d;
   color: #f8f2e4;
