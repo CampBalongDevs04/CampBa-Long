@@ -49,6 +49,9 @@ const coldDrinkItems = [
   { image: food15, name: 'Strawberry Hibiscus', desc: 'Family Serving / Single', price: 'PHP 150.00' },
   { image: food16, name: 'Blue Lemonade', desc: 'Family Serving / Single', price: 'PHP 130.00' },
 ]
+const dinnerItems = [
+  //input the details here - gab 
+]
 
 function SubcategoryToggle({ label, expanded, onToggle }) {
   return (
@@ -364,7 +367,31 @@ function FoodMenuPage() {
         </div>
         {expanded.coldDrinks && <MenuFoodRow items={coldDrinkItems} onAddToOrder={setOrderItem} />}
       </section>
+
+      <section className="menu-category">
+        <div
+          className="menu-category-banner"
+          style={{ backgroundImage: `url(${food10})` }}
+        >
+          <CategoryTitle>DINNER</CategoryTitle>
+        </div>
+        <div className="menu-category-toggle-row">
+          <SubcategoryToggle
+            label="Foods"
+            expanded={expanded.lunch}
+            onToggle={() => toggleSection('lunch')}
+          />
+        </div>
+        {expanded.lunch && <MenuFoodRow items={lunchItems} onAddToOrder={setOrderItem} />}
+      </section>
+
+      
+
+
+
+
     </main>
+
     <Footer />
     {orderItem && (
       <FoodOrderModal item={orderItem} onClose={() => setOrderItem(null)} />
