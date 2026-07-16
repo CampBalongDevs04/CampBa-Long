@@ -9,6 +9,7 @@ import PaxInput from './components/paxInput'
 import Payment from './components/payment'
 import Terms from './components/terms'
 import BookingSummary from './components/bookingSummary'
+import Footer from '../components/footer'
 
 const steps = [
     {
@@ -176,6 +177,8 @@ export default function Booking(){
                     />
                 </div>
             </div>
+            <Footer />
+
         </main>
     )
 }
