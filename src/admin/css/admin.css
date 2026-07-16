@@ -168,6 +168,7 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    position: relative;
 }
 
 .admin-dash-eyebrow{
@@ -222,6 +223,41 @@
     color: var(--cream-2);
     margin: 0;
 }
+.services-section{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    margin-top: 24px;
+}
+
+.services-section .lotus-divider{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+}
+.services-section .lotus-divider .rule{
+    height: 1px;
+    width: 90px;
+}
+.services-section .lotus-divider .rule.left{
+    background: linear-gradient(to left, var(--gold), transparent);
+}
+.services-section .lotus-divider .rule.right{
+    background: linear-gradient(to right, var(--gold), transparent);
+}
+
+.services-title{
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 700;
+    font-size: clamp(1.6rem, 3.5vw, 2.1rem);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--cream);
+    margin: 0;
+}
 
 /* ---------- Responsive ---------- */
 @media (max-width: 640px){
@@ -233,5 +269,8 @@
     }
     .admin-dash-section{
         padding: calc(var(--admin-header-h) + 28px) 14px 48px;
+    }
+    .services-section .lotus-divider .rule{
+        width: 48px;
     }
 }

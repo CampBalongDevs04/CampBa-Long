@@ -1,15 +1,15 @@
-import '../css/booking-tabs.css'
+import '../css/tabFoodSpa.css'
 
-const bookings = [] // TODO: replace with database data later
+const orderService = [] // TODO: replace with database data later
 
-export default function All() {
+export default function Food() {
     // Empty state — shown while there is no booking data
-    if (bookings.length === 0) {
+    if (orderService.length === 0) {
         return (
-            <div className="booking-panel">
-                <div className="booking-empty">
+            <div className="orderService-panel">
+                <div className="orderService-empty">
                     <svg
-                        className="booking-empty-icon"
+                        className="orderService-empty-icon"
                         viewBox="0 0 24 24"
                         width="44"
                         height="44"
@@ -24,8 +24,8 @@ export default function All() {
                         <line x1="8" y1="2" x2="8" y2="6" />
                         <line x1="3" y1="10" x2="21" y2="10" />
                     </svg>
-                    <h3 className="booking-empty-title">No bookings yet</h3>
-                    <p className="booking-empty-text">
+                    <h3 className="orderService-empty-title">No Food Orders yet</h3>
+                    <p className="orderService-empty-text">
                         New reservations will appear here once guests start booking.
                     </p>
                 </div>
@@ -35,10 +35,10 @@ export default function All() {
 
     // List state — runs once bookings has data
     return (
-        <div className="booking-panel">
-            {bookings.map((booking) => (
-                <div key={booking.id} className="booking-card">
-                    {booking.guestName}
+        <div className="orderService-panel">
+            {orderService.map((orderService) => (
+                <div key={orderService.id} className="orderService-card">
+                    {orderService.guestName}
                 </div>
             ))}
         </div>

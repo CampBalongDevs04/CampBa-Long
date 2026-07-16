@@ -12,8 +12,14 @@ import Active from './items/overview-ACTIVE.jsx'
 import Completed from './items/overview-COMPLETED.jsx'
 import Paid from './items/overview-PAIDFULL.jsx'
 import DP from './items/overview-DOWNPAYMENT.jsx'
+import FoodSpaAll from './items/foodSpa-ALL.jsx'
+import Food from './items/foodSpa-Food.jsx'
+import Spa from  './items/foodSpa-Spa.jsx'
 import LotusDividerIcon from '../components/LotusDividerIcon.jsx'
 import logoCamp from '../assets/images/logocamp.png'
+import FoodSpa from './items/FoodSpa.jsx'
+import ClockDate from './items/extras/clockDate.jsx'
+
 
 
 const ADMIN_PASSCODE = 'campbalong2025'
@@ -42,6 +48,7 @@ function AdminDash() {
   const [error, setError] = useState('')
   const [activeSection, setActiveSection] = useState('overview')
   const [activeBookingTab, setActiveBookingTab] = useState('all')
+  const [activeServiceTab, setActiveServiceTab] = useState('all')
 
 
   const handleLogout = () => {
@@ -121,6 +128,7 @@ function AdminDash() {
                     <div className="admin-dash-heading">
                         <p className="admin-dash-eyebrow">Camp Ba-long</p>
                         <h1 className="admin-dash-title">Overview</h1>
+                        <ClockDate />
                     </div>
                     <Units />
                     <Tab active={activeBookingTab} onChange={setActiveBookingTab} />
@@ -130,7 +138,21 @@ function AdminDash() {
                     {activeBookingTab === 'active' && <Active />}
                     {activeBookingTab === 'upcomming' && <Upcomming /> }
                     {activeBookingTab === 'all' && <All />}
+
+
+                    <div className ="services-section">
+                        <LotusDividerIcon />
+                        <h1 className ="services-title">Other Services</h1>
+                        <FoodSpa active={activeServiceTab} onChange={setActiveServiceTab} />
+                        {activeServiceTab === 'all' && <FoodSpaAll />}
+                        {activeServiceTab === 'food' && <Food />}
+                        {activeServiceTab === 'spa' && <Spa />}
+
+                    </div>
                 </div>
+
+
+
             ) : activeSection === 'export' ? (
                 <div className="admin-dash-content">
                     <button
