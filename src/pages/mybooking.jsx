@@ -1,7 +1,13 @@
+import { useEffect } from 'react'
 import { Link } from 'react-router'
 import './components/css/mybooking.css'
+import Footer from '../components/footer'
 
 function MyBooking() {
+    useEffect(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    }, [])
+
     return (
         <main className="page my-booking-page">
             <div className="my-booking-shell">
@@ -32,6 +38,8 @@ function MyBooking() {
                     </Link>
                 </section>
             </div>
+
+            <Footer />
         </main>
     )
 }
