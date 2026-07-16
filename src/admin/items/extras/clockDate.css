@@ -1,0 +1,42 @@
+.clock-date {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    line-height: 1.2;
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+@media (max-width: 640px) {
+    .clock-date {
+        position: static;
+        align-items: flex-start;
+        margin-top: 4px;
+    }
+}
+
+.clock-date-time {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--cream);
+}
+
+.clock-date-day {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.8rem;
+    color: var(--cream);
+    opacity: 0.85;
+}
+
+.clock-date-location {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--gold);
+}
