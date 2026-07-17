@@ -1,15 +1,19 @@
 import { useState } from 'react'
-import { useLocation } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import './components/css/booking.css'
 import BookingCalendar from './components/BookingCalendar'
 import TimeSelector, { timeOptions } from './components/timeSelector'
 import ScheduleNote from './components/scheduleNote'
-import AccomodationList from './components/accomodationList'
+import AccomodationList, { accomodationOptions } from './components/accomodationList'
 import PaxInput from './components/paxInput'
 import Payment from './components/payment'
 import Terms from './components/terms'
 import BookingSummary from './components/bookingSummary'
 import Footer from '../components/footer'
+
+// Shared with mybooking.jsx — the key under which confirmed bookings are persisted.
+const BOOKINGS_STORAGE_KEY = 'cbl-my-bookings'
+const DOWNPAYMENT_RATE = 0.5
 
 const steps = [
     {
@@ -54,6 +58,7 @@ function StepHeader({ index }){
 
 export default function Booking(){
     const location = useLocation()
+    const navigate = useNavigate()
     const [selectedTime, setSelectedTime] = useState(null)
     const [dates, setDates] = useState({ checkIn: null, checkOut: null })
     const [selectedAccomodation, setSelectedAccomodation] = useState(
@@ -63,8 +68,59 @@ export default function Booking(){
     const [guest, setGuest] = useState({ fullName: '', mobile: '', email: '' })
     const [receipt, setReceipt] = useState(null)
     const [agreed, setAgreed] = useState(false)
+    const [attemptedConfirm, setAttemptedConfirm] = useState(false)
 
     const sameDayCheckout = selectedTime !== null && timeOptions[selectedTime].sameDay === true
+
+    // One entry per step above — a step counts as done only once every
+    // field it collects is filled in, so Confirm can be blocked until
+    // all five are complete.
+    const missingSteps = [
+        !(dates.checkIn && (sameDayCheckout || dates.checkOut) && selectedTime !== null)
+            && 'Dates & Schedule',
+        !selectedAccomodation && 'Accommodation',
+        !(pax && guest.fullName.trim() && guest.mobile.trim() && guest.email.trim())
+            && 'Guest Information',
+        !receipt && 'Payment',
+    ].filter(Boolean)
+
+    function handleConfirm(){
+        setAttemptedConfirm(true)
+        if (missingSteps.length > 0) return
+
+        const unit = selectedAccomodation
+            ? accomodationOptions.find((item) => item.id === selectedAccomodation)
+            : null
+        const schedule = selectedTime !== null ? timeOptions[selectedTime] : null
+        const checkOut = sameDayCheckout ? dates.checkIn : dates.checkOut
+        const downpayment = unit?.price != null ? unit.price * DOWNPAYMENT_RATE : null
+
+        const booking = {
+            id: `CBL-${Date.now().toString().slice(-10)}`,
+            // Newly confirmed bookings await staff verification of the
+            // uploaded receipt — they aren't "upcoming" until approved.
+            status: 'pending',
+            accomodationId: unit?.id ?? null,
+            accomodationName: unit?.name ?? 'Accommodation',
+            accomodationPax: unit?.pax ?? null,
+            checkIn: dates.checkIn ? dates.checkIn.toISOString() : null,
+            checkOut: checkOut ? checkOut.toISOString() : null,
+            sameDayCheckout,
+            schedule: schedule
+                ? { checkIn: schedule.checkIn, time: schedule.time, description: schedule.description }
+                : null,
+            pax,
+            guest,
+            downpayment,
+            hasReceipt: !!receipt,
+            createdAt: new Date().toISOString(),
+        }
+
+        const existing = JSON.parse(localStorage.getItem(BOOKINGS_STORAGE_KEY) ?? '[]')
+        localStorage.setItem(BOOKINGS_STORAGE_KEY, JSON.stringify([booking, ...existing]))
+
+        navigate('/my-booking')
+    }
 
     return(
         <main className="page booking-page">
@@ -158,9 +214,15 @@ export default function Booking(){
                         <section className="booking-step" aria-labelledby="step-confirm">
                             <StepHeader index={4} />
                             <div className="booking-step-body">
+                                {attemptedConfirm && missingSteps.length > 0 && (
+                                    <p className="booking-confirm-alert" role="alert">
+                                        Please complete the following before confirming: {missingSteps.join(', ')}.
+                                    </p>
+                                )}
                                 <Terms
                                     agreed={agreed}
                                     onAgreeChange={setAgreed}
+                                    onConfirm={handleConfirm}
                                 />
                             </div>
                         </section>
