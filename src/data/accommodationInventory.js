@@ -94,7 +94,7 @@ function isoDaysFromToday(days) {
 // Later this becomes the Supabase `bookings` table:
 //   unit_id | check_in | check_out | status ('booked' = paid, 'pending' = waiting for payment)
 export const UNIT_BOOKINGS = [
-    //{ unitId: 'TBL-03',  checkIn: isoDaysFromToday(0),  checkOut: isoDaysFromToday(1), status: 'booked' },
+    { unitId: 'TBL-03',  checkIn: isoDaysFromToday(0),  checkOut: isoDaysFromToday(1), status: 'booked' },
     //{ unitId: 'TBL-05',  checkIn: isoDaysFromToday(0),  checkOut: isoDaysFromToday(2), status: 'pending' },
    // { unitId: 'TENT-07', checkIn: isoDaysFromToday(-1), checkOut: isoDaysFromToday(3), status: 'booked' },
     //{ unitId: 'AHM-02',  checkIn: isoDaysFromToday(1),  checkOut: isoDaysFromToday(4), status: 'booked' },
