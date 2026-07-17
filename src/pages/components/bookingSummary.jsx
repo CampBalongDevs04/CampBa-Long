@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import '../components/css/bookingSummary.css'
-import { accomodationOptions } from './accomodationList'
+import { accomodationOptions } from '../../data/accomodationOptions.js'
 
 const DOWNPAYMENT_RATE = 0.5
 
