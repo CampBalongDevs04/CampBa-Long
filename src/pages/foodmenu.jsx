@@ -73,36 +73,38 @@ const orderSteps = [
   'The total food cost will automatically be added to your booking receipt.',
 ]
 
-const breakfastItems = [
+// The item arrays below are exported so the admin dashboard's food list
+// (src/admin/items/foodList.jsx) can reuse the same hardcoded menu data.
+export const breakfastItems = [
   { image: food4, name: 'Hotsilog', desc: 'Hotdog / Egg / Cucumber / Tomato / Fried Rice', price: 'PHP 110.00' },
   { image: food5, name: 'Tapsilog', desc: 'Tapa / Egg / Fried Garlic / Tomato / Fried Rice', price: 'PHP 120.00' },
   { image: food6, name: 'Longsilog', desc: 'Longganisa / Egg / Fried Garlic / Fried Rice', price: 'PHP 120.00' },
 ]
 
-const beverageItems = [
+export const beverageItems = [
   { image: food7, name: 'Americano', desc: 'Hot Brewed / Iced', price: 'PHP 100.00' },
   { image: food8, name: 'Salted Caramel', desc: 'Hot Brewed / Iced', price: 'PHP 150.00' },
   { image: food9, name: 'Vanilla Latte', desc: 'Hot Brewed / Iced', price: 'PHP 130.00' },
 ]
 
-const lunchItems = [
+export const lunchItems = [
   { image: food11, name: 'Pork Adobo', desc: 'Pork / Soy Sauce / Vinegar / Paminta / Onion / Garlic', price: 'PHP 110.00' },
   { image: food12, name: 'Kare-Kare', desc: 'Pork / Talong / Sitaw / Pechay / Peanut Bagoong', price: 'PHP 120.00' },
   { image: food13, name: 'Paksiw', desc: 'Bangus / Green Chili / Vinegar / Onion / Garlic / Ampalaya', price: 'PHP 120.00' },
 ]
 
-const coldDrinkItems = [
+export const coldDrinkItems = [
   { image: food14, name: 'Softdrinks', desc: 'Family Serving', price: 'PHP 100.00' },
   { image: food15, name: 'Strawberry Hibiscus', desc: 'Family Serving / Single', price: 'PHP 150.00' },
   { image: food16, name: 'Blue Lemonade', desc: 'Family Serving / Single', price: 'PHP 130.00' },
 ]
-const dinnerItems = [
+export const dinnerItems = [
   { image: food18, name: 'Pork Chicken Adobo', desc: 'Pork / Chicken / Soy Sauce / Vinegar / Paminta / Onion / Garlic', price: 'PHP 125.00' },
   { image: food19, name: 'Menudo', desc: 'Pork / Liver / Potato / Carrot / Bell Pepper / Tomato Sauce', price: 'PHP 140.00' },
   { image: food20, name: 'Monggo', desc: 'Mung Beans / Sitaw / Ampalaya / Malunggay / Pork', price: 'PHP 110.00' },
 ]
 
-const dinnerDrinkItems = [
+export const dinnerDrinkItems = [
   { image: food21, name: "Sago't Gulaman Special", desc: 'Single Serving', price: 'PHP 65.00' },
   { image: food22, name: 'Calamansi Juice', desc: 'Family Serving', price: 'PHP 130.00' },
   { image: food23, name: 'Creamy Melon Vanilla', desc: 'Family Serving', price: 'PHP 150.00' },
