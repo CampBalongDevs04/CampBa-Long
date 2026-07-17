@@ -19,6 +19,7 @@ import LotusDividerIcon from '../components/LotusDividerIcon.jsx'
 import logoCamp from '../assets/images/logocamp.png'
 import FoodSpa from './items/FoodSpa.jsx'
 import ClockDate from './items/extras/clockDate.jsx'
+import AccommodationCount from './items/accommodationCount.jsx'
 
 
 
@@ -153,6 +154,25 @@ function AdminDash() {
 
 
 
+            ) : activeSection === 'units' ? (
+                <div className="admin-dash-content">
+                    <button
+                        type="button"
+                        className="admin-dash-back"
+                        onClick={() => setActiveSection('overview')}
+                    >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12" />
+                            <path d="M12 19l-7-7 7-7" />
+                        </svg>
+                        Back to Overview
+                    </button>
+                    <div className="admin-dash-heading">
+                        <p className="admin-dash-eyebrow">Camp Ba-long</p>
+                        <h1 className="admin-dash-title">Units</h1>
+                    </div>
+                    <AccommodationCount />
+                </div>
             ) : activeSection === 'export' ? (
                 <div className="admin-dash-content">
                     <button

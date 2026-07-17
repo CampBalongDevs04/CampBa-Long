@@ -149,3 +149,21 @@
     color: #3DA35D;
     font-weight: 600;
 }
+
+.accomodation-availability-note{
+    margin: 0 0 10px;
+    font-size: 12px;
+    font-style: italic;
+    color: var(--leaf);
+}
+
+.accomodation-card.fully-booked{
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.accomodation-card.fully-booked .accomodation-card-available{
+    color: #9b3c2d;
+    font-weight: 600;
+    font-style: normal;
+}

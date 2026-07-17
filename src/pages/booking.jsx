@@ -184,6 +184,8 @@ export default function Booking(){
                                 <AccomodationList
                                     selectedAccomodation={selectedAccomodation}
                                     onSelectAccomodation={setSelectedAccomodation}
+                                    checkIn={dates.checkIn}
+                                    checkOut={sameDayCheckout ? dates.checkIn : dates.checkOut}
                                 />
                             </div>
                         </section>

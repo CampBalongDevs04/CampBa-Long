@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import './css/accommodations.css';
 import LotusDividerIcon from './LotusDividerIcon';
 import LeafDeco from './LeafDeco';
+import { getAvailability, getNextAvailableDate, formatShortDate } from '../data/accommodationInventory.js';
 
 
 //---ACCOMMODATIONS---//
@@ -326,7 +327,12 @@ export default function Accommodations() {
                         onPointerCancel={() => { dragRef.current = { dragging: false, pressed: false, startX: 0 }; }}
                     >
                         <div className="acc-track" ref={trackRef}>
-                            {accommodations.map((acc, i) => (
+                            {accommodations.map((acc, i) => {
+                                const availability = getAvailability(acc.id);
+                                const isFullyBooked = availability !== null && availability.available === 0;
+                                const nextAvailable = isFullyBooked ? getNextAvailableDate(acc.id) : null;
+
+                                return (
                                 <div
                                     key={acc.id}
                                     className={`acc-card${i === currentIndex ? ' active' : ''}`}
@@ -335,6 +341,7 @@ export default function Accommodations() {
                                 >
                                     <div className="acc-card-photo" style={{ background: acc.photoBg }}>
                                         {acc.featured && <span className="acc-badge">Most Popular</span>}
+                                        {isFullyBooked && <span className="acc-badge acc-badge-booked">Fully Booked Today</span>}
                                         {acc.image ? (
                                             <img src={acc.image} alt={acc.title} draggable="false" />
                                         ) : (
@@ -348,6 +355,13 @@ export default function Accommodations() {
                                         <h3>{acc.title}</h3>
                                         <p className="acc-pax">{paxLabel(acc)}</p>
                                         <p className="acc-price">PHP {acc.price.toLocaleString()}</p>
+                                        {availability !== null && (
+                                            <p className={`acc-availability${isFullyBooked ? ' booked-out' : ''}`}>
+                                                {isFullyBooked
+                                                    ? `Fully booked today${nextAvailable ? ` · free ${formatShortDate(nextAvailable)}` : ''}`
+                                                    : `${availability.available} of ${availability.total} units available today`}
+                                            </p>
+                                        )}
                                     </div>
                                     <div className="acc-details">
                                         <h4>What&apos;s Included</h4>
@@ -366,10 +380,11 @@ export default function Accommodations() {
                                         className="acc-book-btn"
                                         onClick={(e) => { e.stopPropagation(); handleBook(acc); }}
                                     >
-                                        Book Now!
+                                        {isFullyBooked ? 'Book a Later Date' : 'Book Now!'}
                                     </button>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
 

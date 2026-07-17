@@ -346,6 +346,14 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
+/* Fully-booked badge sits on the right so it never overlaps "Most Popular" */
+.acc-badge-booked{
+    left: auto;
+    right: 10px;
+    background: linear-gradient(135deg, #b5543f, #9b3c2d);
+    color: #FBF7EA;
+}
+
 .acc-card-info{
     background: var(--forest-dark);
     color: #F3F5E9;
@@ -368,6 +376,17 @@
     letter-spacing: 1px;
     text-transform: uppercase;
     opacity: 0.8;
+}
+.acc-card-info .acc-availability{
+    margin: 4px 0 0;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #9fd0a4;
+}
+.acc-card-info .acc-availability.booked-out{
+    color: #e2a08f;
 }
 .acc-card-info .acc-price{
     margin: 5px 0 0;
@@ -457,6 +476,15 @@
 }
 .acc-book-btn:hover{ background: var(--green); color: #fff; border-color: var(--green); }
 .acc-book-btn:active{ transform: scale(0.97); }
+.acc-book-btn:disabled{
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+.acc-book-btn:disabled:hover{
+    background: transparent;
+    color: var(--forest-dark);
+    border-color: var(--gold);
+}
 
 /* ---------- Pagination dots ---------- */
 .acc-dots{

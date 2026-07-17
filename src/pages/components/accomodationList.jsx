@@ -1,5 +1,10 @@
 import { useEffect, useRef } from 'react'
 import '../components/css/accomodationList.css'
+import {
+    getAvailability,
+    getNextAvailableDate,
+    formatShortDate,
+} from '../../data/accommodationInventory.js'
 import houseSmall from '../../assets/temp/A-House-Small.png'
 import houseMedium from '../../assets/temp/A-House-Medium.png'
 import houseFamily from '../../assets/temp/A-House-Family.png'
@@ -67,8 +72,11 @@ const list = [
     }
 ]
 
-export default function AccomodationList({ selectedAccomodation, onSelectAccomodation }){
+export default function AccomodationList({ selectedAccomodation, onSelectAccomodation, checkIn, checkOut }){
     const trackRef = useRef(null)
+    const hasDates = !!checkIn
+    const stayStart = checkIn ?? new Date()
+    const stayEnd = checkOut ?? null
 
     const scrollByCard = (direction) => {
         const track = trackRef.current
@@ -89,6 +97,11 @@ export default function AccomodationList({ selectedAccomodation, onSelectAccomod
 
     return(
         <div className="accomodation-list">
+            <p className="accomodation-availability-note">
+                {hasDates
+                    ? `Showing availability for ${formatShortDate(stayStart)}${stayEnd && formatShortDate(stayEnd) !== formatShortDate(stayStart) ? ` – ${formatShortDate(stayEnd)}` : ''}`
+                    : 'Showing availability for today — pick your dates in step 1 to check your stay.'}
+            </p>
             <div className="accomodation-carousel">
                 <button
                     type="button"
@@ -100,33 +113,44 @@ export default function AccomodationList({ selectedAccomodation, onSelectAccomod
                 </button>
 
                 <div className="accomodation-track" ref={trackRef}>
-                    {list.map((item) => (
-                        <button
-                            type="button"
-                            className={`accomodation-card ${selectedAccomodation === item.id ? 'selected' : ''}`}
-                            key={item.id}
-                            onClick={() => onSelectAccomodation?.(item.id)}
-                        >
-                            <span className="accomodation-card-circle"></span>
-                            <div className="accomodation-card-image">
-                                {item.image
-                                    ? <img src={item.image} alt={item.name} />
-                                    : <span className="accomodation-card-noimage">No image</span>}
-                            </div>
-                            <div className="accomodation-card-info">
-                                <span className="accomodation-card-name">{item.name}</span>
-                                <span className="accomodation-card-pax">{item.pax}</span>
-                                <span className="accomodation-card-price">
-                                    {item.price ? `₱${item.price}` : 'Price TBA'}
-                                </span>
-                                <span className={`accomodation-card-available ${item.available ? 'is-available' : ''}`}>
-                                    {item.available === null
-                                        ? 'Availability TBA'
-                                        : item.available ? 'Available' : 'Fully booked'}
-                                </span>
-                            </div>
-                        </button>
-                    ))}
+                    {list.map((item) => {
+                        const availability = getAvailability(item.id, stayStart, stayEnd)
+                        const isFullyBooked = availability !== null && availability.available === 0
+                        const nextAvailable = isFullyBooked
+                            ? getNextAvailableDate(item.id, stayStart)
+                            : null
+
+                        return (
+                            <button
+                                type="button"
+                                className={`accomodation-card ${selectedAccomodation === item.id ? 'selected' : ''} ${isFullyBooked ? 'fully-booked' : ''}`}
+                                key={item.id}
+                                disabled={isFullyBooked}
+                                onClick={() => onSelectAccomodation?.(item.id)}
+                            >
+                                <span className="accomodation-card-circle"></span>
+                                <div className="accomodation-card-image">
+                                    {item.image
+                                        ? <img src={item.image} alt={item.name} />
+                                        : <span className="accomodation-card-noimage">No image</span>}
+                                </div>
+                                <div className="accomodation-card-info">
+                                    <span className="accomodation-card-name">{item.name}</span>
+                                    <span className="accomodation-card-pax">{item.pax}</span>
+                                    <span className="accomodation-card-price">
+                                        {item.price ? `₱${item.price}` : 'Price TBA'}
+                                    </span>
+                                    <span className={`accomodation-card-available ${availability && availability.available > 0 ? 'is-available' : ''}`}>
+                                        {availability === null
+                                            ? 'Availability TBA'
+                                            : isFullyBooked
+                                                ? `Fully booked${nextAvailable ? ` · free ${formatShortDate(nextAvailable)}` : ''}`
+                                                : `${availability.available} of ${availability.total} available`}
+                                    </span>
+                                </div>
+                            </button>
+                        )
+                    })}
                 </div>
 
                 <button
