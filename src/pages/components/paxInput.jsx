@@ -1,5 +1,5 @@
 import '../components/css/paxInput.css'
-import { accomodationOptions } from './accomodationList'
+import { accomodationOptions } from '../../data/accomodationOptions.js'
 
 const MIN_PAX = 1
 const MAX_PAX = 20
