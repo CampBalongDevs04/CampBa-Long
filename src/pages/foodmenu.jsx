@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Link } from 'react-router'
 import './foodmenu.css'
 import Footer from '../components/footer'
 import food1 from '../assets/images/food1.png'
@@ -17,6 +18,52 @@ import food13 from '../assets/images/food13.png'
 import food14 from '../assets/images/food14.png'
 import food15 from '../assets/images/food15.png'
 import food16 from '../assets/images/food16.png'
+import food17 from '../assets/images/food17.png'
+import food18 from '../assets/images/food18.png'
+import food19 from '../assets/images/food19.png'
+import food20 from '../assets/images/food20.png'
+import food21 from '../assets/images/food21.png'
+import food22 from '../assets/images/food22.png'
+import food23 from '../assets/images/food23.png'
+
+// Shared with booking.jsx and mybooking.jsx — the key under which
+// confirmed bookings (and their food orders) are persisted.
+const BOOKINGS_STORAGE_KEY = 'cbl-my-bookings'
+
+function loadBookings(){
+  try {
+    return JSON.parse(localStorage.getItem(BOOKINGS_STORAGE_KEY) ?? '[]')
+  } catch {
+    return []
+  }
+}
+
+function isBookingActive(booking){
+  if (booking.status === 'cancelled') return false
+  if (booking.status === 'upcoming' && booking.checkOut && new Date(booking.checkOut).getTime() < Date.now()) {
+    return false
+  }
+  return true
+}
+
+// Food can only be added to a booking that has an uploaded down-payment
+// receipt on file — that's what "a receipt inside My Bookings" means.
+// The most recent eligible booking (bookings are stored newest-first) is
+// the one the order gets attached to.
+function findOrderableBooking(){
+  const bookings = loadBookings()
+  return bookings.find((booking) => booking.hasReceipt && isBookingActive(booking)) ?? null
+}
+
+function addFoodOrderToBooking(bookingId, order){
+  const bookings = loadBookings()
+  const next = bookings.map((booking) =>
+    booking.id === bookingId
+      ? { ...booking, foodOrders: [...(booking.foodOrders ?? []), order] }
+      : booking
+  )
+  localStorage.setItem(BOOKINGS_STORAGE_KEY, JSON.stringify(next))
+}
 
 const orderSteps = [
   'Complete your booking first.',
@@ -50,7 +97,15 @@ const coldDrinkItems = [
   { image: food16, name: 'Blue Lemonade', desc: 'Family Serving / Single', price: 'PHP 130.00' },
 ]
 const dinnerItems = [
-  //input the details here - gab 
+  { image: food18, name: 'Pork Chicken Adobo', desc: 'Pork / Chicken / Soy Sauce / Vinegar / Paminta / Onion / Garlic', price: 'PHP 125.00' },
+  { image: food19, name: 'Menudo', desc: 'Pork / Liver / Potato / Carrot / Bell Pepper / Tomato Sauce', price: 'PHP 140.00' },
+  { image: food20, name: 'Monggo', desc: 'Mung Beans / Sitaw / Ampalaya / Malunggay / Pork', price: 'PHP 110.00' },
+]
+
+const dinnerDrinkItems = [
+  { image: food21, name: "Sago't Gulaman Special", desc: 'Single Serving', price: 'PHP 65.00' },
+  { image: food22, name: 'Calamansi Juice', desc: 'Family Serving', price: 'PHP 130.00' },
+  { image: food23, name: 'Creamy Melon Vanilla', desc: 'Family Serving', price: 'PHP 150.00' },
 ]
 
 function SubcategoryToggle({ label, expanded, onToggle }) {
@@ -80,6 +135,7 @@ function CategoryTitle({ children, plain }) {
 function FoodOrderModal({ item, onClose }) {
   const [quantity, setQuantity] = useState(1)
   const [confirmed, setConfirmed] = useState(false)
+  const [blocked, setBlocked] = useState(false)
 
   useEffect(() => {
     const handleKey = (event) => {
@@ -105,6 +161,24 @@ function FoodOrderModal({ item, onClose }) {
   const unitPrice = Number(item.price.replace(/[^0-9.]/g, '')) || 0
   const total = unitPrice * quantity
 
+  const handleConfirm = () => {
+    // Eligibility is only checked once the guest actually tries to
+    // confirm, so the ordering form is what they see first.
+    const targetBooking = findOrderableBooking()
+    if (!targetBooking) {
+      setBlocked(true)
+      return
+    }
+    addFoodOrderToBooking(targetBooking.id, {
+      name: item.name,
+      unitPrice,
+      quantity,
+      total,
+      orderedAt: new Date().toISOString(),
+    })
+    setConfirmed(true)
+  }
+
   return (
     <div className="food-order-overlay" onClick={onClose}>
       <div
@@ -122,6 +196,22 @@ function FoodOrderModal({ item, onClose }) {
           <div className="food-order-confirmed">
             <span className="food-order-confirmed-icon" aria-hidden="true">✓</span>
             <p>Added to your booking receipt!</p>
+          </div>
+        ) : blocked ? (
+          <div className="food-order-blocked">
+            <span className="food-order-blocked-icon" aria-hidden="true">!</span>
+            <p>
+              You need a confirmed booking with an uploaded down-payment
+              receipt before you can order food.
+            </p>
+            <div className="food-order-blocked-actions">
+              <Link to="/my-booking" className="food-order-blocked-link">
+                View My Bookings
+              </Link>
+              <Link to="/booking" className="food-order-blocked-link food-order-blocked-link-primary">
+                Book Now
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="food-order-body">
@@ -150,7 +240,7 @@ function FoodOrderModal({ item, onClose }) {
 
               <p className="food-order-total">Total: PHP {total.toFixed(2)}</p>
 
-              <button type="button" className="food-order-confirm" onClick={() => setConfirmed(true)}>
+              <button type="button" className="food-order-confirm" onClick={handleConfirm}>
                 Add to Booking Receipt
               </button>
             </div>
@@ -252,6 +342,8 @@ function FoodMenuPage() {
     beverages: true,
     lunch: true,
     coldDrinks: true,
+    dinner: true,
+    dinnerDrinks: true,
   })
 
   const [orderItem, setOrderItem] = useState(null)
@@ -371,23 +463,31 @@ function FoodMenuPage() {
       <section className="menu-category">
         <div
           className="menu-category-banner"
-          style={{ backgroundImage: `url(${food10})` }}
+          style={{ backgroundImage: `url(${food17})` }}
         >
           <CategoryTitle>DINNER</CategoryTitle>
         </div>
         <div className="menu-category-toggle-row">
           <SubcategoryToggle
             label="Foods"
-            expanded={expanded.lunch}
-            onToggle={() => toggleSection('lunch')}
+            expanded={expanded.dinner}
+            onToggle={() => toggleSection('dinner')}
           />
         </div>
-        {expanded.lunch && <MenuFoodRow items={lunchItems} onAddToOrder={setOrderItem} />}
+        {expanded.dinner && <MenuFoodRow items={dinnerItems} onAddToOrder={setOrderItem} />}
       </section>
 
-      
-
-
+      <section className="menu-category">
+        <div className="menu-category-header">
+          <CategoryTitle plain>BEVERAGES</CategoryTitle>
+          <SubcategoryToggle
+            label="Drinks"
+            expanded={expanded.dinnerDrinks}
+            onToggle={() => toggleSection('dinnerDrinks')}
+          />
+        </div>
+        {expanded.dinnerDrinks && <MenuFoodRow items={dinnerDrinkItems} onAddToOrder={setOrderItem} />}
+      </section>
 
 
     </main>
