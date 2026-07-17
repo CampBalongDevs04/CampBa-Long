@@ -1,3 +1,13 @@
+/* ---------- Two-panel layout: food list left, user orders right ---------- */
+.foodlist-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
+    gap: 20px;
+    align-items: start;
+    width: 100%;
+    box-sizing: border-box;
+}
+
 /* ---------- Admin food list panel ---------- */
 .foodlist-panel {
     display: flex;
@@ -85,9 +95,120 @@
     white-space: nowrap;
 }
 
+/* ---------- User orders panel (right) ---------- */
+.foodlist-orders {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-sizing: border-box;
+    background: var(--cream);
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 10px 20px -14px rgba(10, 22, 14, 0.5);
+    position: sticky;
+    top: 20px;
+}
+
+.foodlist-orders-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.foodlist-order-card {
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.25);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-family: 'Jost', sans-serif;
+    color: var(--forest-dark);
+}
+
+.foodlist-order-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.foodlist-order-guest {
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.foodlist-order-date {
+    font-size: 0.75rem;
+    color: rgba(10, 22, 14, 0.55);
+    white-space: nowrap;
+}
+
+.foodlist-order-line {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.foodlist-order-item {
+    font-size: 0.85rem;
+    color: rgba(10, 22, 14, 0.75);
+}
+
+.foodlist-order-qty {
+    font-weight: 600;
+    color: var(--forest-dark);
+}
+
+.foodlist-order-total {
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+/* ---------- Orders empty state ---------- */
+.foodlist-orders-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 6px;
+    padding: 32px 12px;
+    color: rgba(10, 22, 14, 0.45);
+    font-family: 'Jost', sans-serif;
+}
+
+.foodlist-orders-empty-title {
+    margin: 6px 0 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--forest-dark);
+}
+
+.foodlist-orders-empty-text {
+    margin: 0;
+    font-size: 0.82rem;
+}
+
 /* ---------- Responsive ---------- */
+@media (max-width: 1080px) {
+    .foodlist-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .foodlist-orders {
+        position: static;
+    }
+}
+
 @media (max-width: 860px) {
-    .foodlist-panel {
+    .foodlist-panel,
+    .foodlist-orders {
         padding: 18px;
     }
 
