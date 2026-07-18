@@ -22,8 +22,8 @@ import FoodTab from './items/foodTab.jsx'
 import FoodList from './items/foodList.jsx'
 import ClockDate from './items/extras/clockDate.jsx'
 import AccommodationCount from './items/accommodationCount.jsx'
-
-
+import SpaService from './items/spaService-Tab.jsx'
+import SpaServiceAvails from './items/SpaServiceAvails.jsx'
 
 const ADMIN_PASSCODE = 'campbalong2025'
 const ADMIN_EMAIL ='campbalong@gmail.com'
@@ -53,6 +53,7 @@ function AdminDash() {
   const [activeBookingTab, setActiveBookingTab] = useState('all')
   const [activeServiceTab, setActiveServiceTab] = useState('all')
   const [activeFoodTab, setActiveFoodTab] = useState('all')
+  const [activeSpaTab, setActiveSpaTab] = useState('avail')
 
 
   const handleLogout = () => {
@@ -154,6 +155,7 @@ function AdminDash() {
 
                     </div>
                 </div>
+            //bookings section 
 
 
 
@@ -173,6 +175,7 @@ function AdminDash() {
                     <div className="admin-dash-heading">
                         <p className="admin-dash-eyebrow">Camp Ba-long</p>
                         <h1 className="admin-dash-title">Units</h1>
+                        <ClockDate />
                     </div>
                     <AccommodationCount />
                 </div>
@@ -192,6 +195,7 @@ function AdminDash() {
                     <div className="admin-dash-heading">
                         <p className="admin-dash-eyebrow">Camp Ba-long</p>
                         <h1 className="admin-dash-title">Food Menu</h1>
+                        <ClockDate />
                     </div>
                     <FoodTab active={activeFoodTab} onChange={setActiveFoodTab} />
                     {activeFoodTab === 'all' && <FoodList category="all" />}
@@ -199,6 +203,28 @@ function AdminDash() {
                     {activeFoodTab === 'lunch' && <FoodList category="lunch" />}
                     {activeFoodTab === 'dinner' && <FoodList category="dinner" />}
                     {activeFoodTab === 'beverages' && <FoodList category="beverages" />}
+                </div>
+
+            ): activeSection === 'spa' ? (
+                <div className="admin-dash-content">
+                    <button
+                        type="button"
+                        className="admin-dash-back"
+                        onClick={() => setActiveSection('overview')}
+                    >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12" />
+                            <path d="M12 19l-7-7 7-7" />
+                        </svg>
+                        Back to Overview
+                    </button>
+                    <div className="admin-dash-heading">
+                        <p className="admin-dash-eyebrow">Camp Ba-long</p>
+                        <h1 className="admin-dash-title">Spa Services</h1>
+                        <ClockDate />
+                    </div>
+                    <SpaService active={activeSpaTab} onChange={setActiveSpaTab} />
+                    {activeSpaTab === 'avail' && <SpaServiceAvails />}
                 </div>
             ) : activeSection === 'export' ? (
                 <div className="admin-dash-content">
@@ -216,6 +242,7 @@ function AdminDash() {
                     <div className="admin-dash-heading">
                         <p className="admin-dash-eyebrow">Camp Ba-long</p>
                         <h1 className="admin-dash-title">Export Reports</h1>
+                        <ClockDate />
                     </div>
                     <Export />
                 </div>

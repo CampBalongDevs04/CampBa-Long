@@ -1,8 +1,8 @@
 import {useState} from 'react'
-import '../css/'
+import '../css/Spatab.css'
 
 const TabSpaService = [
-    {id: 'avail', label: 'Avail'}
+    {id: 'avail', label: 'Avails'}
 ]
 
  
@@ -24,7 +24,7 @@ export default function SpaService({active, onChange}){
                         key={id}
                         type="button"
                         role="tab"
-                        aria-slected={current === id}
+                        aria-selected={current === id}
                         className={current ===id ? 'Spa-Tab-item active' : 'Spa-Tab-item'}
                         onClick={() => handleSelect(id)}
                         >
