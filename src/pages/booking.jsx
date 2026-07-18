@@ -11,9 +11,8 @@ import Payment from './components/payment'
 import Terms from './components/terms'
 import BookingSummary from './components/bookingSummary'
 import Footer from '../components/footer'
+import { useBookings } from './mybooking.jsx'
 
-// Shared with mybooking.jsx — the key under which confirmed bookings are persisted.
-const BOOKINGS_STORAGE_KEY = 'cbl-my-bookings'
 const DOWNPAYMENT_RATE = 0.5
 
 const steps = [
@@ -60,6 +59,7 @@ function StepHeader({ index }){
 export default function Booking(){
     const location = useLocation()
     const navigate = useNavigate()
+    const { addBooking } = useBookings()
     const [selectedTime, setSelectedTime] = useState(null)
     const [dates, setDates] = useState({ checkIn: null, checkOut: null })
     const [selectedAccomodation, setSelectedAccomodation] = useState(
@@ -117,8 +117,7 @@ export default function Booking(){
             createdAt: new Date().toISOString(),
         }
 
-        const existing = JSON.parse(localStorage.getItem(BOOKINGS_STORAGE_KEY) ?? '[]')
-        localStorage.setItem(BOOKINGS_STORAGE_KEY, JSON.stringify([booking, ...existing]))
+        addBooking(booking)
 
         navigate('/my-booking')
     }
