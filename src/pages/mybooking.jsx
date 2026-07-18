@@ -1,21 +1,79 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import { Link, useNavigate } from 'react-router'
 import './components/css/mybooking.css'
 import Footer from '../components/footer'
 
-// Shared with booking.jsx — the key under which confirmed bookings are persisted.
-const BOOKINGS_STORAGE_KEY = 'cbl-my-bookings'
+// In-memory only — no localStorage, no Provider. This is a module-level
+// singleton store: the ES module is loaded once per page load, so the
+// array survives client-side navigation (booking -> menu -> my-booking)
+// but resets to empty on a real refresh or tab close, same as any other
+// in-memory JS state. Shared with booking.jsx and foodmenu.jsx.
+let bookingsStore = []
+const listeners = new Set()
 
-function loadBookings(){
-    try {
-        return JSON.parse(localStorage.getItem(BOOKINGS_STORAGE_KEY) ?? '[]')
-    } catch {
-        return []
-    }
+function notify(){
+    for (const listener of listeners) listener()
 }
 
-function saveBookings(bookings){
-    localStorage.setItem(BOOKINGS_STORAGE_KEY, JSON.stringify(bookings))
+function updateBookings(updater){
+    bookingsStore = updater(bookingsStore)
+    notify()
+}
+
+function subscribe(listener){
+    listeners.add(listener)
+    return () => listeners.delete(listener)
+}
+
+function getSnapshot(){
+    return bookingsStore
+}
+
+function isBookingActive(booking){
+    if (booking.status === 'cancelled') return false
+    if (booking.status === 'upcoming' && booking.checkOut && new Date(booking.checkOut).getTime() < Date.now()) {
+        return false
+    }
+    return true
+}
+
+export function useBookings(){
+    const bookings = useSyncExternalStore(subscribe, getSnapshot)
+
+    return {
+        bookings,
+
+        addBooking(booking){
+            updateBookings((prev) => [booking, ...prev])
+        },
+
+        cancelBooking(id){
+            updateBookings((prev) =>
+                prev.map((booking) => (booking.id === id ? { ...booking, status: 'cancelled' } : booking))
+            )
+        },
+
+        deleteBooking(id){
+            updateBookings((prev) => prev.filter((booking) => booking.id !== id))
+        },
+
+        // Food can only be added to a booking that has an uploaded down-payment
+        // receipt on file. The most recent eligible booking (bookings are
+        // stored newest-first) is the one an order gets attached to.
+        findOrderableBooking(){
+            return bookingsStore.find((booking) => booking.hasReceipt && isBookingActive(booking)) ?? null
+        },
+
+        addFoodOrderToBooking(bookingId, order){
+            updateBookings((prev) =>
+                prev.map((booking) =>
+                    booking.id === bookingId
+                        ? { ...booking, foodOrders: [...(booking.foodOrders ?? []), order] }
+                        : booking
+                )
+            )
+        },
+    }
 }
 
 function formatDate(iso){
@@ -221,28 +279,18 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete }){
 
 function MyBooking() {
     const navigate = useNavigate()
-    const [bookings, setBookings] = useState(loadBookings)
+    const { bookings, cancelBooking, deleteBooking } = useBookings()
 
     useEffect(() => {
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     }, [])
 
     function handleCancel(id){
-        setBookings((prev) => {
-            const next = prev.map((booking) =>
-                booking.id === id ? { ...booking, status: 'cancelled' } : booking
-            )
-            saveBookings(next)
-            return next
-        })
+        cancelBooking(id)
     }
 
     function handleDelete(id){
-        setBookings((prev) => {
-            const next = prev.filter((booking) => booking.id !== id)
-            saveBookings(next)
-            return next
-        })
+        deleteBooking(id)
     }
 
     function handleBookAgain(booking){

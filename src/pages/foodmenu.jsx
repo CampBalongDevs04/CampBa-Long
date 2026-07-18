@@ -25,45 +25,7 @@ import food20 from '../assets/images/food20.png'
 import food21 from '../assets/images/food21.png'
 import food22 from '../assets/images/food22.png'
 import food23 from '../assets/images/food23.png'
-
-// Shared with booking.jsx and mybooking.jsx — the key under which
-// confirmed bookings (and their food orders) are persisted.
-const BOOKINGS_STORAGE_KEY = 'cbl-my-bookings'
-
-function loadBookings(){
-  try {
-    return JSON.parse(localStorage.getItem(BOOKINGS_STORAGE_KEY) ?? '[]')
-  } catch {
-    return []
-  }
-}
-
-function isBookingActive(booking){
-  if (booking.status === 'cancelled') return false
-  if (booking.status === 'upcoming' && booking.checkOut && new Date(booking.checkOut).getTime() < Date.now()) {
-    return false
-  }
-  return true
-}
-
-// Food can only be added to a booking that has an uploaded down-payment
-// receipt on file — that's what "a receipt inside My Bookings" means.
-// The most recent eligible booking (bookings are stored newest-first) is
-// the one the order gets attached to.
-function findOrderableBooking(){
-  const bookings = loadBookings()
-  return bookings.find((booking) => booking.hasReceipt && isBookingActive(booking)) ?? null
-}
-
-function addFoodOrderToBooking(bookingId, order){
-  const bookings = loadBookings()
-  const next = bookings.map((booking) =>
-    booking.id === bookingId
-      ? { ...booking, foodOrders: [...(booking.foodOrders ?? []), order] }
-      : booking
-  )
-  localStorage.setItem(BOOKINGS_STORAGE_KEY, JSON.stringify(next))
-}
+import { useBookings } from './mybooking.jsx'
 
 const orderSteps = [
   'Complete your booking first.',
@@ -135,6 +97,7 @@ function CategoryTitle({ children, plain }) {
 }
 
 function FoodOrderModal({ item, onClose }) {
+  const { findOrderableBooking, addFoodOrderToBooking } = useBookings()
   const [quantity, setQuantity] = useState(1)
   const [confirmed, setConfirmed] = useState(false)
   const [blocked, setBlocked] = useState(false)
