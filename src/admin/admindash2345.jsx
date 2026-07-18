@@ -18,6 +18,8 @@ import Spa from  './items/foodSpa-Spa.jsx'
 import LotusDividerIcon from '../components/LotusDividerIcon.jsx'
 import logoCamp from '../assets/images/logocamp.png'
 import FoodSpa from './items/FoodSpa.jsx'
+import FoodTab from './items/foodTab.jsx'
+import FoodList from './items/foodList.jsx'
 import ClockDate from './items/extras/clockDate.jsx'
 import AccommodationCount from './items/accommodationCount.jsx'
 
@@ -50,6 +52,7 @@ function AdminDash() {
   const [activeSection, setActiveSection] = useState('overview')
   const [activeBookingTab, setActiveBookingTab] = useState('all')
   const [activeServiceTab, setActiveServiceTab] = useState('all')
+  const [activeFoodTab, setActiveFoodTab] = useState('all')
 
 
   const handleLogout = () => {
@@ -172,6 +175,30 @@ function AdminDash() {
                         <h1 className="admin-dash-title">Units</h1>
                     </div>
                     <AccommodationCount />
+                </div>
+            ) : activeSection === 'menu' ? (
+                <div className="admin-dash-content">
+                    <button
+                        type="button"
+                        className="admin-dash-back"
+                        onClick={() => setActiveSection('overview')}
+                    >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12" />
+                            <path d="M12 19l-7-7 7-7" />
+                        </svg>
+                        Back to Overview
+                    </button>
+                    <div className="admin-dash-heading">
+                        <p className="admin-dash-eyebrow">Camp Ba-long</p>
+                        <h1 className="admin-dash-title">Food Menu</h1>
+                    </div>
+                    <FoodTab active={activeFoodTab} onChange={setActiveFoodTab} />
+                    {activeFoodTab === 'all' && <FoodList category="all" />}
+                    {activeFoodTab === 'breakfast' && <FoodList category="breakfast" />}
+                    {activeFoodTab === 'lunch' && <FoodList category="lunch" />}
+                    {activeFoodTab === 'dinner' && <FoodList category="dinner" />}
+                    {activeFoodTab === 'beverages' && <FoodList category="beverages" />}
                 </div>
             ) : activeSection === 'export' ? (
                 <div className="admin-dash-content">
