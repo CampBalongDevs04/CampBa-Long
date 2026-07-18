@@ -1,5 +1,5 @@
 /* ---------- Range calendar ---------- */
-.cal {
+.excal {
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -7,14 +7,14 @@
     max-width: 340px;
 }
 
-.cal-header {
+.excal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
 }
 
-.cal-month-label {
+.excal-month-label {
     font-family: 'Cormorant Garamond', serif;
     font-size: 1.15rem;
     font-weight: 700;
@@ -23,7 +23,7 @@
     color: var(--forest-dark);
 }
 
-.cal-nav-btn {
+.excal-nav-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -40,19 +40,19 @@
     transition: background 200ms ease, color 200ms ease;
 }
 
-.cal-nav-btn:hover,
-.cal-nav-btn:focus-visible {
+.excal-nav-btn:hover,
+.excal-nav-btn:focus-visible {
     background: var(--gold);
     color: var(--cream);
 }
 
-.cal-grid {
+.excal-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 4px;
 }
 
-.cal-weekday {
+.excal-weekday {
     font-family: 'Jost', sans-serif;
     font-size: 0.68rem;
     font-weight: 600;
@@ -63,7 +63,7 @@
     padding: 6px 0;
 }
 
-.cal-day {
+.excal-day {
     aspect-ratio: 1;
     display: flex;
     align-items: center;
@@ -79,39 +79,39 @@
     transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
 }
 
-.cal-day-blank {
+.excal-day-blank {
     cursor: default;
     pointer-events: none;
 }
 
-.cal-day:hover,
-.cal-day:focus-visible {
+.excal-day:hover,
+.excal-day:focus-visible {
     border-color: var(--gold);
     background: rgba(198, 161, 91, 0.15);
 }
 
-.cal-day-today {
+.excal-day-today {
     border-color: rgba(198, 161, 91, 0.5);
 }
 
-.cal-day-in-range {
+.excal-day-in-range {
     background: rgba(198, 161, 91, 0.22);
 }
 
-.cal-day-selected {
+.excal-day-selected {
     background: var(--forest-dark);
     color: var(--cream);
     border-color: var(--forest-dark);
 }
 
-.cal-day-selected:hover,
-.cal-day-selected:focus-visible {
+.excal-day-selected:hover,
+.excal-day-selected:focus-visible {
     background: var(--forest-dark);
     color: var(--cream);
     border-color: var(--gold);
 }
 
-.cal-range-label {
+.excal-range-label {
     margin: 0;
     font-family: 'Jost', sans-serif;
     font-size: 0.82rem;

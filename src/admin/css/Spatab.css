@@ -1,0 +1,57 @@
+/* ---------- Spa service tabs ---------- */
+.Spa-Tab {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: fit-content;
+    max-width: 100%;
+    box-sizing: border-box;
+    background: var(--cream);
+    border-radius: 999px;
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    padding: 5px;
+    box-shadow: 0 10px 20px -14px rgba(10, 22, 14, 0.5);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.Spa-Tab::-webkit-scrollbar {
+    display: none;
+}
+
+.Spa-Tab .Spa-Tab-item {
+    flex: 0 0 auto;
+    border: none;
+    background: transparent;
+    border-radius: 999px;
+    padding: 11px 28px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.76rem;
+    font-weight: 500;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--forest-dark);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 200ms ease, color 200ms ease;
+}
+
+.Spa-Tab .Spa-Tab-item:hover,
+.Spa-Tab .Spa-Tab-item:focus-visible {
+    background: rgba(198, 161, 91, 0.18);
+    color: var(--forest-dark);
+}
+
+.Spa-Tab .Spa-Tab-item.active {
+    background: var(--forest-dark);
+    color: var(--cream);
+    font-weight: 600;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 860px) {
+    .Spa-Tab .Spa-Tab-item {
+        padding: 10px 20px;
+    }
+}

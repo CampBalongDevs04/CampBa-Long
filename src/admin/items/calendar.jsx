@@ -64,22 +64,22 @@ export default function Calendar({ startDate = null, endDate = null, onRangeChan
     }
 
     return (
-        <div className="cal">
-            <div className="cal-header">
+        <div className="excal">
+            <div className="excal-header">
                 <button
                     type="button"
-                    className="cal-nav-btn"
+                    className="excal-nav-btn"
                     aria-label="Previous month"
                     onClick={() => goToMonth(-1)}
                 >
                     ‹
                 </button>
-                <span className="cal-month-label">
+                <span className="excal-month-label">
                     {MONTHS[viewMonth]} {viewYear}
                 </span>
                 <button
                     type="button"
-                    className="cal-nav-btn"
+                    className="excal-nav-btn"
                     aria-label="Next month"
                     onClick={() => goToMonth(1)}
                 >
@@ -87,20 +87,20 @@ export default function Calendar({ startDate = null, endDate = null, onRangeChan
                 </button>
             </div>
 
-            <div className="cal-grid">
+            <div className="excal-grid">
                 {WEEKDAYS.map((weekday) => (
-                    <span key={weekday} className="cal-weekday">{weekday}</span>
+                    <span key={weekday} className="excal-weekday">{weekday}</span>
                 ))}
                 {cells.map((day, index) => {
                     if (!day) {
-                        return <span key={`blank-${index}`} className="cal-day cal-day-blank" />
+                        return <span key={`blank-${index}`} className="excal-day excal-day-blank" />
                     }
                     const isStart = isSameDay(day, startDate)
                     const isEnd = isSameDay(day, endDate)
-                    const classes = ['cal-day']
-                    if (isStart || isEnd) classes.push('cal-day-selected')
-                    if (isBetween(day, startDate, endDate)) classes.push('cal-day-in-range')
-                    if (isSameDay(day, today)) classes.push('cal-day-today')
+                    const classes = ['excal-day']
+                    if (isStart || isEnd) classes.push('excal-day-selected')
+                    if (isBetween(day, startDate, endDate)) classes.push('excal-day-in-range')
+                    if (isSameDay(day, today)) classes.push('excal-day-today')
                     return (
                         <button
                             key={day.getTime()}
@@ -114,7 +114,7 @@ export default function Calendar({ startDate = null, endDate = null, onRangeChan
                 })}
             </div>
 
-            <p className="cal-range-label">{formatRangeLabel(startDate, endDate)}</p>
+            <p className="excal-range-label">{formatRangeLabel(startDate, endDate)}</p>
         </div>
     )
 }
