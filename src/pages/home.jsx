@@ -7,11 +7,15 @@ import Location from '../components/location.jsx'
 import { FAQDemo } from '../components/Usage.tsx'
 import Contact from '../components/contact.jsx'
 import Footer from '../components/footer.jsx'
+import CampBalong from '../assets/images/CampBalong.webp'
+// Image for the hero circle frame — drop the import in here when it's ready.
+const heroCircleImage = CampBalong
 
 function Home() {
     return (
         <>
             <div className="hero-banner" id="home">
+                <div className="hero-main">
                 <div className="hero-content">
                     <h1 className="hero-title">
                         Book Your<br />
@@ -29,11 +33,17 @@ function Home() {
                         </Link>
                         <a className="hero-button hero-button-outline" href="#accommodations">
                             <svg viewBox="0 0 24 24" strokeWidth="1.8" aria-hidden="true">
-                                <path d="M4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16M2 21h20M14 12h.01"/>
+                                <path d="M13 4h3a2 2 0 0 1 2 2v14M2 20h3M13 20h9M10 12v.01"/>
+                                <path d="M13 4.56v16.16a1 1 0 0 1-1.24.97L5 20V5.56a2 2 0 0 1 1.51-1.94l4-1A2 2 0 0 1 13 4.56Z"/>
                             </svg>
                             Explore Rooms
                         </a>
                     </div>
+                </div>
+
+                <div className="hero-image-circle">
+                    {heroCircleImage && <img src={heroCircleImage} alt="Camp Ba-long resort" />}
+                </div>
                 </div>
 
                 <div className="hero-features">
@@ -57,9 +67,9 @@ function Home() {
                     </div>
                     <div className="hero-feature">
                         <svg viewBox="0 0 24 24" strokeWidth="1.8" aria-hidden="true">
-                            <circle cx="12" cy="12" r="8"/>
-                            <circle cx="12" cy="12" r="4"/>
-                            <path d="M12 2v2M12 20v2"/>
+                            <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/>
+                            <path d="M7 2v20"/>
+                            <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
                         </svg>
                         <div>
                             <h3>Delicious Dining</h3>
