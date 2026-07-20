@@ -115,20 +115,20 @@ export default function Offers() {
                     <LotusDividerIcon />
                     <h1 className="Welcome-message">• A HIDDEN PARADISE IN NATURE •</h1>
                     <p className="Welcome-description">Immerse yourself in the healing waters , surrounded by lush tropical forest. The perfect place to unwind, rejuvenate your body, and calm your mind.</p>
-                    <div className="Resort-images">
-                        {resortFeatures.map(({ image, altText, icon: Icon, title, description }) => (
-                            <figure className="resort-item" key={title}>
-                                <div className="resort-media">
+                    <div className="story-triptych">
+                        {resortFeatures.map(({ image, altText, title, description }, index) => (
+                            <article className="story-piece" key={title}>
+                                <div className="story-media">
+                                    <span className="story-frame" aria-hidden="true"></span>
                                     <img src={image} alt={altText} />
                                 </div>
-                                <div className="resort-feature">
-                                    <span className="feature-icon"><Icon /></span>
-                                    <div className="feature-text">
-                                        <h3>{title}</h3>
-                                        <p>{description}</p>
-                                    </div>
+                                <div className="story-text">
+                                    <span className="story-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+                                    <h3>{title}</h3>
+                                    <span className="story-rule" aria-hidden="true"></span>
+                                    <p>{description}</p>
                                 </div>
-                            </figure>
+                            </article>
                         ))}
                     </div>
 
