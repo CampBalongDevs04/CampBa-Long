@@ -278,7 +278,8 @@
     /* gold ring + deep shadow to crown the active card */
     box-shadow: 0 0 0 4px rgba(217, 189, 132, 0.18), 0 18px 36px rgba(0, 0, 0, 0.45);
     z-index: 5;
-    cursor: default;
+    /* the active card opens the view-more modal, so it stays clickable */
+    cursor: pointer;
 }
 
 .acc-card-photo{
@@ -456,6 +457,28 @@
     grid-column: 1 / -1;
 }
 
+/* "Click to view more" hint between the amenities and the book button */
+.acc-view-more{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin: 0 0 8px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--green);
+    opacity: 0.85;
+    transition: opacity 0.2s ease;
+}
+.acc-view-more svg{
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+}
+.acc-card:hover .acc-view-more{ opacity: 1; }
+
 /* pill button, same language as the offers "Discover" button */
 .acc-book-btn{
     display: block;
@@ -539,6 +562,205 @@
     transform: translateX(-50%) translateY(0);
 }
 
+/* ---------- View-more modal ---------- */
+.acc-modal-overlay{
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(15, 26, 19, 0.72);
+    backdrop-filter: blur(4px);
+    animation: accOverlayIn 0.25s ease;
+}
+@keyframes accOverlayIn{
+    from{ opacity: 0; }
+    to{ opacity: 1; }
+}
+
+.acc-modal{
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    width: min(880px, 100%);
+    max-height: min(620px, 92vh);
+    background: var(--cream);
+    border: 1px solid var(--gold-soft);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6);
+    animation: accModalIn 0.3s cubic-bezier(0.22, 0.85, 0.32, 1);
+}
+@keyframes accModalIn{
+    from{ opacity: 0; transform: translateY(18px) scale(0.96); }
+    to{ opacity: 1; transform: none; }
+}
+
+.acc-modal-close{
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 5;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--gold-soft);
+    background: rgba(22, 41, 30, 0.8);
+    color: var(--gold-soft);
+    font-size: 20px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+.acc-modal-close:hover{ background: var(--gold-soft); color: var(--forest-dark); }
+.acc-modal-close:active{ transform: scale(0.9); }
+
+/* image carousel (left side) */
+.acc-modal-carousel{
+    position: relative;
+    min-height: 320px;
+    overflow: hidden;
+}
+.acc-modal-slide{
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+.acc-modal-slide img{
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.acc-modal-slide svg{
+    width: 72px;
+    height: 72px;
+}
+.acc-modal-slide .acc-photo-label{ font-size: 0.65rem; }
+.acc-modal-slide .acc-badge{ top: 14px; left: 14px; }
+
+.acc-modal-arrow{
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 4;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid var(--gold-soft);
+    background: rgba(22, 41, 30, 0.65);
+    color: var(--gold-soft);
+    font-size: 20px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+.acc-modal-arrow.prev{ left: 12px; }
+.acc-modal-arrow.next{ right: 12px; }
+.acc-modal-arrow:hover{ background: var(--gold-soft); color: var(--forest-dark); }
+
+.acc-modal-dots{
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* info panel (right side) */
+.acc-modal-info{
+    padding: 30px 28px 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+.acc-modal-info h3{
+    margin: 0 0 4px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--forest-dark);
+}
+.acc-modal-meta{
+    margin: 0;
+    font-size: 0.75rem;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #5b5b4c;
+}
+.acc-modal-price{
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--gold);
+}
+.acc-modal-info .acc-availability{
+    margin: 8px 0 0;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--green);
+}
+.acc-modal-info .acc-availability.booked-out{ color: #9b3c2d; }
+.acc-modal-desc{
+    margin: 14px 0 18px;
+    font-size: 0.82rem;
+    line-height: 1.65;
+    color: var(--ink);
+}
+/* reuse the card's "What's Included" heading style */
+.acc-modal-info h4{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 0 0 10px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--forest-dark);
+    white-space: nowrap;
+}
+.acc-modal-info h4::before,
+.acc-modal-info h4::after{
+    content: '';
+    height: 1px;
+    flex: 1;
+    min-width: 12px;
+}
+.acc-modal-info h4::before{ background: linear-gradient(to left, var(--gold), transparent); }
+.acc-modal-info h4::after{ background: linear-gradient(to right, var(--gold), transparent); }
+.acc-modal-info .acc-feature-list{
+    gap: 7px 12px;
+    margin-bottom: 20px;
+}
+.acc-modal-info .acc-feature-list li{ font-size: 0.74rem; }
+.acc-modal-info .acc-book-btn{
+    width: 100%;
+    margin: auto 0 0;
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 760px){
     .acc-section{ padding: 44px 20px 48px; }
@@ -550,6 +772,18 @@
     .acc-card-photo{ height: 104px; }
     /* cards are too narrow for two columns here */
     .acc-feature-list{ grid-template-columns: 1fr; gap: 5px; }
+
+    /* modal stacks: photo on top, info below */
+    .acc-modal-overlay{ padding: 14px; }
+    .acc-modal{
+        grid-template-columns: 1fr;
+        max-height: 92vh;
+        overflow-y: auto;
+    }
+    .acc-modal-carousel{ min-height: 210px; }
+    .acc-modal-info{ padding: 20px 18px 18px; overflow-y: visible; }
+    /* the modal keeps two columns since it's wider than a card */
+    .acc-modal-info .acc-feature-list{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 480px){
@@ -564,4 +798,5 @@
 
 @media (prefers-reduced-motion: reduce){
     .acc-track, .acc-card, .acc-card-photo img{ transition: none; }
+    .acc-modal-overlay, .acc-modal{ animation: none; }
 }

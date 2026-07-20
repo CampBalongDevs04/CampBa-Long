@@ -17,7 +17,7 @@ function Header() {
     return (
         <header className={menuOpen ? "site-header menu-open" : "site-header"}>
             <Link className="site-logo" to="/" aria-label="Camp Ba-long home" onClick={closeMenu}>
-                <img className="site-logo-icon" src={iconBalong} alt="" />
+                <img className="site-logo-icon" src={iconBalong} alt="Camp Ba-long" />
                 <span className="site-logo-copy">
                     <span className="site-logo-text">Camp Ba-long</span>
                     <span className="site-logo-tagline">Nature Farm &amp; Resort</span>

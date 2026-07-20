@@ -8,6 +8,7 @@ import { FAQDemo } from '../components/Usage.tsx'
 import Contact from '../components/contact.jsx'
 import Footer from '../components/footer.jsx'
 import CampBalong from '../assets/images/CampBalong.webp'
+import heroVideo from '../assets/video/campbalongVid-web.mp4'
 import waterSvg from '../assets/svg/water.svg'
 import bedSvg from '../assets/svg/bed.svg'
 import diningSvg from '../assets/svg/dining.svg'
@@ -19,6 +20,17 @@ function Home() {
     return (
         <>
             <div className="hero-banner" id="home">
+                <video
+                    className="hero-video"
+                    src={heroVideo}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    preload="auto"
+                    aria-hidden="true"
+                    onCanPlay={(e) => e.currentTarget.classList.add('is-ready')}
+                />
                 <div className="hero-main">
                 <div className="hero-content">
                     <h1 className="hero-title">

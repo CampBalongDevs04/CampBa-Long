@@ -312,6 +312,37 @@
     width: 100%;
     aspect-ratio: 10 / 9;
   }
+  /* backdrop shapes: forest arch tucked behind the upper-right photos,
+     with a thin gold echo ring that peeks out around the curve */
+  .story-collage::before{
+    content: "";
+    position: absolute;
+    top: -6%;
+    left: 40%;
+    width: 55%;
+    height: 92%;
+    background: linear-gradient(180deg, var(--forest) 0%, var(--forest-dark) 100%);
+    border-radius: 999px 999px 10px 10px;
+    outline: 1px solid rgba(198, 161, 91, 0.45);
+    outline-offset: 10px;
+    z-index: 0;
+  }
+  /* deep green block anchoring the bottom-left photo; flush with the
+     collage's left edge so it lines up with the cards below.
+     Inner dashed gold frame echoes the tag-card styling. */
+  .story-collage::after{
+    content: "";
+    position: absolute;
+    bottom: -3%;
+    left: 0;
+    width: 56%;
+    height: 48%;
+    background: var(--forest-dark);
+    border-radius: 10px;
+    outline: 1px dashed rgba(198, 161, 91, 0.45);
+    outline-offset: -10px;
+    z-index: 0;
+  }
   .collage-photo{
     position: absolute;
     box-shadow: 0 20px 36px -20px rgba(22, 41, 30, 0.5);

@@ -1,3 +1,15 @@
+:root{
+    --cream: #F5F1E4;
+    --cream-2: #EFE9D6;
+    --forest: #1E3A2B;
+    --forest-dark: #16291E;
+    --gold: #C6A15B;
+    --gold-soft: #D9BD84;
+    --ink: #2A2A22;
+    --leaf: #4C6B4F;
+    --footer-color: #1d3025;
+}
+
 .footer-section{
     width: 100%;
 }
@@ -5,7 +17,7 @@
     box-sizing: border-box;
     width: 100%;
     padding: 60px 50px 24px;
-    background: #037d4d;
+    background: var(--footer-color);
     color: rgb(243, 245, 233);
 }
 .footer-content{
@@ -22,7 +34,7 @@
     margin: 0;
     font-family: 'Cormorant Garamond', serif;
     font-size: 32px;
-    color: rgb(243, 245, 233);
+    color: var(--gold);
 }
 .footer-description{
     margin: 0;
@@ -42,7 +54,8 @@
     margin: 0 0 6px;
     font-size: 18px;
     font-weight: 700;
-    color: rgb(243, 245, 233);
+    color: var(--gold);
+    font-family: 'Cormorant Garamond', serif;
 }
 .footer-links{
     list-style: none;
@@ -51,6 +64,9 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+}
+.footer-links :hover li{
+    color: var(--gold);
 }
 .footer-links a{
     color: rgba(243, 245, 233, 0.85);
