@@ -11,8 +11,9 @@ import SpaIcon from './SpaIcon';
 import NatureIcon from './NatureIcon';
 import RelaxationIcon from './RelaxationIcon';
 import WellnessIcon from './WellnessIcon';
-import RiverImage from '../assets/images/river.png';
-import PoolImage from '../assets/images/pool.png';
+import RiverImage from '../assets/images/ilog.png';
+import PoolSideImage from '../assets/images/poolside.png';
+import PoolImage from '../assets/images/poolplace.png';
 import ForestImage from '../assets/images/forest.png';
 import leafSvg from '../assets/svg/leaf.svg';
 import familySvg from '../assets/svg/family.svg';
@@ -22,7 +23,7 @@ import heartSvg from '../assets/svg/heart.svg'
 
 const offersData = [
     {
-        imageUrl: "https://images.unsplash.com/photo-1544644181-1484b3fdfc62?w=600&q=80&auto=format&fit=crop",
+        imageUrl: PoolSideImage,
         altText: "Natural theme pool surrounded by greenery",
         icon: PoolIcon,
         title: "Pool & Running Water",

@@ -73,6 +73,18 @@ export default function Booking(){
 
     const sameDayCheckout = selectedTime !== null && timeOptions[selectedTime].sameDay === true
 
+    function handleDatesChange(nextDates){
+        setDates(nextDates)
+        // A Sunday check-in only allows the same-day Day Time schedule
+        // (Monday is maintenance day), so drop any overnight selection.
+        if (
+            nextDates.checkIn && nextDates.checkIn.getDay() === 0 &&
+            selectedTime !== null && timeOptions[selectedTime].sameDay !== true
+        ) {
+            setSelectedTime(null)
+        }
+    }
+
     // One entry per step above — a step counts as done only once every
     // field it collects is filled in, so Confirm can be blocked until
     // all five are complete.
@@ -164,12 +176,13 @@ export default function Booking(){
                             <div className="booking-step-body">
                                 <BookingCalendar
                                     sameDayCheckout={sameDayCheckout}
-                                    onChange={setDates}
+                                    onChange={handleDatesChange}
                                 />
 
                                 <TimeSelector
                                     selectedTime={selectedTime}
                                     onSelectTime={setSelectedTime}
+                                    checkIn={dates.checkIn}
                                 />
 
                                 <ScheduleNote
