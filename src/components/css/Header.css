@@ -1,9 +1,19 @@
+
+
 html {
     scroll-behavior: smooth;
 }
 
 :root {
     --header-h: 80px;
+    --cream: #F5F1E4;
+    --cream-2: #EFE9D6;
+    --forest: #1E3A2B;
+    --forest-dark: #16291E;
+    --gold: #C6A15B;
+    --gold-soft: #D9BD84;
+    --ink: #2A2A22;
+    --leaf: #4C6B4F;
 }
 
 /* Anchor navigation (#home, #accommodations, …) must land below the fixed header */
@@ -196,6 +206,7 @@ html {
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
+    border-bottom: solid 1px var(--gold);
 }
 
 .hero-main{
@@ -216,16 +227,31 @@ html {
 
 /* Circular image frame, mirroring the food menu hero circle */
 .hero-image-circle{
+    position: relative;
     flex-shrink: 0;
     width: clamp(260px, 30vw, 420px);
     height: clamp(260px, 30vw, 420px);
     border-radius: 50%;
-    border: 8px solid #C6A15B;
+    border: 6px solid var(--gold);
     overflow: hidden;
     background: rgba(22, 41, 30, 0.45);
     -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
-    box-shadow: 0 24px 48px rgba(10, 20, 14, 0.4);
+    box-shadow:
+        0 0 0 4px rgba(22, 41, 30, 0.65),
+        0 0 0 5px rgba(217, 189, 132, 0.55),
+        0 0 55px rgba(198, 161, 91, 0.28),
+        0 24px 48px rgba(10, 20, 14, 0.4);
+}
+
+/* Inner dashed ring floating over the photo */
+.hero-image-circle::after{
+    content: '';
+    position: absolute;
+    inset: 10px;
+    border-radius: 50%;
+    border: 1.5px dashed rgba(245, 241, 228, 0.55);
+    pointer-events: none;
 }
 
 .hero-image-circle img{
@@ -233,6 +259,12 @@ html {
     height: 100%;
     object-fit: cover;
     display: block;
+    transform: scale(1);
+    transition: transform 0.6s ease;
+}
+
+.hero-image-circle:hover img{
+    transform: scale(1.05);
 }
 
 .hero-accent{
@@ -330,40 +362,61 @@ html {
     margin-top: 40px;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
-    padding: 18px 22px;
-    border-radius: 14px;
-    background: rgba(243, 245, 233, 0.94);
-    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.22);
+    padding: 20px 8px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(198, 161, 91, 0.32), rgba(198, 161, 91, 0.16));
+    border: 1px solid rgba(217, 189, 132, 0.5);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.25);
 }
 
 .hero-feature{
     display: flex;
-    align-items: flex-start;
-    gap: 12px;
+    align-items: center;
+    gap: 14px;
+    padding: 4px 22px;
+    border-left: 1px solid rgba(217, 189, 132, 0.35);
+}
+
+.hero-feature:first-child{
+    border-left: none;
 }
 
 .hero-feature svg{
     width: 30px;
     height: 30px;
     flex-shrink: 0;
-    stroke: #1f4f2f;
+    stroke: var(--gold);
     fill: none;
+}
+
+.hero-feature img{
+    width: 46px;
+    height: 46px;
+    box-sizing: border-box;
+    padding: 11px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: rgba(22, 41, 30, 0.82);
+    border: 1px solid rgba(217, 189, 132, 0.5);
+    object-fit: contain;
 }
 
 .hero-feature h3{
     margin: 0 0 4px;
     font-family: 'Cormorant Garamond', serif;
     font-size: 17px;
-    font-weight: 800;
-    color: #16291E;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #F5F1E4;
 }
 
 .hero-feature p{
     margin: 0;
     font-size: 13px;
-    line-height: 1.35;
-    color: #5b5b4c;
+    line-height: 1.4;
+    color: rgba(245, 241, 228, 0.8);
 }
 
 @media (max-width: 860px) {
@@ -458,6 +511,11 @@ html {
 
     .hero-features {
         grid-template-columns: repeat(2, 1fr);
+        row-gap: 18px;
+    }
+
+    .hero-feature:nth-child(odd) {
+        border-left: none;
     }
 }
 
@@ -514,6 +572,12 @@ html {
     .hero-features {
         grid-template-columns: 1fr;
         margin-top: 28px;
-        padding: 14px 16px;
+        padding: 16px 12px;
+        row-gap: 14px;
+    }
+
+    .hero-feature {
+        border-left: none;
+        padding: 0 12px;
     }
 }
