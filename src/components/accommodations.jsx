@@ -129,10 +129,159 @@ const accommodations = [
     },
 ];
 
+// Extended info shown inside the "view more" modal, keyed by accommodation id.
+// Every entry in `images` is a null placeholder for now — replace each null
+// with an imported photo later (e.g. `images: [smallInterior, smallView]`).
+const ACCOMMODATION_DETAILS = {
+    table: {
+        description:
+            'A shaded picnic table right in the heart of the camp gardens. Perfect for day visitors who want a home base for meals, games, and relaxing between dips in the river.',
+        images: [null, null, null],
+    },
+    tent: {
+        description:
+            'The classic Camp Ba-long experience. Sleep under the trees in a pre-pitched dome tent with sleeping mats provided — just bring your sense of adventure. Fire pit access included for evening bonfires.',
+        images: [null, null, null],
+    },
+    small: {
+        description:
+            'A cozy A-frame hideaway built for one or two. Wake up to a river view, unwind at your own table, and enjoy a comfortable mattress after a day of exploring the camp.',
+        images: [null, null, null],
+    },
+    medium: {
+        description:
+            'Our most popular unit. This mid-size A-frame comfortably fits small groups and barkadas, with bedding for five, an extra tent, and its own table and chair set for shared meals.',
+        images: [null, null, null],
+    },
+    large: {
+        description:
+            'The family favorite. A spacious A-frame that sleeps up to eight, with full bedding, an extra tent for the kids, and a table and chairs set — ideal for reunions and weekend getaways.',
+        images: [null, null, null],
+    },
+    pavilion: {
+        description:
+            'A roofed open-air pavilion made for big celebrations. Long table seating for up to 30 guests, ceiling fans, and power outlets make it the go-to spot for birthdays, team buildings, and family events.',
+        images: [null, null, null],
+    },
+};
+
 const defaultIndex = Math.max(0, accommodations.findIndex((a) => a.featured));
 
 function paxLabel({ paxMin, paxMax }) {
     return paxMin === paxMax ? `${paxMin} pax` : `${paxMin}-${paxMax} pax`;
+}
+
+function AccommodationModal({ acc, onClose, onBook }) {
+    const details = ACCOMMODATION_DETAILS[acc.id] ?? { description: '', images: [null] };
+    const images = details.images.length ? details.images : [null];
+    const [slide, setSlide] = useState(0);
+
+    const availability = getAvailability(acc.id);
+    const isFullyBooked = availability !== null && availability.available === 0;
+    const nextAvailable = isFullyBooked ? getNextAvailableDate(acc.id) : null;
+
+    // Close on Escape and keep the page from scrolling behind the modal.
+    useEffect(() => {
+        const onKey = (e) => e.key === 'Escape' && onClose();
+        window.addEventListener('keydown', onKey);
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => {
+            window.removeEventListener('keydown', onKey);
+            document.body.style.overflow = prevOverflow;
+        };
+    }, [onClose]);
+
+    const goSlide = (index) => {
+        setSlide((index + images.length) % images.length);
+    };
+
+    return (
+        <div className="acc-modal-overlay" onClick={onClose}>
+            <div
+                className="acc-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label={`${acc.title} details`}
+                onClick={(e) => e.stopPropagation()}
+            >
+                <button className="acc-modal-close" onClick={onClose} aria-label="Close">
+                    ×
+                </button>
+
+                <div className="acc-modal-carousel">
+                    <div className="acc-modal-slide" style={{ background: acc.photoBg }}>
+                        {images[slide] ? (
+                            <img src={images[slide]} alt={`${acc.title} photo ${slide + 1}`} draggable="false" />
+                        ) : (
+                            <>
+                                <UnitIcon paths={acc.icon} />
+                                <span className="acc-photo-label">Photo coming soon</span>
+                            </>
+                        )}
+                        {acc.featured && <span className="acc-badge">Most Popular</span>}
+                    </div>
+                    {images.length > 1 && (
+                        <>
+                            <button
+                                className="acc-modal-arrow prev"
+                                onClick={() => goSlide(slide - 1)}
+                                aria-label="Previous photo"
+                            >
+                                ‹
+                            </button>
+                            <button
+                                className="acc-modal-arrow next"
+                                onClick={() => goSlide(slide + 1)}
+                                aria-label="Next photo"
+                            >
+                                ›
+                            </button>
+                            <div className="acc-modal-dots">
+                                {images.map((_, i) => (
+                                    <button
+                                        key={i}
+                                        className={`acc-dot${i === slide ? ' on' : ''}`}
+                                        onClick={() => goSlide(i)}
+                                        aria-label={`Go to photo ${i + 1}`}
+                                    />
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </div>
+
+                <div className="acc-modal-info">
+                    <h3>{acc.title}</h3>
+                    <p className="acc-modal-meta">
+                        {paxLabel(acc)} · <span className="acc-modal-price">PHP {acc.price.toLocaleString()}</span>
+                    </p>
+                    {availability !== null && (
+                        <p className={`acc-availability${isFullyBooked ? ' booked-out' : ''}`}>
+                            {isFullyBooked
+                                ? `Fully booked today${nextAvailable ? ` · free ${formatShortDate(nextAvailable)}` : ''}`
+                                : `${availability.available} of ${availability.total} units available today`}
+                        </p>
+                    )}
+                    <p className="acc-modal-desc">{details.description}</p>
+                    <h4>What&apos;s Included</h4>
+                    <ul className="acc-feature-list">
+                        {acc.features.map((f) => (
+                            <li key={f}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <path d="M20 6L9 17l-5-5" />
+                                </svg>
+                                {f}
+                            </li>
+                        ))}
+                    </ul>
+                    <button className="acc-book-btn" onClick={onBook}>
+                        {isFullyBooked ? 'Book a Later Date' : 'Book Now!'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
 }
 
 export default function Accommodations() {
@@ -140,6 +289,7 @@ export default function Accommodations() {
     const [currentIndex, setCurrentIndex] = useState(defaultIndex);
     const [paxValue, setPaxValue] = useState('');
     const [toast, setToast] = useState({ message: '', visible: false });
+    const [modalAcc, setModalAcc] = useState(null);
 
     const viewportRef = useRef(null);
     const trackRef = useRef(null);
@@ -337,7 +487,7 @@ export default function Accommodations() {
                                     key={acc.id}
                                     className={`acc-card${i === currentIndex ? ' active' : ''}`}
                                     style={{ '--dist': Math.abs(i - currentIndex) }}
-                                    onClick={() => goTo(i)}
+                                    onClick={() => { goTo(i); setModalAcc(acc); }}
                                 >
                                     <div className="acc-card-photo" style={{ background: acc.photoBg }}>
                                         {acc.featured && <span className="acc-badge">Most Popular</span>}
@@ -376,6 +526,14 @@ export default function Accommodations() {
                                             ))}
                                         </ul>
                                     </div>
+                                    <p className="acc-view-more">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                            <circle cx="12" cy="12" r="9" />
+                                            <line x1="12" y1="8" x2="12" y2="12" />
+                                            <line x1="12" y1="16" x2="12.01" y2="16" />
+                                        </svg>
+                                        Click to view more
+                                    </p>
                                     <button
                                         className="acc-book-btn"
                                         onClick={(e) => { e.stopPropagation(); handleBook(acc); }}
@@ -412,6 +570,14 @@ export default function Accommodations() {
             </div>
 
             <div className={`acc-toast${toast.visible ? ' show' : ''}`}>{toast.message}</div>
+
+            {modalAcc && (
+                <AccommodationModal
+                    acc={modalAcc}
+                    onClose={() => setModalAcc(null)}
+                    onBook={() => { setModalAcc(null); handleBook(modalAcc); }}
+                />
+            )}
         </section>
     );
 }
