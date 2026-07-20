@@ -341,40 +341,61 @@ html {
     margin-top: 40px;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
-    padding: 18px 22px;
-    border-radius: 14px;
-    background: rgba(243, 245, 233, 0.94);
-    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.22);
+    padding: 20px 8px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(198, 161, 91, 0.32), rgba(198, 161, 91, 0.16));
+    border: 1px solid rgba(217, 189, 132, 0.5);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.25);
 }
 
 .hero-feature{
     display: flex;
-    align-items: flex-start;
-    gap: 12px;
+    align-items: center;
+    gap: 14px;
+    padding: 4px 22px;
+    border-left: 1px solid rgba(217, 189, 132, 0.35);
+}
+
+.hero-feature:first-child{
+    border-left: none;
 }
 
 .hero-feature svg{
     width: 30px;
     height: 30px;
     flex-shrink: 0;
-    stroke: #1f4f2f;
+    stroke: var(--gold);
     fill: none;
+}
+
+.hero-feature img{
+    width: 46px;
+    height: 46px;
+    box-sizing: border-box;
+    padding: 11px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: rgba(22, 41, 30, 0.82);
+    border: 1px solid rgba(217, 189, 132, 0.5);
+    object-fit: contain;
 }
 
 .hero-feature h3{
     margin: 0 0 4px;
     font-family: 'Cormorant Garamond', serif;
     font-size: 17px;
-    font-weight: 800;
-    color: #16291E;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #F5F1E4;
 }
 
 .hero-feature p{
     margin: 0;
     font-size: 13px;
-    line-height: 1.35;
-    color: #5b5b4c;
+    line-height: 1.4;
+    color: rgba(245, 241, 228, 0.8);
 }
 
 @media (max-width: 860px) {
@@ -469,6 +490,11 @@ html {
 
     .hero-features {
         grid-template-columns: repeat(2, 1fr);
+        row-gap: 18px;
+    }
+
+    .hero-feature:nth-child(odd) {
+        border-left: none;
     }
 }
 
@@ -525,6 +551,12 @@ html {
     .hero-features {
         grid-template-columns: 1fr;
         margin-top: 28px;
-        padding: 14px 16px;
+        padding: 16px 12px;
+        row-gap: 14px;
+    }
+
+    .hero-feature {
+        border-left: none;
+        padding: 0 12px;
     }
 }

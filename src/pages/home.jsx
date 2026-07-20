@@ -8,6 +8,10 @@ import { FAQDemo } from '../components/Usage.tsx'
 import Contact from '../components/contact.jsx'
 import Footer from '../components/footer.jsx'
 import CampBalong from '../assets/images/CampBalong.webp'
+import waterSvg from '../assets/svg/water.svg'
+import bedSvg from '../assets/svg/bed.svg'
+import diningSvg from '../assets/svg/dining.svg'
+import camSvg from '../assets/svg/cam.svg'
 // Image for the hero circle frame — drop the import in here when it's ready.
 const heroCircleImage = CampBalong
 
@@ -48,39 +52,28 @@ function Home() {
 
                 <div className="hero-features">
                     <div className="hero-feature">
-                        <svg viewBox="0 0 24 24" strokeWidth="1.8" aria-hidden="true">
-                            <path d="M3 18v-6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v6M3 18h18M3 18v2M21 18v2M6 11V8a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/>
-                        </svg>
+                        <img src={bedSvg} alt="" aria-hidden="true" />
                         <div>
                             <h3>Comfortable Stays</h3>
                             <p>Well-appointed rooms for a relaxing stay</p>
                         </div>
                     </div>
                     <div className="hero-feature">
-                        <svg viewBox="0 0 24 24" strokeWidth="1.8" aria-hidden="true">
-                            <path d="M2 8c1.5 1 2.5 1 4 0s2.5-1 4 0 2.5 1 4 0 2.5-1 4 0 2.5 1 4 0M2 13c1.5 1 2.5 1 4 0s2.5-1 4 0 2.5 1 4 0 2.5-1 4 0 2.5 1 4 0M2 18c1.5 1 2.5 1 4 0s2.5-1 4 0 2.5 1 4 0 2.5-1 4 0 2.5 1 4 0"/>
-                        </svg>
+                        <img src={waterSvg} alt="" aria-hidden="true" />
                         <div>
                             <h3>Relaxing Amenities</h3>
                             <p>Pools, spa, and more for your comfort</p>
                         </div>
                     </div>
                     <div className="hero-feature">
-                        <svg viewBox="0 0 24 24" strokeWidth="1.8" aria-hidden="true">
-                            <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/>
-                            <path d="M7 2v20"/>
-                            <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
-                        </svg>
+                        <img src={diningSvg} alt="" aria-hidden="true" />
                         <div>
                             <h3>Delicious Dining</h3>
                             <p>A variety of cuisines to satisfy you</p>
                         </div>
                     </div>
                     <div className="hero-feature">
-                        <svg viewBox="0 0 24 24" strokeWidth="1.8" aria-hidden="true">
-                            <path d="M3 8h4l2-3h6l2 3h4v12H3V8Z"/>
-                            <circle cx="12" cy="13" r="3.5"/>
-                        </svg>
+                        <img src={camSvg} alt="" aria-hidden="true" />
                         <div>
                             <h3>Unforgettable Experiences</h3>
                             <p>Activities and moments you'll cherish forever</p>

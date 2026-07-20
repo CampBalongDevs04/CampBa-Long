@@ -115,34 +115,36 @@ export default function Offers() {
                     <LotusDividerIcon />
                     <h1 className="Welcome-message">• A HIDDEN PARADISE IN NATURE •</h1>
                     <p className="Welcome-description">Immerse yourself in the healing waters , surrounded by lush tropical forest. The perfect place to unwind, rejuvenate your body, and calm your mind.</p>
-                    <div className="story-triptych">
-                        {resortFeatures.map(({ image, altText, title, description }, index) => (
-                            <article className="story-piece" key={title}>
-                                <div className="story-media">
-                                    <span className="story-frame" aria-hidden="true"></span>
-                                    <img src={image} alt={altText} />
-                                </div>
-                                <div className="story-text">
-                                    <span className="story-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
-                                    <h3>{title}</h3>
-                                    <span className="story-rule" aria-hidden="true"></span>
-                                    <p>{description}</p>
-                                </div>
-                            </article>
-                        ))}
-                    </div>
+                </div>
 
-                    <div className="tag-card">
-                        {tags.map(({ icon,title, description }) => (
-                            <div className="tag-item" key={title}>
-                                <span className="tag-icon"><img src={icon} alt="" /></span>
-                                <h3>{title}</h3>
-                                <p>{description}</p>
+                <div className="story-showcase">
+                    <div className="story-collage">
+                        {resortFeatures.map(({ image, altText }, index) => (
+                            <div className={`collage-photo photo-${index + 1}`} key={altText}>
+                                <img src={image} alt={altText} />
                             </div>
                         ))}
                     </div>
-                
-                
+                    <ul className="story-list">
+                        {resortFeatures.map(({ icon: Icon, title, description }, index) => (
+                            <li className="story-list-item" key={title}>
+                                <span className="story-list-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+                                <span className="story-list-icon" aria-hidden="true"><Icon /></span>
+                                <h3>{title}</h3>
+                                <p>{description}</p>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+
+                <div className="tag-card">
+                    {tags.map(({ icon,title, description }) => (
+                        <div className="tag-item" key={title}>
+                            <span className="tag-icon"><img src={icon} alt="" /></span>
+                            <h3>{title}</h3>
+                            <p>{description}</p>
+                        </div>
+                    ))}
                 </div>
 
 
