@@ -227,16 +227,31 @@ html {
 
 /* Circular image frame, mirroring the food menu hero circle */
 .hero-image-circle{
+    position: relative;
     flex-shrink: 0;
     width: clamp(260px, 30vw, 420px);
     height: clamp(260px, 30vw, 420px);
     border-radius: 50%;
-    border: 8px solid #C6A15B;
+    border: 6px solid var(--gold);
     overflow: hidden;
     background: rgba(22, 41, 30, 0.45);
     -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
-    box-shadow: 0 24px 48px rgba(10, 20, 14, 0.4);
+    box-shadow:
+        0 0 0 4px rgba(22, 41, 30, 0.65),
+        0 0 0 5px rgba(217, 189, 132, 0.55),
+        0 0 55px rgba(198, 161, 91, 0.28),
+        0 24px 48px rgba(10, 20, 14, 0.4);
+}
+
+/* Inner dashed ring floating over the photo */
+.hero-image-circle::after{
+    content: '';
+    position: absolute;
+    inset: 10px;
+    border-radius: 50%;
+    border: 1.5px dashed rgba(245, 241, 228, 0.55);
+    pointer-events: none;
 }
 
 .hero-image-circle img{
@@ -244,6 +259,12 @@ html {
     height: 100%;
     object-fit: cover;
     display: block;
+    transform: scale(1);
+    transition: transform 0.6s ease;
+}
+
+.hero-image-circle:hover img{
+    transform: scale(1.05);
 }
 
 .hero-accent{
