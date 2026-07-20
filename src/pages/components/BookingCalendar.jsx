@@ -15,6 +15,15 @@ function isSameDay(a, b) {
     return a && b && a.getTime() === b.getTime()
 }
 
+// First Monday strictly after the given date — no stay may reach it,
+// since the resort is closed every Monday for maintenance.
+function nextMondayAfter(date) {
+    const d = startOfDay(date)
+    const daysUntilMonday = ((8 - d.getDay()) % 7) || 7
+    d.setDate(d.getDate() + daysUntilMonday)
+    return d
+}
+
 function formatDate(date) {
     if (!date) return 'Select a date'
     return date.toLocaleDateString('en-US', {
@@ -22,7 +31,7 @@ function formatDate(date) {
     })
 }
 
-function CalendarPanel({ label, variant, selected, onSelect, minDate, rangeStart, rangeEnd }) {
+function CalendarPanel({ label, variant, selected, onSelect, minDate, maxDate, rangeStart, rangeEnd }) {
     const today = startOfDay(new Date())
     const initialView = selected || minDate || today
     const [viewYear, setViewYear] = useState(initialView.getFullYear())
@@ -63,7 +72,8 @@ function CalendarPanel({ label, variant, selected, onSelect, minDate, rangeStart
         const isPast = date.getTime() < today.getTime()
         const isMonday = date.getDay() === 1
         const isBeforeMin = minDate && date.getTime() <= minDate.getTime()
-        const isDisabled = isPast || isMonday || isBeforeMin
+        const isPastMax = maxDate && date.getTime() >= maxDate.getTime()
+        const isDisabled = isPast || isMonday || isBeforeMin || isPastMax
         const isSelected = isSameDay(date, selected)
         const isInRange = rangeStart && rangeEnd &&
             date.getTime() > rangeStart.getTime() && date.getTime() < rangeEnd.getTime()
@@ -182,9 +192,15 @@ export default function BookingCalendar({ onChange, sameDayCheckout = false }) {
             onChange?.({ checkIn: date, checkOut: date })
             return
         }
-        // a check-out on or before the new check-in no longer makes sense
+        // a check-out on or before the new check-in, or one that would
+        // cross the next Monday (maintenance day), no longer makes sense
+        const mondayLimit = nextMondayAfter(date)
         const nextCheckOut =
-            checkOut && date.getTime() >= checkOut.getTime() ? null : checkOut
+            checkOut &&
+            (date.getTime() >= checkOut.getTime() ||
+                checkOut.getTime() >= mondayLimit.getTime())
+                ? null
+                : checkOut
         setCheckOut(nextCheckOut)
         onChange?.({ checkIn: date, checkOut: nextCheckOut })
     }
@@ -220,6 +236,7 @@ export default function BookingCalendar({ onChange, sameDayCheckout = false }) {
                         selected={checkOut}
                         onSelect={selectCheckOut}
                         minDate={checkIn}
+                        maxDate={checkIn ? nextMondayAfter(checkIn) : null}
                         rangeStart={checkIn}
                         rangeEnd={checkOut}
                     />
@@ -229,6 +246,7 @@ export default function BookingCalendar({ onChange, sameDayCheckout = false }) {
             <div className="cal-footer">
                 <p className="cal-note">
                     Mondays are unavailable — maintenance day.
+                    Sunday check-ins are Day Time only.
                 </p>
                 {(checkIn || checkOut) && (
                     <button type="button" className="cal-clear" onClick={clearDates}>

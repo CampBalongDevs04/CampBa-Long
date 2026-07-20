@@ -20,7 +20,11 @@ const timeOptions = [
     }
 ]
 
-export default function TimeSelector({ selectedTime, onSelectTime }){
+export default function TimeSelector({ selectedTime, onSelectTime, checkIn }){
+    // Sunday check-ins can't stay overnight — Monday is maintenance day,
+    // so only the same-day Day Time schedule is offered.
+    const sundayCheckIn = checkIn != null && checkIn.getDay() === 0
+
     return(
         <div className="booking-time-selector">
             <h3 className="title-selector">
@@ -28,22 +32,34 @@ export default function TimeSelector({ selectedTime, onSelectTime }){
             </h3>
 
             <div className="time-choices">
-                {timeOptions.map((time, index) => (
-                    <button
-                        key={index}
-                        type="button"
-                        className={`time-card ${selectedTime === index ? 'selected' : ''}`}
-                        onClick={() => onSelectTime(index)}
-                    >
-                        <span className="time-card-circle"></span>
-                        <div className="time-card-info">
-                            <span className="time-card-label">{time.checkIn}</span>
-                            <span className="time-card-time">{time.time}</span>
-                            <span className="time-card-desc">{time.description}</span>
-                        </div>
-                    </button>
-                ))}
+                {timeOptions.map((time, index) => {
+                    const isDisabled = sundayCheckIn && time.sameDay !== true
+                    return (
+                        <button
+                            key={index}
+                            type="button"
+                            className={`time-card ${selectedTime === index ? 'selected' : ''} ${isDisabled ? 'time-card-disabled' : ''}`}
+                            disabled={isDisabled}
+                            aria-disabled={isDisabled}
+                            onClick={() => { if (!isDisabled) onSelectTime(index) }}
+                        >
+                            <span className="time-card-circle"></span>
+                            <div className="time-card-info">
+                                <span className="time-card-label">{time.checkIn}</span>
+                                <span className="time-card-time">{time.time}</span>
+                                <span className="time-card-desc">{time.description}</span>
+                            </div>
+                        </button>
+                    )
+                })}
             </div>
+
+            {sundayCheckIn && (
+                <p className="time-sunday-note" role="note">
+                    Sunday check-ins are Day Time only — the resort is closed
+                    every Monday for maintenance, so overnight stays are unavailable.
+                </p>
+            )}
         </div>
     )
 }

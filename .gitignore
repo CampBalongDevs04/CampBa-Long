@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local notes / secrets - do not commit
+src/components/psw.md

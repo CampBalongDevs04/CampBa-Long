@@ -250,6 +250,20 @@ html{
     font-style: italic;
     color: var(--leaf);
 }
+.time-card-disabled,
+.time-card-disabled:hover{
+    opacity: 0.45;
+    filter: grayscale(1);
+    cursor: not-allowed;
+    border-color: var(--gold-soft);
+    box-shadow: none;
+}
+.time-sunday-note{
+    margin: 12px 0 0;
+    font-size: 13px;
+    font-style: italic;
+    color: var(--leaf);
+}
 
 /* ---- step 5: nudge shown when Confirm is clicked with steps left ---- */
 .booking-confirm-alert{
