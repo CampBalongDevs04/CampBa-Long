@@ -1,13 +1,14 @@
 import { useRef, useState } from 'react'
 import '../components/css/payment.css'
+import IreneQR from '../../assets/images/IreneGcash.jpg'
 
 const paymentOptions = [
     {
         id: 'gcash',
         method: 'GCash',
-        name: 'Gabriel Aramullo',
-        number: '09xx xxx xxxx',
-        imageQR: null,
+        name: 'IR**E B.',
+        number: '0919 033 ....',
+        imageQR: IreneQR,
     },
     {
         id: 'bank-transfer',

@@ -3,37 +3,64 @@ import './css/faq.css'
 
 const faqs = [
     {
-        question: 'What are your check-in and check-out times?',
-        answer: 'Check-in starts at 2:00 PM and check-out is until 12:00 NN. If you need an early check-in or late check-out, let us know ahead of time and we will do our best to accommodate you.',
+        question: 'Location?',
+        answer: 'We are located at Brgy. Laguan Liliw, Laguna',
     },
     {
-        question: 'How do I book a stay?',
-        answer: 'You can reserve your stay in just a few clicks through the Book Now button on our home page. Walk-ins are welcome, but we recommend booking in advance to secure your preferred room and dates.',
+        question: 'Is tent pitching allowed?',
+        answer: 'Yes, tent pitching is allowed.',
     },
     {
-        question: 'What amenities are included with my stay?',
-        answer: 'All stays include access to our swimming pools, gardens, and common lounge areas. Spa services, dining, and special experiences are available on-site and can be added to your booking.',
+        question: 'Are walk-ins allowed?',
+        answer: "We allow walk-ins if we're not fully booked but it is better if you make reservations.",
     },
     {
-        question: 'Is food available at the resort?',
-        answer: 'Yes! Our restaurant serves a variety of cuisines from breakfast to dinner. You can browse the full menu on our Food Menu page and order during your stay.',
+        question: 'Do you have rooms?',
+        answer: "We are a camp site so we don't have rooms but we do have teepees, A-houses and tents, where you can stay and sleep.",
     },
     {
-        question: 'Do you accommodate events and group bookings?',
-        answer: 'Absolutely. Camp Ba-long is a great venue for family reunions, team buildings, and celebrations. Reach out through our contact form and we will help you plan your event.',
+        question: 'How much is the entrance fee?',
+        answer: '150/ pax for day time, (10am-5pm) and 350/pax for 22 hours/ day and night (10am-8am) night and day (7pm-5am).',
     },
     {
-        question: 'Are pets allowed?',
-        answer: 'Well-behaved pets are welcome in selected accommodations. Please mention your furry companion when booking so we can assign you a pet-friendly room.',
+        question: 'How much is the entrance fee for children?',
+        answer: 'No entrance fee for children 7 years old and below.',
     },
     {
-        question: 'What payment methods do you accept?',
-        answer: 'We accept cash, major credit and debit cards, and popular e-wallets such as GCash. A down payment may be required to confirm reservations.',
+        question: 'How much is the cottage fee?',
+        answer: 'Cottage fee is 2000, for day time (good for 8-10pax).',
     },
     {
-        question: 'Can I cancel or reschedule my booking?',
-        answer: 'Yes. You can manage your reservation through the My Booking page. Cancellations and rescheduling are free up to 48 hours before your check-in date.',
+        question: 'Is the parking lot far from the site?',
+        answer: 'No, the distance between the parking lot to the gate was more or less 100 meters.',
     },
+    {
+        question: 'Can we check in and check out at our preferred time?',
+        answer: 'No, checking in and out depends on your booked time, day time (10am-5pm) and night and day (7pm-5am).',
+
+    },
+    {
+        question: 'Do you have parking?',
+        answer: 'Yes, we have parking space.',
+    },
+    {
+        question: 'Is Camp Ba-long Nature Resort a private resort?',
+        answer: 'Our Place is a semi exclusive, we make sure that you enjoy yourselves without crowding. You may also rent the whole place for your group.',
+    },
+    {
+        question: 'Is there a maximum number of persons allowed when you book the place exclusively for our group?',
+        answer: 'We only allow a maximum of 60 pax for day time and 50 for Day and Night'
+    },
+    {
+        question: 'Is cooking allowed?',
+        answer: 'Yes, you may also rent a gas stove for 400 pesos and utensils for 200 pesos.'
+
+    },
+    {
+        question: 'Can we order foods?',
+        answer: 'Yes, you can order foods. Please message us for the menu and availability.'
+    },
+    
 ]
 
 function FAQ() {
