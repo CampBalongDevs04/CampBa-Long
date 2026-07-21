@@ -4,6 +4,7 @@ import './components/css/spaService.css'
 import Footer from '../components/footer'
 import LotusDividerIcon from '../components/LotusDividerIcon'
 import { useBookings } from './mybooking.jsx'
+import { SkeletonImage } from '../components/skeletons/Skeleton.jsx'
 import massage1 from '../assets/images/massage1.png'
 import massage2 from '../assets/images/massage2.png'
 import massage3 from '../assets/images/massage3.png'
@@ -152,7 +153,7 @@ function SpaOrderModal({ item, onClose }) {
                 ) : (
                     <div className="spa-order-body">
                         <div className="spa-order-image">
-                            <img src={item.image} alt={item.name} />
+                            <SkeletonImage src={item.image} alt={item.name} />
                             <span className="spa-order-duration">
                                 <svg viewBox="0 0 24 24" strokeWidth="1.8" aria-hidden="true">
                                     <circle cx="12" cy="12" r="9" />
@@ -291,7 +292,7 @@ function SpaService() {
                             key={item.image}
                             style={{ transitionDelay: `${(index % 3) * 120}ms` }}
                         >
-                            <img src={item.image} alt={`Spa massage service ${index + 1}`} loading="lazy" />
+                            <SkeletonImage src={item.image} alt={`Spa massage service ${index + 1}`} loading="lazy" />
                         </div>
                     ))}
                 </div>
@@ -326,7 +327,7 @@ function SpaService() {
                             }}
                         >
                             <div className="hilot-card-media">
-                                <img src={item.image} alt={item.name} loading="lazy" />
+                                <SkeletonImage src={item.image} alt={item.name} loading="lazy" />
                                 <span className="hilot-card-price">&#8369;{item.price}</span>
                                 <span className="hilot-card-overlay">
                                     <span className="hilot-card-overlay-btn">Select Treatment</span>

@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import './css/location.css'
 import LotusDividerIcon from './LotusDividerIcon'
+import { Skeleton } from './skeletons/Skeleton.jsx'
 import addressSvg from '../assets/svg/address.svg'
 import phoneSvg from '../assets/svg/phone.svg'
 import emailSvg from '../assets/svg/email.svg'
@@ -57,6 +59,8 @@ const locationFeatures = [
 ]
 
 export default function Location(){
+    const [mapLoaded, setMapLoaded] = useState(false)
+
     return(
         <>
             <section className = "location-section">
@@ -94,7 +98,9 @@ export default function Location(){
                             loading = "lazy"
                             allowFullScreen
                             referrerPolicy = "no-referrer-when-downgrade"
+                            onLoad = {() => setMapLoaded(true)}
                         ></iframe>
+                        {!mapLoaded && <Skeleton photo className="skel-img-cover" />}
                     </div>
 
                 </div>

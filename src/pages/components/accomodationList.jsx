@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import '../components/css/accomodationList.css'
+import { SkeletonImage } from '../../components/skeletons/Skeleton.jsx'
 import {
     getAvailability,
     getNextAvailableDate,
@@ -66,7 +67,7 @@ export default function AccomodationList({ selectedAccomodation, onSelectAccomod
                                 <span className="accomodation-card-circle"></span>
                                 <div className="accomodation-card-image">
                                     {item.image
-                                        ? <img src={item.image} alt={item.name} />
+                                        ? <SkeletonImage src={item.image} alt={item.name} />
                                         : <span className="accomodation-card-noimage">No image</span>}
                                 </div>
                                 <div className="accomodation-card-info">

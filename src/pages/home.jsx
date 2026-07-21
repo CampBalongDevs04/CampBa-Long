@@ -7,6 +7,7 @@ import Location from '../components/location.jsx'
 import { FAQDemo } from '../components/Usage.tsx'
 import Contact from '../components/contact.jsx'
 import Footer from '../components/footer.jsx'
+import { SkeletonImage } from '../components/skeletons/Skeleton.jsx'
 import CampBalong from '../assets/images/CampBalong.webp'
 import heroVideo from '../assets/video/campbalongVid-web.mp4'
 import waterSvg from '../assets/svg/water.svg'
@@ -58,7 +59,7 @@ function Home() {
                 </div>
 
                 <div className="hero-image-circle">
-                    {heroCircleImage && <img src={heroCircleImage} alt="Camp Ba-long resort" />}
+                    {heroCircleImage && <SkeletonImage src={heroCircleImage} alt="Camp Ba-long resort" />}
                 </div>
                 </div>
 

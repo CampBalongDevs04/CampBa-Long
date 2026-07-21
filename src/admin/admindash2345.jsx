@@ -1,29 +1,39 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import './css/admin.css'
 import Header from '../components/Header.jsx'
 import AdminNavbar from './items/navbar.jsx'
-import Units from './items/units.jsx'
-import Export from './items/export.jsx'
 import AdminSidebar from './items/sidebar.jsx'
-import Tab from './items/tab.jsx'
-import All from './items/overview-ALL.jsx'
-import Upcomming from './items/overview-UPCOMMING.jsx'
-import Active from './items/overview-ACTIVE.jsx'
-import Completed from './items/overview-COMPLETED.jsx'
-import Paid from './items/overview-PAIDFULL.jsx'
-import DP from './items/overview-DOWNPAYMENT.jsx'
-import FoodSpaAll from './items/foodSpa-ALL.jsx'
-import Food from './items/foodSpa-Food.jsx'
-import Spa from  './items/foodSpa-Spa.jsx'
 import LotusDividerIcon from '../components/LotusDividerIcon.jsx'
 import logoCamp from '../assets/images/logocamp.png'
-import FoodSpa from './items/FoodSpa.jsx'
-import FoodTab from './items/foodTab.jsx'
-import FoodList from './items/foodList.jsx'
 import ClockDate from './items/extras/clockDate.jsx'
-import AccommodationCount from './items/accommodationCount.jsx'
-import SpaService from './items/spaService-Tab.jsx'
-import SpaServiceAvails from './items/SpaServiceAvails.jsx'
+import {
+    StatCardsSkeleton,
+    TabsSkeleton,
+    PanelSkeleton,
+    ListSkeleton,
+    TableSkeleton,
+} from '../components/skeletons/Skeleton.jsx'
+
+// Dashboard widgets are lazy chunks: the login screen stays light, and
+// each area shows a matching skeleton while its widget code loads.
+const Units = lazy(() => import('./items/units.jsx'))
+const Export = lazy(() => import('./items/export.jsx'))
+const Tab = lazy(() => import('./items/tab.jsx'))
+const All = lazy(() => import('./items/overview-ALL.jsx'))
+const Upcomming = lazy(() => import('./items/overview-UPCOMMING.jsx'))
+const Active = lazy(() => import('./items/overview-ACTIVE.jsx'))
+const Completed = lazy(() => import('./items/overview-COMPLETED.jsx'))
+const Paid = lazy(() => import('./items/overview-PAIDFULL.jsx'))
+const DP = lazy(() => import('./items/overview-DOWNPAYMENT.jsx'))
+const FoodSpaAll = lazy(() => import('./items/foodSpa-ALL.jsx'))
+const Food = lazy(() => import('./items/foodSpa-Food.jsx'))
+const Spa = lazy(() => import('./items/foodSpa-Spa.jsx'))
+const FoodSpa = lazy(() => import('./items/FoodSpa.jsx'))
+const FoodTab = lazy(() => import('./items/foodTab.jsx'))
+const FoodList = lazy(() => import('./items/foodList.jsx'))
+const AccommodationCount = lazy(() => import('./items/accommodationCount.jsx'))
+const SpaService = lazy(() => import('./items/spaService-Tab.jsx'))
+const SpaServiceAvails = lazy(() => import('./items/SpaServiceAvails.jsx'))
 
 const ADMIN_PASSCODE = 'campbalong2025'
 const ADMIN_EMAIL ='campbalong@gmail.com'
@@ -135,23 +145,33 @@ function AdminDash() {
                         <h1 className="admin-dash-title">Overview</h1>
                         <ClockDate />
                     </div>
-                    <Units />
-                    <Tab active={activeBookingTab} onChange={setActiveBookingTab} />
-                    {activeBookingTab === 'down-payment' && <DP />}
-                    {activeBookingTab === 'paid-full' && <Paid />}
-                    {activeBookingTab === 'completed' && <Completed />} 
-                    {activeBookingTab === 'active' && <Active />}
-                    {activeBookingTab === 'upcomming' && <Upcomming /> }
-                    {activeBookingTab === 'all' && <All />}
+                    <Suspense fallback={<StatCardsSkeleton count={5} />}>
+                        <Units />
+                    </Suspense>
+                    <Suspense fallback={<TabsSkeleton count={6} />}>
+                        <Tab active={activeBookingTab} onChange={setActiveBookingTab} />
+                    </Suspense>
+                    <Suspense fallback={<PanelSkeleton />}>
+                        {activeBookingTab === 'down-payment' && <DP />}
+                        {activeBookingTab === 'paid-full' && <Paid />}
+                        {activeBookingTab === 'completed' && <Completed />}
+                        {activeBookingTab === 'active' && <Active />}
+                        {activeBookingTab === 'upcomming' && <Upcomming /> }
+                        {activeBookingTab === 'all' && <All />}
+                    </Suspense>
 
 
                     <div className ="services-section">
                         <LotusDividerIcon />
                         <h1 className ="services-title">Other Services</h1>
-                        <FoodSpa active={activeServiceTab} onChange={setActiveServiceTab} />
-                        {activeServiceTab === 'all' && <FoodSpaAll />}
-                        {activeServiceTab === 'food' && <Food />}
-                        {activeServiceTab === 'spa' && <Spa />}
+                        <Suspense fallback={<TabsSkeleton count={3} />}>
+                            <FoodSpa active={activeServiceTab} onChange={setActiveServiceTab} />
+                        </Suspense>
+                        <Suspense fallback={<PanelSkeleton />}>
+                            {activeServiceTab === 'all' && <FoodSpaAll />}
+                            {activeServiceTab === 'food' && <Food />}
+                            {activeServiceTab === 'spa' && <Spa />}
+                        </Suspense>
 
                     </div>
                 </div>
@@ -177,7 +197,9 @@ function AdminDash() {
                         <h1 className="admin-dash-title">Units</h1>
                         <ClockDate />
                     </div>
-                    <AccommodationCount />
+                    <Suspense fallback={<StatCardsSkeleton count={6} />}>
+                        <AccommodationCount />
+                    </Suspense>
                 </div>
             ) : activeSection === 'menu' ? (
                 <div className="admin-dash-content">
@@ -197,12 +219,16 @@ function AdminDash() {
                         <h1 className="admin-dash-title">Food Menu</h1>
                         <ClockDate />
                     </div>
-                    <FoodTab active={activeFoodTab} onChange={setActiveFoodTab} />
-                    {activeFoodTab === 'all' && <FoodList category="all" />}
-                    {activeFoodTab === 'breakfast' && <FoodList category="breakfast" />}
-                    {activeFoodTab === 'lunch' && <FoodList category="lunch" />}
-                    {activeFoodTab === 'dinner' && <FoodList category="dinner" />}
-                    {activeFoodTab === 'beverages' && <FoodList category="beverages" />}
+                    <Suspense fallback={<TabsSkeleton count={5} />}>
+                        <FoodTab active={activeFoodTab} onChange={setActiveFoodTab} />
+                    </Suspense>
+                    <Suspense fallback={<ListSkeleton rows={5} />}>
+                        {activeFoodTab === 'all' && <FoodList category="all" />}
+                        {activeFoodTab === 'breakfast' && <FoodList category="breakfast" />}
+                        {activeFoodTab === 'lunch' && <FoodList category="lunch" />}
+                        {activeFoodTab === 'dinner' && <FoodList category="dinner" />}
+                        {activeFoodTab === 'beverages' && <FoodList category="beverages" />}
+                    </Suspense>
                 </div>
 
             ): activeSection === 'spa' ? (
@@ -223,8 +249,12 @@ function AdminDash() {
                         <h1 className="admin-dash-title">Spa Services</h1>
                         <ClockDate />
                     </div>
-                    <SpaService active={activeSpaTab} onChange={setActiveSpaTab} />
-                    {activeSpaTab === 'avail' && <SpaServiceAvails />}
+                    <Suspense fallback={<TabsSkeleton count={2} />}>
+                        <SpaService active={activeSpaTab} onChange={setActiveSpaTab} />
+                    </Suspense>
+                    <Suspense fallback={<TableSkeleton rows={4} cols={4} />}>
+                        {activeSpaTab === 'avail' && <SpaServiceAvails />}
+                    </Suspense>
                 </div>
             ) : activeSection === 'export' ? (
                 <div className="admin-dash-content">
@@ -244,7 +274,9 @@ function AdminDash() {
                         <h1 className="admin-dash-title">Export Reports</h1>
                         <ClockDate />
                     </div>
-                    <Export />
+                    <Suspense fallback={<TableSkeleton rows={3} cols={3} />}>
+                        <Export />
+                    </Suspense>
                 </div>
             ) : (
                 <div className="admin-dash-content">
