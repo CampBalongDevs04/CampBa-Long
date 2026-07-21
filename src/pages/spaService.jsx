@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import './components/css/spaService.css'
 import Footer from '../components/footer'
 import LotusDividerIcon from '../components/LotusDividerIcon'
+import { SkeletonImage } from '../components/skeletons/Skeleton.jsx'
 import massage1 from '../assets/images/massage1.png'
 import massage2 from '../assets/images/massage2.png'
 import massage3 from '../assets/images/massage3.png'
@@ -157,7 +158,7 @@ function SpaService() {
                             key={item.image}
                             style={{ transitionDelay: `${(index % 3) * 120}ms` }}
                         >
-                            <img src={item.image} alt={`Spa massage service ${index + 1}`} loading="lazy" />
+                            <SkeletonImage src={item.image} alt={`Spa massage service ${index + 1}`} loading="lazy" />
                         </div>
                     ))}
                 </div>

@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import './foodmenu.css'
 import Footer from '../components/footer'
 import LotusDividerIcon from '../components/LotusDividerIcon'
+import { SkeletonImage } from '../components/skeletons/Skeleton.jsx'
 import food1 from '../assets/images/food1.png'
 import food2 from '../assets/images/food2.png'
 import food3 from '../assets/images/food3.png'
@@ -185,7 +186,7 @@ function FoodOrderModal({ item, onClose }) {
         ) : (
           <div className="food-order-body">
             <div className="food-order-image">
-              <img src={item.image} alt={item.name} />
+              <SkeletonImage src={item.image} alt={item.name} />
             </div>
             <div className="food-order-details">
               <h3 className="food-order-name">{item.name}</h3>
@@ -280,7 +281,7 @@ function MenuFoodRow({ items, onAddToOrder }) {
           {combined.map((item, i) => (
             <article className="menu-food-card" key={`${item.name}-${i}`}>
               <div className="menu-food-image">
-                <img src={item.image} alt={item.name} />
+                <SkeletonImage src={item.image} alt={item.name} />
               </div>
               <h3 className="menu-food-name">{item.name}</h3>
               <p className="menu-food-desc">{item.desc}</p>
@@ -354,7 +355,7 @@ function FoodMenuPage() {
             </div>
           </div>
           <div className="foodmenu-hero-image">
-            <img src={food1} alt="Featured dish" />
+            <SkeletonImage src={food1} alt="Featured dish" />
           </div>
         </div>
       </section>
