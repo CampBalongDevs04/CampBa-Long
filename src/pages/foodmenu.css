@@ -9,81 +9,141 @@
 .foodmenu-hero {
   position: relative;
   box-sizing: border-box;
-  overflow: hidden;
   width: 100%;
   min-height: calc(100vh - var(--header-h));
   margin-top: var(--header-h);
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding: 2.5rem clamp(1.5rem, 6vw, 4.5rem) 4rem;
-  background-image: linear-gradient(90deg, rgba(249, 245, 234, 0.94) 0%, rgba(249, 245, 234, 0.72) 55%, rgba(249, 245, 234, 0.35) 100%), url('../assets/images/herobanner.png');
+  align-items: flex-start;
+  padding: 64px 50px 36px;
+  overflow: hidden;
+}
+
+.foodmenu-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(90deg, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.16)), url('../assets/images/herobanner.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  filter: blur(6px);
+  transform: scale(1.1);
+  z-index: 0;
 }
 
 .foodmenu-hero-inner {
   position: relative;
   z-index: 1;
+  width: 100%;
   max-width: 1180px;
-  margin: 0 auto;
+  margin-top: auto;
+  margin-bottom: auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 3rem;
 }
 
-.foodmenu-hero-text {
+.foodmenu-hero-content {
   max-width: 620px;
 }
 
 .foodmenu-hero-title {
+  margin: 0;
   font-family: 'Cormorant Garamond', serif;
-  color: #1f4f2f;
-  font-size: clamp(2.8rem, 5.5vw, 4.7rem);
-  font-weight: 800;
+  color: #f9f5ea;
+  font-size: 75px;
   line-height: 0.95;
-  margin: 0 0 1.25rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.123);
 }
 
 .foodmenu-hero-subtitle {
-  color: #34402c;
+  max-width: 480px;
+  margin: 18px 0 0;
+  color: #f9f5ea;
   font-size: 1.35rem;
   line-height: 1.4;
-  margin: 0 0 1.75rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 2px solid rgba(31, 79, 47, 0.35);
-  max-width: 480px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.22);
+}
+
+.foodmenu-hero-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-top: 22px;
 }
 
 .foodmenu-order-btn {
-  border: 2px solid #1f4f2f;
-  color: #1f4f2f;
-  background: transparent;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  border-radius: 25px;
-  padding: 0.875rem 1.875rem;
-  font-size: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #c6a15b;
+  color: #16291e;
+  background: #c6a15b;
+  font-family: 'Jost', sans-serif;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border-radius: 30px;
+  padding: 14px 30px;
+  font-size: 15px;
   cursor: pointer;
-  transition: background 0.25s ease, color 0.25s ease, transform 0.2s ease;
+  box-shadow: 0 10px 22px rgba(10, 20, 14, 0.3);
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
 }
 
 .foodmenu-order-btn:hover {
-  background: #1f4f2f;
-  color: #f8f2e4;
+  background-color: #d9bd84;
+  border-color: #d9bd84;
   transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(10, 20, 14, 0.28);
+}
+
+.foodmenu-order-btn:focus-visible {
+  outline: 3px solid #f5f1e4;
+  outline-offset: 4px;
+}
+
+.foodmenu-order-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+}
+
+.foodmenu-order-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
+  flex-shrink: 0;
 }
 
 .foodmenu-hero-image {
+  position: relative;
   flex-shrink: 0;
-  width: clamp(300px, 34vw, 460px);
-  height: clamp(300px, 34vw, 460px);
+  width: clamp(260px, 30vw, 420px);
+  height: clamp(260px, 30vw, 420px);
   border-radius: 50%;
-  border: 10px solid #1f4f2f;
+  border: 6px solid #c6a15b;
   overflow: hidden;
-  box-shadow: 0 24px 48px rgba(31, 79, 47, 0.28);
+  background: rgba(22, 41, 30, 0.45);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  box-shadow:
+    0 0 0 4px rgba(22, 41, 30, 0.65),
+    0 0 0 5px rgba(217, 189, 132, 0.55),
+    0 0 55px rgba(198, 161, 91, 0.28),
+    0 24px 48px rgba(10, 20, 14, 0.4);
+}
+
+.foodmenu-hero-image::after {
+  content: '';
+  position: absolute;
+  inset: 10px;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(245, 241, 228, 0.55);
+  pointer-events: none;
 }
 
 .foodmenu-hero-image img {
@@ -91,6 +151,12 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  transform: scale(1);
+  transition: transform 0.6s ease;
+}
+
+.foodmenu-hero-image:hover img {
+  transform: scale(1.05);
 }
 
 @media (max-width: 860px) {
@@ -99,13 +165,17 @@
     text-align: center;
   }
 
-  .foodmenu-hero-text {
+  .foodmenu-hero-content {
     max-width: 100%;
   }
 
   .foodmenu-hero-subtitle {
     margin-left: auto;
     margin-right: auto;
+  }
+
+  .foodmenu-hero-buttons {
+    justify-content: center;
   }
 }
 
@@ -260,8 +330,17 @@
 }
 
 .menu-category {
-  background: #f9f5ea;
-  padding: 0 0 3rem;
+  position: relative;
+  background:
+    radial-gradient(900px 420px at 50% 0%, rgba(198, 161, 91, 0.14), transparent 65%),
+    radial-gradient(700px 380px at 6% 105%, rgba(76, 107, 79, 0.12), transparent 60%),
+    radial-gradient(700px 380px at 94% 105%, rgba(76, 107, 79, 0.09), transparent 60%),
+    #f9f5ea;
+  padding: 0 0 3.5rem;
+}
+
+.menu-category + .menu-category {
+  border-top: 1px solid rgba(31, 79, 47, 0.12);
 }
 
 .menu-category-banner {
@@ -306,6 +385,8 @@
 }
 
 .menu-category-header {
+  position: relative;
+  z-index: 1;
   max-width: 1180px;
   margin: 0 auto;
   padding: 2.5rem 3.5rem 1.5rem;
@@ -320,6 +401,26 @@
   text-shadow: none;
   padding: 0;
   margin: 0 0 0.75rem;
+}
+
+.menu-category-header .lotus-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0.25rem 0 1.1rem;
+}
+
+.menu-category-header .lotus-divider .rule {
+  height: 1px;
+  width: 70px;
+}
+
+.menu-category-header .lotus-divider .rule.left {
+  background: linear-gradient(to left, transparent, #c6a15b);
+}
+
+.menu-category-header .lotus-divider .rule.right {
+  background: linear-gradient(to right, transparent, #c6a15b);
 }
 
 .menu-category-toggle-row {
@@ -383,7 +484,7 @@
   justify-content: center;
   border: 2px solid #1f4f2f;
   border-radius: 50%;
-  background: #f9f5ea;
+  background: #fffdf6;
   color: #1f4f2f;
   font-size: 1.6rem;
   line-height: 1;
@@ -419,12 +520,23 @@
   flex: 0 0 clamp(200px, 22vw, 270px);
   display: flex;
   flex-direction: column;
+  background: linear-gradient(180deg, #fffdf6 0%, #f8f1de 100%);
+  border-radius: 1rem;
+  padding: 0.9rem 0.9rem 1.15rem;
+  border-top: 3px solid #c9762b;
+  box-shadow: 0 14px 28px -14px rgba(31, 79, 47, 0.4);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.menu-food-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 36px -14px rgba(31, 79, 47, 0.45);
 }
 
 .menu-food-image {
   width: 100%;
   aspect-ratio: 1 / 1;
-  border-radius: 0.85rem;
+  border-radius: 0.7rem;
   overflow: hidden;
   margin-bottom: 1rem;
   border: 3px solid #1f4f2f;

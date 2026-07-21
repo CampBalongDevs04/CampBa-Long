@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { Link } from 'react-router'
 import './foodmenu.css'
 import Footer from '../components/footer'
+import LotusDividerIcon from '../components/LotusDividerIcon'
 import food1 from '../assets/images/food1.png'
 import food2 from '../assets/images/food2.png'
 import food3 from '../assets/images/food3.png'
@@ -88,11 +89,14 @@ function SubcategoryToggle({ label, expanded, onToggle }) {
 
 function CategoryTitle({ children, plain }) {
   return (
-    <h2 className={`menu-category-title${plain ? ' plain' : ''}`}>
-      <span className="menu-category-title-mark" aria-hidden="true">✦</span>
-      {children}
-      <span className="menu-category-title-mark" aria-hidden="true">✦</span>
-    </h2>
+    <>
+      <h2 className={`menu-category-title${plain ? ' plain' : ''}`}>
+        <span className="menu-category-title-mark" aria-hidden="true">✦</span>
+        {children}
+        <span className="menu-category-title-mark" aria-hidden="true">✦</span>
+      </h2>
+      {plain && <LotusDividerIcon />}
+    </>
   )
 }
 
@@ -330,16 +334,24 @@ function FoodMenuPage() {
     <main className="foodmenu-page">
       <section className="foodmenu-hero">
         <div className="foodmenu-hero-inner">
-          <div className="foodmenu-hero-text">
+          <div className="foodmenu-hero-content">
             <h1 className="foodmenu-hero-title">
-              Hungry? We&apos;ve Got You Covered.
+              Hungry? We&apos;ve Got<br />
+              You Covered.
             </h1>
             <p className="foodmenu-hero-subtitle">
               Explore our menu and discover dishes you&apos;ll keep coming back for.
             </p>
-            <button type="button" className="foodmenu-order-btn" onClick={scrollToHowToOrder}>
-              ORDER NOW!
-            </button>
+            <div className="foodmenu-hero-buttons">
+              <button type="button" className="foodmenu-order-btn" onClick={scrollToHowToOrder}>
+                <svg viewBox="0 0 24 24" strokeWidth="1.8" aria-hidden="true">
+                  <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
+                  <path d="M7 2v20" />
+                  <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />
+                </svg>
+                Order Now
+              </button>
+            </div>
           </div>
           <div className="foodmenu-hero-image">
             <img src={food1} alt="Featured dish" />
