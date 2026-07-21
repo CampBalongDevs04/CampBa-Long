@@ -73,6 +73,16 @@ export function useBookings(){
                 )
             )
         },
+
+        addSpaOrderToBooking(bookingId, order){
+            updateBookings((prev) =>
+                prev.map((booking) =>
+                    booking.id === bookingId
+                        ? { ...booking, spaOrders: [...(booking.spaOrders ?? []), order] }
+                        : booking
+                )
+            )
+        },
     }
 }
 
@@ -124,6 +134,16 @@ function foodOrderSummary(booking){
 
 function foodOrderTotal(booking){
     return (booking.foodOrders ?? []).reduce((sum, order) => sum + order.total, 0)
+}
+
+function spaOrderSummary(booking){
+    const orders = booking.spaOrders ?? []
+    if (orders.length === 0) return 'none'
+    return orders.map((order) => `${order.name} x${order.quantity}`).join(', ')
+}
+
+function spaOrderTotal(booking){
+    return (booking.spaOrders ?? []).reduce((sum, order) => sum + order.total, 0)
 }
 
 function stayLabel(booking){
@@ -238,8 +258,11 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete }){
                     </p>
                     <p className="field-sub">Payment: Down Payment</p>
                     <p className="field-sub">
-                        Schedule: {booking.schedule?.description ?? 'none'} • Spa: none • Food: {foodOrderSummary(booking)}
+                        Schedule: {booking.schedule?.description ?? 'none'} • Spa: {spaOrderSummary(booking)} • Food: {foodOrderSummary(booking)}
                     </p>
+                    {booking.spaOrders?.length > 0 && (
+                        <p className="field-sub">Spa total: {formatPeso(spaOrderTotal(booking))}</p>
+                    )}
                     {booking.foodOrders?.length > 0 && (
                         <p className="field-sub">Food total: {formatPeso(foodOrderTotal(booking))}</p>
                     )}
