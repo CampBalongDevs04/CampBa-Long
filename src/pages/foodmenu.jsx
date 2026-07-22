@@ -25,20 +25,6 @@ import pre1 from '../assets/images/pre1.png'
 import pre2 from '../assets/images/pre2.png'
 import pre3 from '../assets/images/pre3.png'
 import pre4 from '../assets/images/pre4.png'
-import food10 from '../assets/images/food10.png'
-import food11 from '../assets/images/food11.png'
-import food12 from '../assets/images/food12.png'
-import food13 from '../assets/images/food13.png'
-import food14 from '../assets/images/food14.png'
-import food15 from '../assets/images/food15.png'
-import food16 from '../assets/images/food16.png'
-import food17 from '../assets/images/food17.png'
-import food18 from '../assets/images/food18.png'
-import food19 from '../assets/images/food19.png'
-import food20 from '../assets/images/food20.png'
-import food21 from '../assets/images/food21.png'
-import food22 from '../assets/images/food22.png'
-import food23 from '../assets/images/food23.png'
 import { useBookings } from './mybooking.jsx'
 
 const orderSteps = [
@@ -82,28 +68,98 @@ export const preOrderItems = [
   { image: pre4, name: 'Tofu Sisig', desc: 'Good for 3-4 pax', price: 'PHP 250.00' },
 ]
 
-export const lunchItems = [
-  { image: food11, name: 'Pork Adobo', desc: 'Pork / Soy Sauce / Vinegar / Paminta / Onion / Garlic', price: 'PHP 110.00' },
-  { image: food12, name: 'Kare-Kare', desc: 'Pork / Talong / Sitaw / Pechay / Peanut Bagoong', price: 'PHP 120.00' },
-  { image: food13, name: 'Paksiw', desc: 'Bangus / Green Chili / Vinegar / Onion / Garlic / Ampalaya', price: 'PHP 120.00' },
+// Bukal Cafe by Camp Ba-Long Nature Farm — coffee price list. There are no
+// per-flavor photos for these, so the menu renders as price tables instead
+// of the photo-card carousel the other categories use.
+export const coffeeMenu = [
+  {
+    key: 'classic-hot',
+    title: 'Classic Hot Coffee',
+    sizeLabels: ['8oz.', '12oz.', '16oz.'],
+    flavors: [
+      { name: 'Americano', prices: [110, 125, 130] },
+      { name: 'Cafe Latte', prices: [120, 125, 140] },
+      { name: 'Cappuccino', prices: [125, 140, 145] },
+      { name: 'Cafe Mocha', prices: [125, 140, 145] },
+      { name: 'White Mocha', prices: [125, 140, 145] },
+      { name: 'Caramel Machiatto', prices: [125, 140, 145] },
+      { name: 'Spanish Latte', prices: [125, 140, 145] },
+    ],
+  },
+  {
+    key: 'classic-iced',
+    title: 'Classic Iced Coffee',
+    sizeLabels: ['Tall 12oz.', 'Grande 16oz.'],
+    flavors: [
+      { name: 'Americano', prices: [125, 130] },
+      { name: 'Cafe Latte', prices: [125, 130] },
+      { name: 'Cappuccino', prices: [140, 145] },
+      { name: 'Cafe Mocha', prices: [140, 145] },
+      { name: 'Caramel Machiatto', prices: [140, 145] },
+      { name: 'Spanish Latte', prices: [140, 145] },
+    ],
+  },
+  {
+    key: 'flavored-hot',
+    title: 'Flavored Hot Special',
+    sizeLabels: ['8oz.', '12oz.', '16oz.'],
+    flavors: [
+      { name: 'Vanilla Latte', prices: [130, 145, 155] },
+      { name: 'Hazelnut Latte', prices: [130, 145, 155] },
+      { name: 'Choco Hazelnut Latte', prices: [130, 145, 155] },
+      { name: 'Salted Caramel Latte', prices: [130, 145, 155] },
+      { name: 'Matcha Latte', prices: [130, 145, 155] },
+      { name: 'Strawberry Matcha Latte', prices: [135, 160, 160] },
+    ],
+  },
+  {
+    key: 'flavored-iced',
+    title: 'Flavored Iced Special',
+    sizeLabels: ['Tall 12oz.', 'Grande 16oz.'],
+    flavors: [
+      { name: 'Vanilla Latte', prices: [145, 155] },
+      { name: 'Hazelnut Latte', prices: [145, 155] },
+      { name: 'Choco Hazelnut Latte', prices: [145, 155] },
+      { name: 'Salted Caramel Latte', prices: [145, 155] },
+      { name: 'Matcha Latte', prices: [145, 155] },
+      { name: 'Brown Sugar Latte', prices: [145, 155] },
+      { name: 'Cinnamon Latte', prices: [145, 155] },
+      { name: 'White Chocolate Mocha', prices: [150, 160] },
+      { name: 'Cookie Dough Latte', prices: [150, 160] },
+      { name: 'Strawberry Matcha Latte', prices: [150, 160] },
+    ],
+  },
+  {
+    key: 'iced-fruit',
+    title: "Iced Fruit Soda and Latte",
+    sizeLabels: ['Tall 12oz.', 'Grande 16oz.'],
+    flavors: [
+      { name: 'Strawberry Soda/Latte', prices: [100, 105] },
+      { name: 'Blueberry Soda/Latte', prices: [100, 105] },
+      { name: 'Peach Soda/Latte', prices: [100, 105] },
+    ],
+  },
 ]
 
-export const coldDrinkItems = [
-  { image: food14, name: 'Softdrinks', desc: 'Family Serving', price: 'PHP 100.00' },
-  { image: food15, name: 'Strawberry Hibiscus', desc: 'Family Serving / Single', price: 'PHP 150.00' },
-  { image: food16, name: 'Blue Lemonade', desc: 'Family Serving / Single', price: 'PHP 130.00' },
-]
-export const dinnerItems = [
-  { image: food18, name: 'Pork Chicken Adobo', desc: 'Pork / Chicken / Soy Sauce / Vinegar / Paminta / Onion / Garlic', price: 'PHP 125.00' },
-  { image: food19, name: 'Menudo', desc: 'Pork / Liver / Potato / Carrot / Bell Pepper / Tomato Sauce', price: 'PHP 140.00' },
-  { image: food20, name: 'Monggo', desc: 'Mung Beans / Sitaw / Ampalaya / Malunggay / Pork', price: 'PHP 110.00' },
-]
+// Flattened per-size list, reused by the admin dashboard's food list and by
+// the "add to order" flow (each size is its own orderable line item).
+export const coffeeItems = coffeeMenu.flatMap((category) =>
+  category.flavors.flatMap((flavor) =>
+    flavor.prices.map((price, i) => ({
+      image: null,
+      name: `${flavor.name} (${category.sizeLabels[i]})`,
+      desc: category.title,
+      price: `PHP ${price.toFixed(2)}`,
+    }))
+  )
+)
 
-export const dinnerDrinkItems = [
-  { image: food21, name: "Sago't Gulaman Special", desc: 'Single Serving', price: 'PHP 65.00' },
-  { image: food22, name: 'Calamansi Juice', desc: 'Family Serving', price: 'PHP 130.00' },
-  { image: food23, name: 'Creamy Melon Vanilla', desc: 'Family Serving', price: 'PHP 150.00' },
-]
+// Lunch/Dinner no longer have their own menu items — kept as empty exports
+// so admin/items/foodList.jsx (which still imports these names) doesn't break.
+export const lunchItems = []
+export const coldDrinkItems = []
+export const dinnerItems = []
+export const dinnerDrinkItems = []
 
 function SubcategoryToggle({ label, expanded, onToggle }) {
   return (
@@ -223,10 +279,12 @@ function FoodOrderModal({ item, onClose }) {
             </div>
           </div>
         ) : (
-          <div className="food-order-body">
-            <div className="food-order-image">
-              <SkeletonImage src={item.image} alt={item.name} />
-            </div>
+          <div className={`food-order-body${item.image ? '' : ' no-image'}`}>
+            {item.image && (
+              <div className="food-order-image">
+                <SkeletonImage src={item.image} alt={item.name} />
+              </div>
+            )}
             <div className="food-order-details">
               {showingCoffeeStep ? (
                 <>
@@ -409,6 +467,76 @@ function MenuFoodRow({ items, onAddToOrder }) {
   )
 }
 
+function CoffeeMenuCategory({ category, onAddToOrder }) {
+  return (
+    <div className="coffee-card">
+      <h3 className="coffee-card-title">{category.title}</h3>
+      <table className="coffee-table">
+        <thead>
+          <tr>
+            <th className="coffee-table-flavor-head">Flavor</th>
+            {category.sizeLabels.map((size) => (
+              <th key={size}>{size}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {category.flavors.map((flavor) => (
+            <tr key={flavor.name}>
+              <td className="coffee-table-flavor">{flavor.name}</td>
+              {flavor.prices.map((price, i) => (
+                <td key={category.sizeLabels[i]}>
+                  <button
+                    type="button"
+                    className="coffee-price-btn"
+                    onClick={() =>
+                      onAddToOrder({
+                        image: null,
+                        name: `${flavor.name} (${category.sizeLabels[i]})`,
+                        desc: category.title,
+                        price: `PHP ${price.toFixed(2)}`,
+                      })
+                    }
+                  >
+                    {price}
+                  </button>
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function CoffeeMenuSection({ onAddToOrder }) {
+  // Two independently-stacking columns (instead of a strict grid) so a
+  // shorter card's column keeps flowing upward instead of leaving a gap
+  // underneath it — the left column ends up: Classic Hot, Flavored Hot,
+  // Iced Fruit Soda and Latte; the right column: Classic Iced, Flavored Iced.
+  const leftColumn = coffeeMenu.filter((_, i) => i % 2 === 0)
+  const rightColumn = coffeeMenu.filter((_, i) => i % 2 === 1)
+
+  return (
+    <div className="coffee-menu-wrap">
+      <p className="coffee-menu-hint">Tap a price to add that size to your order.</p>
+      <div className="coffee-menu-grid">
+        <div className="coffee-menu-column">
+          {leftColumn.map((category) => (
+            <CoffeeMenuCategory key={category.key} category={category} onAddToOrder={onAddToOrder} />
+          ))}
+        </div>
+        <div className="coffee-menu-column">
+          {rightColumn.map((category) => (
+            <CoffeeMenuCategory key={category.key} category={category} onAddToOrder={onAddToOrder} />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function FoodMenuPage() {
   const howToOrderRef = useRef(null)
 
@@ -416,10 +544,7 @@ function FoodMenuPage() {
     breakfast: true,
     beverages: true,
     preOrder: true,
-    lunch: true,
-    coldDrinks: true,
-    dinner: true,
-    dinnerDrinks: true,
+    coffee: true,
   })
 
   const [orderItem, setOrderItem] = useState(null)
@@ -527,64 +652,18 @@ function FoodMenuPage() {
         {expanded.preOrder && <MenuFoodRow items={preOrderItems} onAddToOrder={setOrderItem} />}
       </section>
 
-      <section className="menu-category">
-        <div
-          className="menu-category-banner"
-          style={{ backgroundImage: `url(${food10})` }}
-        >
-          <CategoryTitle>LUNCH</CategoryTitle>
-        </div>
-        <div className="menu-category-toggle-row">
-          <SubcategoryToggle
-            label="Foods"
-            expanded={expanded.lunch}
-            onToggle={() => toggleSection('lunch')}
-          />
-        </div>
-        {expanded.lunch && <MenuFoodRow items={lunchItems} onAddToOrder={setOrderItem} />}
-      </section>
-
-      <section className="menu-category">
+      <section className="menu-category coffee-menu-section">
         <div className="menu-category-header">
-          <CategoryTitle plain>BEVERAGES</CategoryTitle>
+          <p className="coffee-menu-eyebrow">Bukal Cafe by Camp Ba-Long Nature Farm</p>
+          <CategoryTitle plain>COFFEE</CategoryTitle>
           <SubcategoryToggle
-            label="Cold Drinks"
-            expanded={expanded.coldDrinks}
-            onToggle={() => toggleSection('coldDrinks')}
+            label="Coffee Menu"
+            expanded={expanded.coffee}
+            onToggle={() => toggleSection('coffee')}
           />
         </div>
-        {expanded.coldDrinks && <MenuFoodRow items={coldDrinkItems} onAddToOrder={setOrderItem} />}
+        {expanded.coffee && <CoffeeMenuSection onAddToOrder={setOrderItem} />}
       </section>
-
-      <section className="menu-category">
-        <div
-          className="menu-category-banner"
-          style={{ backgroundImage: `url(${food17})` }}
-        >
-          <CategoryTitle>DINNER</CategoryTitle>
-        </div>
-        <div className="menu-category-toggle-row">
-          <SubcategoryToggle
-            label="Foods"
-            expanded={expanded.dinner}
-            onToggle={() => toggleSection('dinner')}
-          />
-        </div>
-        {expanded.dinner && <MenuFoodRow items={dinnerItems} onAddToOrder={setOrderItem} />}
-      </section>
-
-      <section className="menu-category">
-        <div className="menu-category-header">
-          <CategoryTitle plain>BEVERAGES</CategoryTitle>
-          <SubcategoryToggle
-            label="Drinks"
-            expanded={expanded.dinnerDrinks}
-            onToggle={() => toggleSection('dinnerDrinks')}
-          />
-        </div>
-        {expanded.dinnerDrinks && <MenuFoodRow items={dinnerDrinkItems} onAddToOrder={setOrderItem} />}
-      </section>
-
 
     </main>
 

@@ -624,6 +624,161 @@
   }
 }
 
+.coffee-menu-eyebrow {
+  margin: 0 0 0.35rem;
+  color: #c9762b;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  text-align: center;
+}
+
+.coffee-menu-hint {
+  max-width: 1180px;
+  margin: 0 auto 1.5rem;
+  padding: 0 clamp(1rem, 4vw, 3.5rem);
+  color: #6b7a5e;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-style: italic;
+  text-align: center;
+}
+
+.coffee-menu-wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 clamp(1rem, 4vw, 3.5rem);
+}
+
+.coffee-menu-grid {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.75rem;
+}
+
+.coffee-menu-column {
+  flex: 1 1 340px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.coffee-card {
+  background: linear-gradient(180deg, #fffdf6 0%, #f8f1de 100%);
+  border-radius: 1rem;
+  border-top: 3px solid #c9762b;
+  box-shadow: 0 14px 28px -14px rgba(31, 79, 47, 0.4);
+  padding: 1.5rem 1.5rem 1.25rem;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.coffee-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 36px -14px rgba(31, 79, 47, 0.45);
+}
+
+.coffee-card-title {
+  margin: 0 0 1rem;
+  color: #1f4f2f;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.35rem;
+  font-weight: 800;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-align: center;
+}
+
+.coffee-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.coffee-table th {
+  color: #6b7a5e;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  padding: 0 0.35rem 0.65rem;
+  border-bottom: 1px solid rgba(31, 79, 47, 0.18);
+}
+
+.coffee-table th:first-child,
+.coffee-table td:first-child {
+  text-align: left;
+}
+
+.coffee-table td {
+  text-align: center;
+  padding: 0.4rem 0.35rem;
+  border-bottom: 1px dashed rgba(31, 79, 47, 0.14);
+}
+
+.coffee-table tr:last-child td {
+  border-bottom: none;
+}
+
+.coffee-table-flavor {
+  color: #34402c;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.coffee-price-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #1f4f2f;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.92rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.coffee-price-btn:hover,
+.coffee-price-btn:focus-visible {
+  background: #1f4f2f;
+  border-color: #1f4f2f;
+  color: #f8f2e4;
+  transform: translateY(-1px);
+  outline: none;
+}
+
+@media (max-width: 780px) {
+  .coffee-menu-grid {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .coffee-card {
+    padding: 1.25rem 1rem 1rem;
+  }
+
+  .coffee-table th,
+  .coffee-table td {
+    padding: 0.35rem 0.2rem;
+    font-size: 0.85rem;
+  }
+
+  .coffee-price-btn {
+    min-width: 2.25rem;
+    font-size: 0.85rem;
+    padding: 0.25rem 0.35rem;
+  }
+}
+
 .food-order-overlay {
   position: fixed;
   inset: 0;
