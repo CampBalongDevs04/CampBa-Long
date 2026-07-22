@@ -1,0 +1,118 @@
+/* ---------- Spa services list (admin view) ---------- */
+.spa-list-panel {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--cream);
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 10px 20px -14px rgba(10, 22, 14, 0.5);
+    font-family: 'Jost', sans-serif;
+}
+
+.spa-list-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.spa-list-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--forest-dark);
+}
+
+.spa-list-count {
+    font-size: 0.8rem;
+    color: rgba(10, 22, 14, 0.55);
+    white-space: nowrap;
+}
+
+.spa-list-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.spa-list-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.25);
+    border-radius: 12px;
+    padding: 14px 18px;
+    color: var(--forest-dark);
+}
+
+.spa-list-image {
+    flex-shrink: 0;
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(198, 161, 91, 0.12);
+}
+
+.spa-list-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.spa-list-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.spa-list-name {
+    margin: 0 0 4px;
+    font-size: 0.98rem;
+    font-weight: 600;
+}
+
+.spa-list-desc {
+    margin: 0 0 6px;
+    font-size: 0.84rem;
+    color: rgba(10, 22, 14, 0.62);
+}
+
+.spa-list-duration {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(198, 161, 91, 0.18);
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #8a6a1f;
+}
+
+.spa-list-price {
+    flex-shrink: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--forest-dark);
+    white-space: nowrap;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 640px) {
+    .spa-list-panel {
+        padding: 18px;
+    }
+
+    .spa-list-row {
+        flex-wrap: wrap;
+    }
+
+    .spa-list-price {
+        width: 100%;
+        text-align: right;
+    }
+}

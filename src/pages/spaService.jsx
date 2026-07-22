@@ -53,7 +53,7 @@ const service =[
     },
 ]
 
-const hilotServices = [
+export const hilotServices = [
     { image: massage11, name: 'Ventosa Cupping', desc: 'Suction cupping therapy that eases muscle tension and improves circulation.', duration: '1hr 30mins', price: 850 },
     { image: massage22, name: 'Traditional Body Massage', desc: 'Full-body Hilot massage rooted in Filipino healing traditions.', duration: '1hr', price: 650 },
     { image: massage33, name: 'Back Massage', desc: 'Targeted kneading to release tension across the back and shoulders.', duration: '30mins', price: 400 },

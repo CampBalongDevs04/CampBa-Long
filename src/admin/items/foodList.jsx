@@ -3,6 +3,7 @@ import '../css/foodlist.css'
 import {
     breakfastItems,
     beverageItems,
+    preOrderItems,
     lunchItems,
     coldDrinkItems,
     dinnerItems,
@@ -13,11 +14,14 @@ import {
 // under the categories used by the FoodTab filter.
 const FOOD_SECTIONS = [
     { category: 'breakfast', title: 'Breakfast', items: breakfastItems },
+    { category: 'combo', title: 'Combo Meal', items: beverageItems },
+    { category: 'pre-order', title: 'Pre-Order', items: preOrderItems },
     { category: 'lunch', title: 'Lunch', items: lunchItems },
     { category: 'dinner', title: 'Dinner', items: dinnerItems },
-    { category: 'beverages', title: 'Beverages · Coffee', items: beverageItems },
     { category: 'beverages', title: 'Beverages · Cold Drinks', items: coldDrinkItems },
     { category: 'beverages', title: 'Beverages · Drinks', items: dinnerDrinkItems },
+    // NOTE: 'combo' and 'pre-order' need matching tabs in foodTab.jsx to be
+    // filterable; all sections still show under the 'all' tab regardless.
 ]
 
 // Same key booking.jsx / foodmenu.jsx / mybooking.jsx persist bookings under —

@@ -17,6 +17,7 @@ import {
 // Dashboard widgets are lazy chunks: the login screen stays light, and
 // each area shows a matching skeleton while its widget code loads.
 const Units = lazy(() => import('./items/units.jsx'))
+const BookingsManage = lazy(() => import('./items/bookingsManage.jsx'))
 const Export = lazy(() => import('./items/export.jsx'))
 const Tab = lazy(() => import('./items/tab.jsx'))
 const All = lazy(() => import('./items/overview-ALL.jsx'))
@@ -33,6 +34,7 @@ const FoodTab = lazy(() => import('./items/foodTab.jsx'))
 const FoodList = lazy(() => import('./items/foodList.jsx'))
 const AccommodationCount = lazy(() => import('./items/accommodationCount.jsx'))
 const SpaService = lazy(() => import('./items/spaService-Tab.jsx'))
+const SpaServiceList = lazy(() => import('./items/spaServiceList.jsx'))
 const SpaServiceAvails = lazy(() => import('./items/SpaServiceAvails.jsx'))
 
 const ADMIN_PASSCODE = 'campbalong2025'
@@ -63,7 +65,7 @@ function AdminDash() {
   const [activeBookingTab, setActiveBookingTab] = useState('all')
   const [activeServiceTab, setActiveServiceTab] = useState('all')
   const [activeFoodTab, setActiveFoodTab] = useState('all')
-  const [activeSpaTab, setActiveSpaTab] = useState('avail')
+  const [activeSpaTab, setActiveSpaTab] = useState('services')
 
 
   const handleLogout = () => {
@@ -175,10 +177,28 @@ function AdminDash() {
 
                     </div>
                 </div>
-            //bookings section 
-
-
-
+            ) : activeSection === 'bookings' ? (
+                <div className="admin-dash-content">
+                    <button
+                        type="button"
+                        className="admin-dash-back"
+                        onClick={() => setActiveSection('overview')}
+                    >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12" />
+                            <path d="M12 19l-7-7 7-7" />
+                        </svg>
+                        Back to Overview
+                    </button>
+                    <div className="admin-dash-heading">
+                        <p className="admin-dash-eyebrow">Camp Ba-long</p>
+                        <h1 className="admin-dash-title">Bookings</h1>
+                        <ClockDate />
+                    </div>
+                    <Suspense fallback={<TableSkeleton rows={5} cols={6} />}>
+                        <BookingsManage />
+                    </Suspense>
+                </div>
             ) : activeSection === 'units' ? (
                 <div className="admin-dash-content">
                     <button
@@ -219,12 +239,14 @@ function AdminDash() {
                         <h1 className="admin-dash-title">Food Menu</h1>
                         <ClockDate />
                     </div>
-                    <Suspense fallback={<TabsSkeleton count={5} />}>
+                    <Suspense fallback={<TabsSkeleton count={7} />}>
                         <FoodTab active={activeFoodTab} onChange={setActiveFoodTab} />
                     </Suspense>
                     <Suspense fallback={<ListSkeleton rows={5} />}>
                         {activeFoodTab === 'all' && <FoodList category="all" />}
                         {activeFoodTab === 'breakfast' && <FoodList category="breakfast" />}
+                        {activeFoodTab === 'combo' && <FoodList category="combo" />}
+                        {activeFoodTab === 'pre-order' && <FoodList category="pre-order" />}
                         {activeFoodTab === 'lunch' && <FoodList category="lunch" />}
                         {activeFoodTab === 'dinner' && <FoodList category="dinner" />}
                         {activeFoodTab === 'beverages' && <FoodList category="beverages" />}
@@ -253,6 +275,7 @@ function AdminDash() {
                         <SpaService active={activeSpaTab} onChange={setActiveSpaTab} />
                     </Suspense>
                     <Suspense fallback={<TableSkeleton rows={4} cols={4} />}>
+                        {activeSpaTab === 'services' && <SpaServiceList />}
                         {activeSpaTab === 'avail' && <SpaServiceAvails />}
                     </Suspense>
                 </div>

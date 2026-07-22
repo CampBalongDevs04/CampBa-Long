@@ -4,6 +4,8 @@ import '../css/tab.css'
 const foodTabs = [
     { id: 'all', label: 'All' },
     { id: 'breakfast', label: 'Breakfast' },
+    { id: 'combo', label: 'Combo Meal' },
+    { id: 'pre-order', label: 'Pre-Order' },
     { id: 'lunch', label: 'Lunch' },
     { id: 'dinner', label: 'Dinner' },
     { id: 'beverages', label: 'Beverages' },
