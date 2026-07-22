@@ -7,12 +7,24 @@ import { SkeletonImage } from '../components/skeletons/Skeleton.jsx'
 import food1 from '../assets/images/food1.png'
 import food2 from '../assets/images/food2.png'
 import food3 from '../assets/images/food3.png'
-import food4 from '../assets/images/food4.png'
-import food5 from '../assets/images/food5.png'
-import food6 from '../assets/images/food6.png'
-import food7 from '../assets/images/food7.png'
-import food8 from '../assets/images/food8.png'
-import food9 from '../assets/images/food9.png'
+import menu1 from '../assets/images/menu1.png'
+import menu2 from '../assets/images/menu2.png'
+import menu3 from '../assets/images/menu3.png'
+import menu4 from '../assets/images/menu4.png'
+import menu5 from '../assets/images/menu5.png'
+import menu6 from '../assets/images/menu6.png'
+import menu7 from '../assets/images/menu7.png'
+import combo1 from '../assets/images/combo1.png'
+import combo2 from '../assets/images/combo2.png'
+import combo3 from '../assets/images/combo3.png'
+import combo4 from '../assets/images/combo4.png'
+import combo5 from '../assets/images/combo5.png'
+import combo6 from '../assets/images/combo6.png'
+import combo7 from '../assets/images/combo7.png'
+import pre1 from '../assets/images/pre1.png'
+import pre2 from '../assets/images/pre2.png'
+import pre3 from '../assets/images/pre3.png'
+import pre4 from '../assets/images/pre4.png'
 import food10 from '../assets/images/food10.png'
 import food11 from '../assets/images/food11.png'
 import food12 from '../assets/images/food12.png'
@@ -40,15 +52,34 @@ const orderSteps = [
 // The item arrays below are exported so the admin dashboard's food list
 // (src/admin/items/foodList.jsx) can reuse the same hardcoded menu data.
 export const breakfastItems = [
-  { image: food4, name: 'Hotsilog', desc: 'Hotdog / Egg / Cucumber / Tomato / Fried Rice', price: 'PHP 110.00' },
-  { image: food5, name: 'Tapsilog', desc: 'Tapa / Egg / Fried Garlic / Tomato / Fried Rice', price: 'PHP 120.00' },
-  { image: food6, name: 'Longsilog', desc: 'Longganisa / Egg / Fried Garlic / Fried Rice', price: 'PHP 120.00' },
+  { image: menu1, name: 'Sinigang na Liempo', desc: 'Good for 4-5 pax', price: 'PHP 700.00' },
+  { image: menu2, name: 'Fried Chicken', desc: 'Good for 3-4 pax', price: 'PHP 350.00' },
+  { image: menu3, name: 'Tinola', desc: 'Good for 4-6 pax', price: 'PHP 600.00' },
+  { image: menu4, name: 'Inihaw na Liempo', desc: 'Good for 3-4 pax', price: 'PHP 500.00' },
+  { image: menu5, name: 'Inihaw na Tilapia', desc: 'Good for 3-4 pax', price: 'PHP 400.00' },
+  { image: menu6, name: 'Pork Sisig', desc: 'Good for 3-4 pax', price: 'PHP 400.00' },
+  { image: menu7, name: 'Pork Adobo', desc: 'Good for 3-4 pax', price: 'PHP 500.00' },
 ]
 
+const classicCoffeeOptions = ['Americano', 'Cafe Latte', 'Cappucino', 'Cafe Mocha', 'Caramel Machiatto']
+const flavoredCoffeeOptions = ['Vanilla Latte', 'Hazelnut Latte', 'Choco Hazelnut Latte', 'Salted Caramel Latte', 'Matcha Latte', 'White Mocha']
+const FLAVORED_COFFEE_UPCHARGE = 10
+
 export const beverageItems = [
-  { image: food7, name: 'Americano', desc: 'Hot Brewed / Iced', price: 'PHP 100.00' },
-  { image: food8, name: 'Salted Caramel', desc: 'Hot Brewed / Iced', price: 'PHP 150.00' },
-  { image: food9, name: 'Vanilla Latte', desc: 'Hot Brewed / Iced', price: 'PHP 130.00' },
+  { image: combo1, name: 'Longsilog', desc: 'Longganisa, Sinangag at Itlog with Classic Hot Coffee', price: 'PHP 230.00', hasCoffeeOption: true },
+  { image: combo2, name: 'Hotsilog', desc: 'Hotdog, Sinangag at Itlog with Classic Hot Coffee', price: 'PHP 230.00', hasCoffeeOption: true },
+  { image: combo3, name: 'Tapsilog', desc: 'Tapa, Sinangag at Itlog with Classic Hot Coffee', price: 'PHP 260.00', hasCoffeeOption: true },
+  { image: combo4, name: 'Tocilog', desc: 'Tocino, Sinangag at Itlog with Classic Hot Coffee', price: 'PHP 260.00', hasCoffeeOption: true },
+  { image: combo5, name: 'Chicksilog', desc: 'Chicken, Sinangag at Itlog with Classic Hot Coffee', price: 'PHP 310.00', hasCoffeeOption: true },
+  { image: combo6, name: 'Shanghaisilog', desc: 'Shanghai, Sinangag at Itlog with Classic Hot Coffee', price: 'PHP 230.00', hasCoffeeOption: true },
+  { image: combo7, name: 'Liemposilog', desc: 'Liempo, Sinangag at Itlog with Classic Hot Coffee', price: 'PHP 310.00', hasCoffeeOption: true },
+]
+
+export const preOrderItems = [
+  { image: pre1, name: 'Pancit Bihon / Canton', desc: 'Good for 6-7 pax', price: 'PHP 400.00' },
+  { image: pre2, name: 'Pancit Bihon / Canton', desc: 'Large Bilao', price: 'PHP 1,500.00' },
+  { image: pre3, name: 'Pancit Bihon / Canton', desc: 'Medium Bilao', price: 'PHP 800.00' },
+  { image: pre4, name: 'Tofu Sisig', desc: 'Good for 3-4 pax', price: 'PHP 250.00' },
 ]
 
 export const lunchItems = [
@@ -106,6 +137,11 @@ function FoodOrderModal({ item, onClose }) {
   const [quantity, setQuantity] = useState(1)
   const [confirmed, setConfirmed] = useState(false)
   const [blocked, setBlocked] = useState(false)
+  const [coffeeChoice, setCoffeeChoice] = useState(
+    item.hasCoffeeOption ? classicCoffeeOptions[0] : null
+  )
+  const [step, setStep] = useState('details')
+  const showingCoffeeStep = item.hasCoffeeOption && step === 'coffee'
 
   useEffect(() => {
     const handleKey = (event) => {
@@ -128,7 +164,9 @@ function FoodOrderModal({ item, onClose }) {
   const decrease = () => setQuantity((current) => Math.max(1, current - 1))
   const increase = () => setQuantity((current) => current + 1)
 
-  const unitPrice = Number(item.price.replace(/[^0-9.]/g, '')) || 0
+  const isFlavoredCoffee = coffeeChoice && flavoredCoffeeOptions.includes(coffeeChoice)
+  const coffeeUpcharge = isFlavoredCoffee ? FLAVORED_COFFEE_UPCHARGE : 0
+  const unitPrice = (Number(item.price.replace(/[^0-9.]/g, '')) || 0) + coffeeUpcharge
   const total = unitPrice * quantity
 
   const handleConfirm = () => {
@@ -139,8 +177,9 @@ function FoodOrderModal({ item, onClose }) {
       setBlocked(true)
       return
     }
+    const orderName = item.hasCoffeeOption && coffeeChoice ? `${item.name} (${coffeeChoice})` : item.name
     addFoodOrderToBooking(targetBooking.id, {
-      name: item.name,
+      name: orderName,
       unitPrice,
       quantity,
       total,
@@ -189,30 +228,96 @@ function FoodOrderModal({ item, onClose }) {
               <SkeletonImage src={item.image} alt={item.name} />
             </div>
             <div className="food-order-details">
-              <h3 className="food-order-name">{item.name}</h3>
-              <p className="food-order-desc">{item.desc}</p>
-              <p className="food-order-price">{item.price}</p>
+              {showingCoffeeStep ? (
+                <>
+                  <h3 className="food-order-name">{item.name}</h3>
 
-              <div className="food-order-quantity">
-                <button
-                  type="button"
-                  onClick={decrease}
-                  aria-label="Decrease quantity"
-                  disabled={quantity <= 1}
-                >
-                  −
-                </button>
-                <span>{quantity}</span>
-                <button type="button" onClick={increase} aria-label="Increase quantity">
-                  +
-                </button>
-              </div>
+                  <div className="food-order-coffee">
+                    <p className="food-order-coffee-label">Pick Your Coffee</p>
 
-              <p className="food-order-total">Total: PHP {total.toFixed(2)}</p>
+                    <span className="food-order-coffee-group-title">Classic Hot Coffee</span>
+                    <div className="food-order-coffee-options">
+                      {classicCoffeeOptions.map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          className={`food-order-coffee-option${coffeeChoice === option ? ' is-selected' : ''}`}
+                          onClick={() => setCoffeeChoice(option)}
+                          aria-pressed={coffeeChoice === option}
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
 
-              <button type="button" className="food-order-confirm" onClick={handleConfirm}>
-                Add to Booking Receipt
-              </button>
+                    <span className="food-order-coffee-group-title">
+                      Flavored Hot Special <span className="food-order-coffee-upcharge">+ PHP {FLAVORED_COFFEE_UPCHARGE.toFixed(2)}</span>
+                    </span>
+                    <div className="food-order-coffee-options">
+                      {flavoredCoffeeOptions.map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          className={`food-order-coffee-option${coffeeChoice === option ? ' is-selected' : ''}`}
+                          onClick={() => setCoffeeChoice(option)}
+                          aria-pressed={coffeeChoice === option}
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <p className="food-order-total">
+                    Total: PHP {total.toFixed(2)}
+                    {isFlavoredCoffee && (
+                      <span className="food-order-total-note"> (includes +PHP {FLAVORED_COFFEE_UPCHARGE.toFixed(2)} flavored coffee)</span>
+                    )}
+                  </p>
+
+                  <div className="food-order-step-actions">
+                    <button type="button" className="food-order-back" onClick={() => setStep('details')}>
+                      ‹ Back
+                    </button>
+                    <button type="button" className="food-order-confirm" onClick={handleConfirm}>
+                      Add to Booking Receipt
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3 className="food-order-name">{item.name}</h3>
+                  <p className="food-order-desc">{item.desc}</p>
+                  <p className="food-order-price">{item.price}</p>
+
+                  <div className="food-order-quantity">
+                    <button
+                      type="button"
+                      onClick={decrease}
+                      aria-label="Decrease quantity"
+                      disabled={quantity <= 1}
+                    >
+                      −
+                    </button>
+                    <span>{quantity}</span>
+                    <button type="button" onClick={increase} aria-label="Increase quantity">
+                      +
+                    </button>
+                  </div>
+
+                  {!item.hasCoffeeOption && (
+                    <p className="food-order-total">Total: PHP {total.toFixed(2)}</p>
+                  )}
+
+                  <button
+                    type="button"
+                    className="food-order-confirm"
+                    onClick={item.hasCoffeeOption ? () => setStep('coffee') : handleConfirm}
+                  >
+                    {item.hasCoffeeOption ? 'Next' : 'Add to Booking Receipt'}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -310,6 +415,7 @@ function FoodMenuPage() {
   const [expanded, setExpanded] = useState({
     breakfast: true,
     beverages: true,
+    preOrder: true,
     lunch: true,
     coldDrinks: true,
     dinner: true,
@@ -385,7 +491,7 @@ function FoodMenuPage() {
           className="menu-category-banner"
           style={{ backgroundImage: `url(${food3})` }}
         >
-          <CategoryTitle>BREAKFAST</CategoryTitle>
+          <CategoryTitle>MENU</CategoryTitle>
         </div>
         <div className="menu-category-toggle-row">
           <SubcategoryToggle
@@ -399,14 +505,26 @@ function FoodMenuPage() {
 
       <section className="menu-category">
         <div className="menu-category-header">
-          <CategoryTitle plain>BEVERAGES</CategoryTitle>
+          <CategoryTitle plain>COMBO MEAL</CategoryTitle>
           <SubcategoryToggle
-            label="Coffee"
+            label="Meals"
             expanded={expanded.beverages}
             onToggle={() => toggleSection('beverages')}
           />
         </div>
         {expanded.beverages && <MenuFoodRow items={beverageItems} onAddToOrder={setOrderItem} />}
+      </section>
+
+      <section className="menu-category">
+        <div className="menu-category-header">
+          <CategoryTitle plain>PRE-ORDER</CategoryTitle>
+          <SubcategoryToggle
+            label="Foods"
+            expanded={expanded.preOrder}
+            onToggle={() => toggleSection('preOrder')}
+          />
+        </div>
+        {expanded.preOrder && <MenuFoodRow items={preOrderItems} onAddToOrder={setOrderItem} />}
       </section>
 
       <section className="menu-category">

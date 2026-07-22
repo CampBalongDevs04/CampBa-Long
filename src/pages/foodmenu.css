@@ -653,8 +653,92 @@
 
 .food-order-body {
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   gap: 1.75rem;
+}
+
+.food-order-coffee {
+  margin: 0 0 1.1rem;
+  padding: 0.9rem 1rem 1rem;
+  background: rgba(31, 79, 47, 0.06);
+  border: 1px solid rgba(31, 79, 47, 0.16);
+  border-radius: 0.85rem;
+}
+
+.food-order-coffee-label {
+  margin: 0 0 0.65rem;
+  color: #1f4f2f;
+  font-weight: 800;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.food-order-coffee-group-title {
+  display: block;
+  margin: 0.6rem 0 0.4rem;
+  color: #6b7a5e;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.food-order-coffee-group-title:first-of-type {
+  margin-top: 0;
+}
+
+.food-order-coffee-upcharge {
+  color: #c9762b;
+  font-weight: 800;
+}
+
+.food-order-coffee-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.food-order-coffee-option {
+  border: 1.5px solid rgba(31, 79, 47, 0.35);
+  background: #fffdf6;
+  color: #1f4f2f;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.food-order-coffee-option:hover {
+  border-color: #1f4f2f;
+  transform: translateY(-1px);
+}
+
+.food-order-coffee-option.is-selected {
+  background: #1f4f2f;
+  border-color: #1f4f2f;
+  color: #f8f2e4;
+  box-shadow: 0 6px 14px rgba(31, 79, 47, 0.3);
+}
+
+.food-order-total-note {
+  color: #c9762b;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 520px) {
+  .food-order-coffee-options {
+    gap: 0.4rem;
+  }
+
+  .food-order-coffee-option {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.75rem;
+  }
 }
 
 @keyframes food-order-fade {
@@ -820,6 +904,35 @@
 .food-order-confirm:hover {
   background: #1f4f2f;
   transform: translateY(-2px);
+}
+
+.food-order-step-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.food-order-step-actions .food-order-confirm {
+  flex: 1;
+}
+
+.food-order-back {
+  flex-shrink: 0;
+  border: 1px solid rgba(31, 79, 47, 0.3);
+  background: transparent;
+  color: #1f4f2f;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-radius: 999px;
+  padding: 0.9rem 1.1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.food-order-back:hover {
+  background: #1f4f2f;
+  color: #f8f2e4;
 }
 
 .food-order-confirmed {
