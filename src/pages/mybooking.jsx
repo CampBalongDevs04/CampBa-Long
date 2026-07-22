@@ -220,6 +220,12 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete }){
                         <p className="field-label">Guest Details</p>
                         <p className="field-value">{booking.guest?.fullName || 'Not provided'}</p>
                         {booking.pax && <p className="field-sub">{booking.pax} guests</p>}
+                        {booking.kids > 0 && (
+                            <p className="field-sub">{booking.kids} kids (7 &amp; below, no entrance fee)</p>
+                        )}
+                        {booking.seniors > 0 && (
+                            <p className="field-sub">{booking.seniors} senior citizens (10% off, ID required)</p>
+                        )}
                     </div>
                 </div>
 
@@ -239,6 +245,28 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete }){
                         <p className="field-sub">{booking.hasReceipt ? 'paid' : 'pending'}</p>
                     </div>
                 </div>
+
+                {booking.entrance?.total > 0 && (
+                    <div className="booking-card-field">
+                        <span className="field-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4" />
+                                <path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
+                                <path d="M9 12h6" />
+                            </svg>
+                        </span>
+                        <div>
+                            <p className="field-label">Entrance Fee</p>
+                            <p className="field-value">{formatPeso(booking.entrance.total)}</p>
+                            <p className="field-sub">
+                                {formatPeso(booking.entrance.perHead)}/head, paid on-site
+                                {booking.entrance.seniorDiscount > 0
+                                    ? ` • senior discount −${formatPeso(booking.entrance.seniorDiscount)}`
+                                    : ''}
+                            </p>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="booking-card-divider" />
