@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import '../components/css/bookingSummary.css'
 import { accomodationOptions } from '../../data/accomodationOptions.js'
+import { computeEntranceFee } from '../../data/entranceFee.js'
 
 const DOWNPAYMENT_RATE = 0.5
 
@@ -29,12 +30,19 @@ function SummaryRow({ label, value, placeholder }){
     )
 }
 
-export default function BookingSummary({ checkIn, checkOut, schedule, selectedAccomodation, guest, pax, receipt }){
+export default function BookingSummary({ checkIn, checkOut, schedule, selectedAccomodation, guest, pax, kids, seniors, receipt }){
     const unit = selectedAccomodation
         ? accomodationOptions.find((item) => item.id === selectedAccomodation)
         : null
 
     const downpayment = unit?.price != null ? unit.price * DOWNPAYMENT_RATE : null
+
+    const entrance = computeEntranceFee({
+        perHead: schedule?.entranceFee ?? 0,
+        pax: pax ?? 0,
+        seniors: seniors ?? 0,
+        kids: kids ?? 0,
+    })
 
     const receiptUrl = useMemo(
         () => (receipt ? URL.createObjectURL(receipt) : null),
@@ -80,6 +88,16 @@ export default function BookingSummary({ checkIn, checkOut, schedule, selectedAc
                     placeholder="Not set"
                 />
                 <SummaryRow
+                    label="Kids (7 & below)"
+                    value={kids > 0 ? `${kids} — no entrance fee` : null}
+                    placeholder="None"
+                />
+                <SummaryRow
+                    label="Senior citizens"
+                    value={seniors > 0 ? `${seniors} — 10% off` : null}
+                    placeholder="None"
+                />
+                <SummaryRow
                     label="Downpayment"
                     value={
                         unit
@@ -88,6 +106,47 @@ export default function BookingSummary({ checkIn, checkOut, schedule, selectedAc
                     }
                     placeholder="Select a unit"
                 />
+            </div>
+
+            <div className="summary-section">
+                <p className="summary-section-label">Entrance Fees</p>
+                <SummaryRow
+                    label="Rate per head"
+                    value={schedule ? `${formatPeso(entrance.perHead)} (${schedule.description})` : null}
+                    placeholder="Select a schedule"
+                />
+                <SummaryRow
+                    label={`Regular guests${entrance.regularCount ? ` (${entrance.regularCount})` : ''}`}
+                    value={schedule && entrance.regularCount > 0 ? formatPeso(entrance.regularTotal) : null}
+                    placeholder={schedule ? '—' : 'Set guests'}
+                />
+                {entrance.seniorCount > 0 && (
+                    <>
+                        <SummaryRow
+                            label={`Seniors (${entrance.seniorCount})`}
+                            value={schedule ? formatPeso(entrance.seniorGross) : null}
+                            placeholder="—"
+                        />
+                        <div className="summary-row summary-row-discount">
+                            <span className="summary-row-label">Senior discount (10%)</span>
+                            <span className="summary-row-value">
+                                {schedule ? `− ${formatPeso(entrance.seniorDiscount)}` : '—'}
+                            </span>
+                        </div>
+                    </>
+                )}
+                {kids > 0 && (
+                    <SummaryRow label={`Kids (${kids})`} value="Free" placeholder="—" />
+                )}
+                <SummaryRow
+                    label="Entrance subtotal"
+                    value={schedule ? formatPeso(entrance.total) : null}
+                    placeholder="Select a schedule"
+                />
+                <p className="summary-note-inline">
+                    Entrance fees are settled on-site at check-in. Seniors must present
+                    a Senior Citizen ID or other valid ID for the discount.
+                </p>
             </div>
 
             <div className="summary-section">

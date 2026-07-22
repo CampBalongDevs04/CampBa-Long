@@ -56,6 +56,19 @@
     font-style: italic;
     color: rgba(42, 42, 34, 0.45);
 }
+/* Senior discount line — reads as a deduction */
+.summary-row-discount .summary-row-label,
+.summary-row-discount .summary-row-value{
+    color: #3DA35D;
+}
+/* Small print inside a summary section (e.g. entrance-fee terms) */
+.summary-note-inline{
+    margin: 8px 0 0;
+    font-size: 13px;
+    font-style: italic;
+    line-height: 1.4;
+    color: var(--leaf);
+}
 .summary-total{
     display: flex;
     justify-content: space-between;

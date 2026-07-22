@@ -1,0 +1,101 @@
+/* Kids counter — matches the guest pax stepper, but button-only (no typing). */
+.kids-field{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    font-family: 'Cormorant Garamond', serif;
+}
+
+/* Grayed out until a guest count (pax) is set */
+.kids-field-disabled{
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.kids-field-label{
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: var(--forest);
+}
+
+.kids-counter{
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 7px 0;
+}
+
+.kids-step{
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--forest);
+    background-color: var(--cream);
+    border: 1px solid var(--gold-soft);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kids-step:hover:not(:disabled){
+    border-color: var(--gold);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.kids-step:disabled{
+    opacity: 0.4;
+    cursor: default;
+}
+
+/* Read-only value — a span, so it can't be typed into */
+.kids-count{
+    box-sizing: border-box;
+    min-width: 56px;
+    padding: 6px 0;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--forest);
+    background-color: var(--cream);
+    border: 1px solid var(--gold-soft);
+    border-radius: 10px;
+    user-select: none;
+}
+
+.kids-counter-hint{
+    font-size: 14px;
+    font-style: italic;
+    color: var(--leaf);
+}
+
+.kids-note{
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 2px 0 0;
+    font-size: 14px;
+    color: var(--ink);
+}
+
+.kids-note-dot{
+    flex-shrink: 0;
+    align-self: center;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--gold);
+}
+
+.kids-note strong{
+    font-weight: 700;
+    color: var(--forest);
+}

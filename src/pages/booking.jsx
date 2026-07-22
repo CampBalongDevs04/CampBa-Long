@@ -7,7 +7,10 @@ import ScheduleNote from './components/scheduleNote'
 import AccomodationList from './components/accomodationList'
 import { accomodationOptions } from '../data/accomodationOptions.js'
 import PaxInput from './components/paxInput'
+import KidsCount from './components/kidscount'
+import SeniorCount from './components/seniorCount'
 import Payment from './components/payment'
+import { computeEntranceFee } from '../data/entranceFee.js'
 import Terms from './components/terms'
 import BookingSummary from './components/bookingSummary'
 import Footer from '../components/footer'
@@ -66,12 +69,26 @@ export default function Booking(){
         location.state?.accomodationId ?? null
     )
     const [pax, setPax] = useState(null)
+    const [kids, setKids] = useState(0)
+    const [seniors, setSeniors] = useState(0)
     const [guest, setGuest] = useState({ fullName: '', mobile: '', email: '' })
     const [receipt, setReceipt] = useState(null)
     const [agreed, setAgreed] = useState(false)
     const [attemptedConfirm, setAttemptedConfirm] = useState(false)
 
     const sameDayCheckout = selectedTime !== null && timeOptions[selectedTime].sameDay === true
+
+    // Seniors and kids are a subset of the total guests (pax). If the guest
+    // count drops below the specials already picked, trim them to fit —
+    // seniors are kept first, then kids fill whatever room is left.
+    function handlePaxChange(nextPax){
+        setPax(nextPax)
+        const cap = nextPax ?? 0
+        const nextSeniors = Math.min(seniors, cap)
+        const nextKids = Math.min(kids, cap - nextSeniors)
+        if (nextSeniors !== seniors) setSeniors(nextSeniors)
+        if (nextKids !== kids) setKids(nextKids)
+    }
 
     function handleDatesChange(nextDates){
         setDates(nextDates)
@@ -107,6 +124,12 @@ export default function Booking(){
         const schedule = selectedTime !== null ? timeOptions[selectedTime] : null
         const checkOut = sameDayCheckout ? dates.checkIn : dates.checkOut
         const downpayment = unit?.price != null ? unit.price * DOWNPAYMENT_RATE : null
+        const entrance = computeEntranceFee({
+            perHead: schedule?.entranceFee ?? 0,
+            pax: pax ?? 0,
+            seniors,
+            kids,
+        })
 
         const booking = {
             id: `CBL-${Date.now().toString().slice(-10)}`,
@@ -123,6 +146,13 @@ export default function Booking(){
                 ? { checkIn: schedule.checkIn, time: schedule.time, description: schedule.description }
                 : null,
             pax,
+            kids,
+            seniors,
+            entrance: {
+                perHead: entrance.perHead,
+                seniorDiscount: entrance.seniorDiscount,
+                total: entrance.total,
+            },
             guest,
             downpayment,
             hasReceipt: !!receipt,
@@ -208,10 +238,24 @@ export default function Booking(){
                             <div className="booking-step-body">
                                 <PaxInput
                                     pax={pax}
-                                    onPaxChange={setPax}
+                                    onPaxChange={handlePaxChange}
                                     selectedAccomodation={selectedAccomodation}
                                     guest={guest}
                                     onGuestChange={setGuest}
+                                />
+
+                                <KidsCount
+                                    kids={kids}
+                                    onKidsChange={setKids}
+                                    disabled={!pax}
+                                    max={(pax ?? 0) - seniors}
+                                />
+
+                                <SeniorCount
+                                    seniors={seniors}
+                                    onSeniorsChange={setSeniors}
+                                    disabled={!pax}
+                                    max={(pax ?? 0) - kids}
                                 />
                             </div>
                         </section>
@@ -250,6 +294,8 @@ export default function Booking(){
                         selectedAccomodation={selectedAccomodation}
                         guest={guest}
                         pax={pax}
+                        kids={kids}
+                        seniors={seniors}
                         receipt={receipt}
                     />
                 </div>
