@@ -61,11 +61,13 @@ export default function KidsCount({ kids, onKidsChange, disabled = false, max = 
 
             <p className="kids-note" role="note">
                 <span className="kids-note-dot" aria-hidden="true"></span>
-                {disabled ? (
-                    <>Set the <strong>number of guests</strong> first — kids are counted within your guest total.</>
-                ) : (
-                    <>Only <strong>7 years old and below</strong> — kids in this age range have no entrance fee.</>
-                )}
+                <span className="kids-note-body">
+                    {disabled ? (
+                        <>Set the <strong>number of guests</strong> first — kids are counted within your guest total.</>
+                    ) : (
+                        <>Only <strong>7 years old and below</strong> — kids in this age range have no entrance fee.</>
+                    )}
+                </span>
             </p>
         </div>
     )

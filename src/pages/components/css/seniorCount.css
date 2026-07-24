@@ -95,6 +95,12 @@
     background-color: var(--gold);
 }
 
+/* One flex item holding the whole message, so the text wraps as a normal
+   paragraph instead of each word/strong run becoming its own flex column. */
+.senior-note-body{
+    flex: 1;
+}
+
 .senior-note strong{
     font-weight: 700;
     color: var(--forest);

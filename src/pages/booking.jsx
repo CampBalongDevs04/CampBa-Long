@@ -5,7 +5,7 @@ import BookingCalendar from './components/BookingCalendar'
 import TimeSelector, { timeOptions } from './components/timeSelector'
 import ScheduleNote from './components/scheduleNote'
 import AccomodationList from './components/accomodationList'
-import { accomodationOptions } from '../data/accomodationOptions.js'
+import { getAccomodationOptions } from '../data/accomodationOptions.js'
 import PaxInput from './components/paxInput'
 import KidsCount from './components/kidscount'
 import SeniorCount from './components/seniorCount'
@@ -77,6 +77,20 @@ export default function Booking(){
     const [attemptedConfirm, setAttemptedConfirm] = useState(false)
 
     const sameDayCheckout = selectedTime !== null && timeOptions[selectedTime].sameDay === true
+    const rateGroup = selectedTime !== null ? timeOptions[selectedTime].rateGroup : null
+
+    // Switching schedules can change which units are even offered (e.g.
+    // Cottage is day-only, tents are overnight-only) — drop a selection
+    // that's no longer valid for the newly chosen schedule.
+    function handleSelectTime(index){
+        setSelectedTime(index)
+        const nextRateGroup = timeOptions[index]?.rateGroup ?? null
+        if (!selectedAccomodation) return
+        const stillOffered = getAccomodationOptions(nextRateGroup).some(
+            (item) => item.id === selectedAccomodation
+        )
+        if (!stillOffered) setSelectedAccomodation(null)
+    }
 
     // Seniors and kids are a subset of the total guests (pax). If the guest
     // count drops below the specials already picked, trim them to fit —
@@ -118,10 +132,10 @@ export default function Booking(){
         setAttemptedConfirm(true)
         if (missingSteps.length > 0) return
 
-        const unit = selectedAccomodation
-            ? accomodationOptions.find((item) => item.id === selectedAccomodation)
-            : null
         const schedule = selectedTime !== null ? timeOptions[selectedTime] : null
+        const unit = selectedAccomodation
+            ? getAccomodationOptions(schedule?.rateGroup).find((item) => item.id === selectedAccomodation)
+            : null
         const checkOut = sameDayCheckout ? dates.checkIn : dates.checkOut
         const downpayment = unit?.price != null ? unit.price * DOWNPAYMENT_RATE : null
         const entrance = computeEntranceFee({
@@ -211,7 +225,7 @@ export default function Booking(){
 
                                 <TimeSelector
                                     selectedTime={selectedTime}
-                                    onSelectTime={setSelectedTime}
+                                    onSelectTime={handleSelectTime}
                                     checkIn={dates.checkIn}
                                 />
 
@@ -229,6 +243,7 @@ export default function Booking(){
                                     onSelectAccomodation={setSelectedAccomodation}
                                     checkIn={dates.checkIn}
                                     checkOut={sameDayCheckout ? dates.checkIn : dates.checkOut}
+                                    rateGroup={rateGroup}
                                 />
                             </div>
                         </section>
@@ -242,6 +257,7 @@ export default function Booking(){
                                     selectedAccomodation={selectedAccomodation}
                                     guest={guest}
                                     onGuestChange={setGuest}
+                                    rateGroup={rateGroup}
                                 />
 
                                 <KidsCount

@@ -9,37 +9,51 @@
 // `prefix` is used to generate the unique unit IDs (TBL-01, TENT-02, ...).
 export const ACCOMMODATION_TYPES = [
     {
-        id: 'table',
-        name: "Table",
-        prefix: "TBL",
-        total: 10,
-        image: null,
-    },
-    {
-        id: 'tent',
-        name: "Camping Tent",
-        prefix: "TENT",
-        total: 10,
+        id: 'teepee',
+        name: "Teepee",
+        prefix: "TPE",
+        total: 2,
         image: null,
     },
     {
         id: 'small',
         name: "A-House Small",
         prefix: "AHS",
-        total: 2,
+        total: 3,
         image: null,
     },
     {
         id: 'medium',
         name: "A-House Medium",
         prefix: "AHM",
-        total: 4,
+        total: 2,
         image: null,
     },
     {
-        id: 'large',
-        name: "A-House Large",
-        prefix: "AHL",
+        id: 'family',
+        name: "A-House Family",
+        prefix: "AHF",
+        total: 1,
+        image: null,
+    },
+    {
+        id: 'tent-small',
+        name: "Small Tent",
+        prefix: "TENTS",
+        total: 3,
+        image: null,
+    },
+    {
+        id: 'tent-large',
+        name: "Big Tent",
+        prefix: "TENTL",
+        total: 1,
+        image: null,
+    },
+    {
+        id: 'cottage',
+        name: "Cottage",
+        prefix: "COT",
         total: 2,
         image: null,
     },
@@ -94,7 +108,7 @@ function isoDaysFromToday(days) {
 // Later this becomes the Supabase `bookings` table:
 //   unit_id | check_in | check_out | status ('booked' = paid, 'pending' = waiting for payment)
 export const UNIT_BOOKINGS = [
-    { unitId: 'TBL-03',  checkIn: isoDaysFromToday(0),  checkOut: isoDaysFromToday(1), status: 'booked' },
+    { unitId: 'AHS-01',  checkIn: isoDaysFromToday(0),  checkOut: isoDaysFromToday(1), status: 'booked' },
     //{ unitId: 'TBL-05',  checkIn: isoDaysFromToday(0),  checkOut: isoDaysFromToday(2), status: 'pending' },
    // { unitId: 'TENT-07', checkIn: isoDaysFromToday(-1), checkOut: isoDaysFromToday(3), status: 'booked' },
     //{ unitId: 'AHM-02',  checkIn: isoDaysFromToday(1),  checkOut: isoDaysFromToday(4), status: 'booked' },

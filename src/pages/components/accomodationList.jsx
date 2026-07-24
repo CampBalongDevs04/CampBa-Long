@@ -6,13 +6,14 @@ import {
     getNextAvailableDate,
     formatShortDate,
 } from '../../data/accommodationInventory.js'
-import { accomodationOptions as list } from '../../data/accomodationOptions.js'
+import { getAccomodationOptions } from '../../data/accomodationOptions.js'
 
-export default function AccomodationList({ selectedAccomodation, onSelectAccomodation, checkIn, checkOut }){
+export default function AccomodationList({ selectedAccomodation, onSelectAccomodation, checkIn, checkOut, rateGroup }){
     const trackRef = useRef(null)
     const hasDates = !!checkIn
     const stayStart = checkIn ?? new Date()
     const stayEnd = checkOut ?? null
+    const list = getAccomodationOptions(rateGroup)
 
     const scrollByCard = (direction) => {
         const track = trackRef.current
@@ -38,6 +39,11 @@ export default function AccomodationList({ selectedAccomodation, onSelectAccomod
                     ? `Showing availability for ${formatShortDate(stayStart)}${stayEnd && formatShortDate(stayEnd) !== formatShortDate(stayStart) ? ` – ${formatShortDate(stayEnd)}` : ''}`
                     : 'Showing availability for today — pick your dates in step 1 to check your stay.'}
             </p>
+            {!rateGroup && (
+                <p className="accomodation-schedule-note">
+                    Select a stay schedule above to see pricing and the units available for it.
+                </p>
+            )}
             <div className="accomodation-carousel">
                 <button
                     type="button"
@@ -50,8 +56,9 @@ export default function AccomodationList({ selectedAccomodation, onSelectAccomod
 
                 <div className="accomodation-track" ref={trackRef}>
                     {list.map((item) => {
-                        const availability = getAvailability(item.id, stayStart, stayEnd)
-                        const isFullyBooked = availability !== null && availability.available === 0
+                        const unlimited = item.unlimited === true
+                        const availability = unlimited ? null : getAvailability(item.id, stayStart, stayEnd)
+                        const isFullyBooked = !unlimited && availability !== null && availability.available === 0
                         const nextAvailable = isFullyBooked
                             ? getNextAvailableDate(item.id, stayStart)
                             : null
@@ -76,12 +83,14 @@ export default function AccomodationList({ selectedAccomodation, onSelectAccomod
                                     <span className="accomodation-card-price">
                                         {item.price ? `₱${item.price}` : 'Price TBA'}
                                     </span>
-                                    <span className={`accomodation-card-available ${availability && availability.available > 0 ? 'is-available' : ''}`}>
-                                        {availability === null
-                                            ? 'Availability TBA'
-                                            : isFullyBooked
-                                                ? `Fully booked${nextAvailable ? ` · free ${formatShortDate(nextAvailable)}` : ''}`
-                                                : `${availability.available} of ${availability.total} available`}
+                                    <span className={`accomodation-card-available ${unlimited || (availability && availability.available > 0) ? 'is-available' : ''}`}>
+                                        {unlimited
+                                            ? 'Available'
+                                            : availability === null
+                                                ? 'Availability TBA'
+                                                : isFullyBooked
+                                                    ? `Fully booked${nextAvailable ? ` · free ${formatShortDate(nextAvailable)}` : ''}`
+                                                    : `${availability.available} of ${availability.total} available`}
                                     </span>
                                 </div>
                             </button>

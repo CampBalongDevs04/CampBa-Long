@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import '../components/css/bookingSummary.css'
-import { accomodationOptions } from '../../data/accomodationOptions.js'
+import { getAccomodationOptions } from '../../data/accomodationOptions.js'
 import { computeEntranceFee } from '../../data/entranceFee.js'
 
 const DOWNPAYMENT_RATE = 0.5
@@ -32,7 +32,7 @@ function SummaryRow({ label, value, placeholder }){
 
 export default function BookingSummary({ checkIn, checkOut, schedule, selectedAccomodation, guest, pax, kids, seniors, receipt }){
     const unit = selectedAccomodation
-        ? accomodationOptions.find((item) => item.id === selectedAccomodation)
+        ? getAccomodationOptions(schedule?.rateGroup).find((item) => item.id === selectedAccomodation)
         : null
 
     const downpayment = unit?.price != null ? unit.price * DOWNPAYMENT_RATE : null
@@ -79,7 +79,7 @@ export default function BookingSummary({ checkIn, checkOut, schedule, selectedAc
                 <p className="summary-section-label">Accommodation</p>
                 <SummaryRow
                     label="Unit"
-                    value={unit ? `${unit.name} (${unit.pax})` : null}
+                    value={unit ? `${unit.name}${unit.pax ? ` (${unit.pax})` : ''}` : null}
                     placeholder="Select a unit"
                 />
                 <SummaryRow
