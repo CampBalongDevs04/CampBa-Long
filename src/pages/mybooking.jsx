@@ -260,6 +260,9 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete }){
                             <p className="field-value">{formatPeso(booking.entrance.total)}</p>
                             <p className="field-sub">
                                 {formatPeso(booking.entrance.perHead)}/head, paid on-site
+                                {booking.entrance.freeApplied > 0
+                                    ? ` • free entrance (${booking.entrance.freeApplied} pax) −${formatPeso(booking.entrance.freeSavings)}`
+                                    : ''}
                                 {booking.entrance.seniorDiscount > 0
                                     ? ` • senior discount −${formatPeso(booking.entrance.seniorDiscount)}`
                                     : ''}

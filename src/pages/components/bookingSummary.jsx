@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import '../components/css/bookingSummary.css'
-import { accomodationOptions } from '../../data/accomodationOptions.js'
+import { getAccomodationOptions, FREE_ENTRANCE_PAX } from '../../data/accomodationOptions.js'
 import { computeEntranceFee } from '../../data/entranceFee.js'
 
 const DOWNPAYMENT_RATE = 0.5
@@ -32,7 +32,7 @@ function SummaryRow({ label, value, placeholder }){
 
 export default function BookingSummary({ checkIn, checkOut, schedule, selectedAccomodation, guest, pax, kids, seniors, receipt }){
     const unit = selectedAccomodation
-        ? accomodationOptions.find((item) => item.id === selectedAccomodation)
+        ? getAccomodationOptions(schedule?.rateGroup).find((item) => item.id === selectedAccomodation)
         : null
 
     const downpayment = unit?.price != null ? unit.price * DOWNPAYMENT_RATE : null
@@ -42,6 +42,7 @@ export default function BookingSummary({ checkIn, checkOut, schedule, selectedAc
         pax: pax ?? 0,
         seniors: seniors ?? 0,
         kids: kids ?? 0,
+        freeEntrance: unit && !unit.freeEntranceExempt ? FREE_ENTRANCE_PAX : 0,
     })
 
     const receiptUrl = useMemo(
@@ -79,7 +80,7 @@ export default function BookingSummary({ checkIn, checkOut, schedule, selectedAc
                 <p className="summary-section-label">Accommodation</p>
                 <SummaryRow
                     label="Unit"
-                    value={unit ? `${unit.name} (${unit.pax})` : null}
+                    value={unit ? `${unit.name}${unit.pax ? ` (${unit.pax})` : ''}` : null}
                     placeholder="Select a unit"
                 />
                 <SummaryRow
@@ -115,6 +116,19 @@ export default function BookingSummary({ checkIn, checkOut, schedule, selectedAc
                     value={schedule ? `${formatPeso(entrance.perHead)} (${schedule.description})` : null}
                     placeholder="Select a schedule"
                 />
+                {unit && (
+                    <SummaryRow
+                        label={`Free entrance (${entrance.freeApplied || FREE_ENTRANCE_PAX} pax)`}
+                        value={
+                            unit.freeEntranceExempt
+                                ? 'Not applicable for this unit'
+                                : schedule
+                                    ? `− ${formatPeso(entrance.freeSavings)}`
+                                    : null
+                        }
+                        placeholder="Select a schedule"
+                    />
+                )}
                 <SummaryRow
                     label={`Regular guests${entrance.regularCount ? ` (${entrance.regularCount})` : ''}`}
                     value={schedule && entrance.regularCount > 0 ? formatPeso(entrance.regularTotal) : null}

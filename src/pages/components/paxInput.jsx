@@ -1,34 +1,40 @@
 import '../components/css/paxInput.css'
-import { accomodationOptions } from '../../data/accomodationOptions.js'
+import { getAccomodationOptions } from '../../data/accomodationOptions.js'
 
 const MIN_PAX = 1
 const MAX_PAX = 20
 
-function getFitNote(pax, selectedAccomodation){
+// Units with no minPax/maxPax (e.g. Tent Pitching) have no capacity limit,
+// so they always "fit" regardless of group size.
+function fitsPax(pax, item){
+    return item.minPax == null || (pax >= item.minPax && pax <= item.maxPax)
+}
+
+function getFitNote(pax, selectedAccomodation, rateGroup){
     if (!pax) return null
 
-    const fitting = accomodationOptions.filter(
-        (item) => pax >= item.minPax && pax <= item.maxPax
-    )
+    const options = getAccomodationOptions(rateGroup)
+    const fitting = options.filter((item) => fitsPax(pax, item))
 
     const selected = selectedAccomodation
-        ? accomodationOptions.find((item) => item.id === selectedAccomodation)
+        ? options.find((item) => item.id === selectedAccomodation)
         : null
 
     if (selected){
-        const fits = pax >= selected.minPax && pax <= selected.maxPax
+        const paxLabel = selected.pax ?? 'schedule not yet selected'
+        const fits = fitsPax(pax, selected)
         if (fits){
             return {
                 tone: 'fit',
                 title: 'Good fit',
-                text: `${selected.name} (${selected.pax}) is fit for your group of ${pax}.`,
+                text: `${selected.name} (${paxLabel}) is fit for your group of ${pax}.`,
             }
         }
         const suggestions = fitting.map((item) => item.name).join(', ')
         return {
             tone: 'unfit',
             title: 'Not a fit',
-            text: `${selected.name} (${selected.pax}) is not fit for your group of ${pax}.`
+            text: `${selected.name} (${paxLabel}) is not fit for your group of ${pax}.`
                 + (suggestions ? ` Consider: ${suggestions}.` : ''),
         }
     }
@@ -48,8 +54,8 @@ function getFitNote(pax, selectedAccomodation){
     }
 }
 
-export default function PaxInput({ pax, onPaxChange, selectedAccomodation, guest, onGuestChange }){
-    const note = getFitNote(pax, selectedAccomodation)
+export default function PaxInput({ pax, onPaxChange, selectedAccomodation, guest, onGuestChange, rateGroup }){
+    const note = getFitNote(pax, selectedAccomodation, rateGroup)
 
     const clamp = (value) => Math.min(MAX_PAX, Math.max(MIN_PAX, value))
     const step = (delta) => onPaxChange?.(clamp((pax ?? 0) + delta))

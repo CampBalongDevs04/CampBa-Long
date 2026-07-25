@@ -61,13 +61,15 @@ export default function SeniorCount({ seniors, onSeniorsChange, disabled = false
 
             <p className="senior-note" role="note">
                 <span className="senior-note-dot" aria-hidden="true"></span>
-                {disabled ? (
-                    <>Set the <strong>number of guests</strong> first — seniors are counted within your guest total.</>
-                ) : (
-                    <>Senior citizens get <strong>10% off</strong> the entrance fee. Please
-                    present a <strong>Senior Citizen ID</strong> or other valid ID upon
-                    check-in for validation.</>
-                )}
+                <span className="senior-note-body">
+                    {disabled ? (
+                        <>Set the <strong>number of guests</strong> first — seniors are counted within your guest total.</>
+                    ) : (
+                        <>Senior citizens get <strong>10% off</strong> the entrance fee. Please
+                        present a <strong>Senior Citizen ID</strong> or other valid ID upon
+                        check-in for validation.</>
+                    )}
+                </span>
             </p>
         </div>
     )
