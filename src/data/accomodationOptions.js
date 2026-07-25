@@ -6,6 +6,9 @@ import houseMedium from '../assets/temp/A-House-Medium.png'
 import houseFamily from '../assets/temp/A-House-Family.png'
 
 // Info that doesn't change with the stay schedule.
+// `freeEntranceExempt` marks units left out of the "free entrance for 2 pax"
+// perk (see INCLUSIONS below) — cottage/pavilion on the Day rate and tent
+// pitching on the overnight rate charge entrance for every head.
 const ACCOMMODATION_INFO = [
     { id: 'teepee', name: 'Teepee', image: null },
     { id: 'small', name: 'A-House Small', image: houseSmall },
@@ -13,12 +16,36 @@ const ACCOMMODATION_INFO = [
     { id: 'family', name: 'A-House Family', image: houseFamily },
     { id: 'tent-small', name: 'Small Tent', image: null },
     { id: 'tent-large', name: 'Big Tent', image: null },
-    { id: 'cottage', name: 'Cottage', image: null },
-    { id: 'pavilion', name: 'Pavillion', image: null },
+    { id: 'cottage', name: 'Cottage', image: null, freeEntranceExempt: true },
+    { id: 'pavilion', name: 'Pavillion', image: null, freeEntranceExempt: true },
     // Guests pitching their own tent: flat per-tent fee, no capacity limit,
     // so it has no minPax/maxPax and isn't tracked in accommodationInventory.js.
-    { id: 'tent-pitching', name: 'Tent Pitching', image: null, unlimited: true },
+    { id: 'tent-pitching', name: 'Tent Pitching', image: null, unlimited: true, freeEntranceExempt: true },
 ]
+
+// Free-entrance headcount granted per booking under the perk above.
+export const FREE_ENTRANCE_PAX = 2
+
+// What each stay schedule's rate includes, shown alongside the schedule note.
+export const INCLUSIONS = {
+    day: [
+        'Free entrance for 2 pax (not applicable for cottage & pavilion)',
+        'Free parking',
+        '3 hours free use of jacuzzi',
+        'Free use of charcoal griller',
+        'Access to swimming pool, kiddie pool & running water',
+        'Access to bathrooms and showers',
+    ],
+    overnight: [
+        'Free entrance for 2 pax (not applicable for tent pitching)',
+        'Free parking',
+        '3 hours free use of jacuzzi',
+        'Free use of charcoal griller',
+        'Access to swimming pool, kiddie pool & running water',
+        'Access to bathrooms and showers',
+        'Beddings included (except tent pitching)',
+    ],
+}
 
 // Price + pax capacity depend on the stay schedule: Day Time (7 hrs) has its
 // own rates, while Day-and-Night and Night-and-Day (both 22 hrs) share the
@@ -62,6 +89,7 @@ export function getAccomodationOptions(rateGroup){
                 pax: rate?.pax ?? null,
                 minPax: rate?.minPax ?? null,
                 maxPax: rate?.maxPax ?? null,
+                freeEntranceExempt: item.freeEntranceExempt === true,
             }
         })
 }

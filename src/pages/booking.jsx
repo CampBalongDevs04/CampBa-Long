@@ -5,7 +5,7 @@ import BookingCalendar from './components/BookingCalendar'
 import TimeSelector, { timeOptions } from './components/timeSelector'
 import ScheduleNote from './components/scheduleNote'
 import AccomodationList from './components/accomodationList'
-import { getAccomodationOptions } from '../data/accomodationOptions.js'
+import { getAccomodationOptions, FREE_ENTRANCE_PAX } from '../data/accomodationOptions.js'
 import PaxInput from './components/paxInput'
 import KidsCount from './components/kidscount'
 import SeniorCount from './components/seniorCount'
@@ -143,6 +143,7 @@ export default function Booking(){
             pax: pax ?? 0,
             seniors,
             kids,
+            freeEntrance: unit && !unit.freeEntranceExempt ? FREE_ENTRANCE_PAX : 0,
         })
 
         const booking = {
@@ -165,6 +166,8 @@ export default function Booking(){
             entrance: {
                 perHead: entrance.perHead,
                 seniorDiscount: entrance.seniorDiscount,
+                freeApplied: entrance.freeApplied,
+                freeSavings: entrance.freeSavings,
                 total: entrance.total,
             },
             guest,
@@ -231,6 +234,7 @@ export default function Booking(){
 
                                 <ScheduleNote
                                     selectedOption={selectedTime !== null ? timeOptions[selectedTime] : null}
+                                    rateGroup={rateGroup}
                                 />
                             </div>
                         </section>

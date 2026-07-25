@@ -81,7 +81,7 @@ export default function AccomodationList({ selectedAccomodation, onSelectAccomod
                                     <span className="accomodation-card-name">{item.name}</span>
                                     <span className="accomodation-card-pax">{item.pax}</span>
                                     <span className="accomodation-card-price">
-                                        {item.price ? `₱${item.price}` : 'Price TBA'}
+                                        {item.price ? `₱${item.price}` : (rateGroup ? 'Price TBA' : 'Choose schedule')}
                                     </span>
                                     <span className={`accomodation-card-available ${unlimited || (availability && availability.available > 0) ? 'is-available' : ''}`}>
                                         {unlimited

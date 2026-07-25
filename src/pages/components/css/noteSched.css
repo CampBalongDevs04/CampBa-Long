@@ -33,3 +33,19 @@
     font-size: 15px;
     color: var(--ink);
 }
+
+.note-inclusions{
+    align-items: flex-start;
+    margin-top: 12px;
+}
+
+.note-inclusions-list{
+    margin: 6px 0 0;
+    padding-left: 18px;
+    font-size: 15px;
+    color: var(--ink);
+}
+
+.note-inclusions-list li{
+    margin-bottom: 2px;
+}
