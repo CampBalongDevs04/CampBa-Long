@@ -49,7 +49,7 @@ export const breakfastItems = [
 
 const classicCoffeeOptions = ['Americano', 'Cafe Latte', 'Cappucino', 'Cafe Mocha', 'Caramel Machiatto']
 const flavoredCoffeeOptions = ['Vanilla Latte', 'Hazelnut Latte', 'Choco Hazelnut Latte', 'Salted Caramel Latte', 'Matcha Latte', 'White Mocha']
-const FLAVORED_COFFEE_UPCHARGE = 10
+export const FLAVORED_COFFEE_UPCHARGE = 10
 
 export const beverageItems = [
   { image: combo1, name: 'Longsilog', desc: 'Longganisa, Sinangag at Itlog with Classic Hot Coffee', price: 'PHP 230.00', hasCoffeeOption: true },
@@ -153,13 +153,6 @@ export const coffeeItems = coffeeMenu.flatMap((category) =>
     }))
   )
 )
-
-// Lunch/Dinner no longer have their own menu items — kept as empty exports
-// so admin/items/foodList.jsx (which still imports these names) doesn't break.
-export const lunchItems = []
-export const coldDrinkItems = []
-export const dinnerItems = []
-export const dinnerDrinkItems = []
 
 function SubcategoryToggle({ label, expanded, onToggle }) {
   return (

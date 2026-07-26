@@ -4,24 +4,25 @@ import {
     breakfastItems,
     beverageItems,
     preOrderItems,
-    lunchItems,
-    coldDrinkItems,
-    dinnerItems,
-    dinnerDrinkItems,
+    coffeeMenu,
+    FLAVORED_COFFEE_UPCHARGE,
 } from '../../pages/foodmenu.jsx'
 
 // Menu data is hardcoded in pages/foodmenu.jsx — this only regroups it
-// under the categories used by the FoodTab filter.
+// under the categories used by the FoodTab filter. Every category id here
+// needs a matching tab in foodTab.jsx to be filterable; the 'all' tab shows
+// them all regardless.
 const FOOD_SECTIONS = [
-    { category: 'breakfast', title: 'Breakfast', items: breakfastItems },
+    { category: 'breakfast', title: 'Foods', items: breakfastItems },
     { category: 'combo', title: 'Combo Meal', items: beverageItems },
     { category: 'pre-order', title: 'Pre-Order', items: preOrderItems },
-    { category: 'lunch', title: 'Lunch', items: lunchItems },
-    { category: 'dinner', title: 'Dinner', items: dinnerItems },
-    { category: 'beverages', title: 'Beverages · Cold Drinks', items: coldDrinkItems },
-    { category: 'beverages', title: 'Beverages · Drinks', items: dinnerDrinkItems },
-    // NOTE: 'combo' and 'pre-order' need matching tabs in foodTab.jsx to be
-    // filterable; all sections still show under the 'all' tab regardless.
+    // Bukal Cafe coffee has no per-flavor photos — it is priced per size, so
+    // it renders as tables instead of the image rows the food sections use.
+    {
+        category: 'beverages',
+        title: 'Beverages · Bukal Cafe Coffee',
+        coffeeGroups: coffeeMenu,
+    },
 ]
 
 // Same key booking.jsx / foodmenu.jsx / mybooking.jsx persist bookings under —
@@ -114,6 +115,68 @@ function UserOrders() {
     )
 }
 
+function ItemRows({ items }) {
+    return (
+        <div className="foodlist-rows">
+            {/* Pre-Order repeats the same dish name at different sizes, so the
+                index is part of the key. */}
+            {items.map((item, index) => (
+                <article key={`${item.name}-${index}`} className="foodlist-row">
+                    <div className="foodlist-image">
+                        <img src={item.image} alt={item.name} />
+                    </div>
+                    <div className="foodlist-info">
+                        <h4 className="foodlist-name">{item.name}</h4>
+                        <p className="foodlist-desc">{item.desc}</p>
+                        {item.hasCoffeeOption && (
+                            <p className="foodlist-note">
+                                Guest picks the coffee — flavored adds PHP{' '}
+                                {FLAVORED_COFFEE_UPCHARGE.toFixed(2)}
+                            </p>
+                        )}
+                    </div>
+                    <span className="foodlist-price">{item.price}</span>
+                </article>
+            ))}
+        </div>
+    )
+}
+
+function CoffeeTables({ groups }) {
+    return (
+        <div className="foodlist-coffee">
+            <p className="foodlist-note">Prices in PHP, per cup size.</p>
+            {groups.map((group) => (
+                <div key={group.key} className="foodlist-coffee-group">
+                    <h4 className="foodlist-coffee-title">{group.title}</h4>
+                    <div className="foodlist-coffee-scroll">
+                        <table className="foodlist-coffee-table">
+                            <thead>
+                                <tr>
+                                    <th className="foodlist-coffee-flavor">Flavor</th>
+                                    {group.sizeLabels.map((size) => (
+                                        <th key={size}>{size}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {group.flavors.map((flavor) => (
+                                    <tr key={flavor.name}>
+                                        <td className="foodlist-coffee-flavor">{flavor.name}</td>
+                                        {flavor.prices.map((price, i) => (
+                                            <td key={group.sizeLabels[i]}>{price.toFixed(2)}</td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ))}
+        </div>
+    )
+}
+
 export default function FoodList({ category = 'all' }) {
     const sections =
         category === 'all'
@@ -126,20 +189,11 @@ export default function FoodList({ category = 'all' }) {
                 {sections.map((section) => (
                     <section key={section.title} className="foodlist-section">
                         <h3 className="foodlist-section-title">{section.title}</h3>
-                        <div className="foodlist-rows">
-                            {section.items.map((item) => (
-                                <article key={item.name} className="foodlist-row">
-                                    <div className="foodlist-image">
-                                        <img src={item.image} alt={item.name} />
-                                    </div>
-                                    <div className="foodlist-info">
-                                        <h4 className="foodlist-name">{item.name}</h4>
-                                        <p className="foodlist-desc">{item.desc}</p>
-                                    </div>
-                                    <span className="foodlist-price">{item.price}</span>
-                                </article>
-                            ))}
-                        </div>
+                        {section.coffeeGroups ? (
+                            <CoffeeTables groups={section.coffeeGroups} />
+                        ) : (
+                            <ItemRows items={section.items} />
+                        )}
                     </section>
                 ))}
             </div>

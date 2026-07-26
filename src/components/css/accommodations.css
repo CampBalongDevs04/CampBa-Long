@@ -248,6 +248,9 @@
 
 .acc-track{
     display: flex;
+    /* stretch keeps every card as tall as the tallest one, which is what
+       lets the "Book Now!" buttons line up (see .acc-view-more) */
+    align-items: stretch;
     gap: 22px;
     will-change: transform;
     transition: transform 0.45s cubic-bezier(0.22, 0.85, 0.32, 1);
@@ -257,6 +260,10 @@
 .acc-card{
     flex-shrink: 0;
     width: 230px;
+    /* column flex so the footer (view-more + book button) can be pinned to
+       the bottom instead of floating up after a short amenity list */
+    display: flex;
+    flex-direction: column;
     background: var(--cream);
     border: 1px solid transparent;
     border-radius: 14px;
@@ -284,6 +291,8 @@
 
 .acc-card-photo{
     height: 138px;
+    /* fixed height — never let the column flex squash it */
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -389,6 +398,17 @@
 .acc-card-info .acc-availability.booked-out{
     color: #e2a08f;
 }
+/* "Day Time schedule only" / "Overnight schedules only" — derived from the
+   booking rate table so the card matches what the booking page will sell. */
+.acc-card-info .acc-schedule-limit{
+    margin: 4px 0 0;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--gold-soft);
+}
+
 .acc-card-info .acc-price{
     margin: 5px 0 0;
     font-family: 'Cormorant Garamond', serif;
@@ -457,13 +477,16 @@
     grid-column: 1 / -1;
 }
 
-/* "Click to view more" hint between the amenities and the book button */
+/* "Click to view more" hint between the amenities and the book button.
+   `margin-top: auto` eats the card's leftover height here, so the hint and
+   the button below it sit flush at the bottom of every card — the buttons
+   line up no matter how many amenities a unit lists. */
 .acc-view-more{
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    margin: 0 0 8px;
+    margin: auto 0 8px;
     font-size: 0.6rem;
     font-weight: 700;
     letter-spacing: 1.6px;
@@ -721,6 +744,14 @@
     color: var(--green);
 }
 .acc-modal-info .acc-availability.booked-out{ color: #9b3c2d; }
+.acc-modal-info .acc-schedule-limit{
+    margin: 6px 0 0;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--gold);
+}
 .acc-modal-desc{
     margin: 14px 0 18px;
     font-size: 0.82rem;

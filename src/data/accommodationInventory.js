@@ -109,6 +109,7 @@ function isoDaysFromToday(days) {
 //   unit_id | check_in | check_out | status ('booked' = paid, 'pending' = waiting for payment)
 export const UNIT_BOOKINGS = [
     { unitId: 'AHS-01',  checkIn: isoDaysFromToday(0),  checkOut: isoDaysFromToday(1), status: 'booked' },
+    {unitId: 'COT-01',  checkIn: isoDaysFromToday(0),  checkOut: isoDaysFromToday(1), status: 'booked' },
     //{ unitId: 'TBL-05',  checkIn: isoDaysFromToday(0),  checkOut: isoDaysFromToday(2), status: 'pending' },
    // { unitId: 'TENT-07', checkIn: isoDaysFromToday(-1), checkOut: isoDaysFromToday(3), status: 'booked' },
     //{ unitId: 'AHM-02',  checkIn: isoDaysFromToday(1),  checkOut: isoDaysFromToday(4), status: 'booked' },

@@ -8,7 +8,7 @@ import {
 } from '../../data/accommodationInventory.js'
 import { getAccomodationOptions } from '../../data/accomodationOptions.js'
 
-export default function AccomodationList({ selectedAccomodation, onSelectAccomodation, checkIn, checkOut, rateGroup }){
+export default function AccomodationList({ selectedAccomodation, onSelectAccomodation, checkIn, checkOut, rateGroup, droppedUnitNote }){
     const trackRef = useRef(null)
     const hasDates = !!checkIn
     const stayStart = checkIn ?? new Date()
@@ -43,6 +43,9 @@ export default function AccomodationList({ selectedAccomodation, onSelectAccomod
                 <p className="accomodation-schedule-note">
                     Select a stay schedule above to see pricing and the units available for it.
                 </p>
+            )}
+            {droppedUnitNote && (
+                <p className="accomodation-dropped-note" role="status">{droppedUnitNote}</p>
             )}
             <div className="accomodation-carousel">
                 <button

@@ -68,6 +68,7 @@ export default function Booking(){
     const [selectedAccomodation, setSelectedAccomodation] = useState(
         location.state?.accomodationId ?? null
     )
+    const [droppedUnitNote, setDroppedUnitNote] = useState(null)
     const [pax, setPax] = useState(null)
     const [kids, setKids] = useState(0)
     const [seniors, setSeniors] = useState(0)
@@ -81,7 +82,9 @@ export default function Booking(){
 
     // Switching schedules can change which units are even offered (e.g.
     // Cottage is day-only, tents are overnight-only) — drop a selection
-    // that's no longer valid for the newly chosen schedule.
+    // that's no longer valid for the newly chosen schedule. The unit can
+    // also arrive preselected from the home page "Book Now!", so say what
+    // was dropped instead of just clearing the card.
     function handleSelectTime(index){
         setSelectedTime(index)
         const nextRateGroup = timeOptions[index]?.rateGroup ?? null
@@ -89,7 +92,30 @@ export default function Booking(){
         const stillOffered = getAccomodationOptions(nextRateGroup).some(
             (item) => item.id === selectedAccomodation
         )
-        if (!stillOffered) setSelectedAccomodation(null)
+        if (stillOffered) {
+            setDroppedUnitNote(null)
+            return
+        }
+        // No rate group here: look the name up across every unit, since the
+        // dropped one is by definition missing from the new group's list.
+        const dropped = getAccomodationOptions(null).find(
+            (item) => item.id === selectedAccomodation
+        )
+        setSelectedAccomodation(null)
+        // `checkIn` carries the schedule's name ('Day Time: '), trailing
+        // separator included — strip it for use mid-sentence. An id that
+        // matches no unit at all gets no note; there is nothing to explain.
+        const scheduleName = timeOptions[index].checkIn.replace(/[:\s]+$/, '')
+        setDroppedUnitNote(
+            dropped
+                ? `${dropped.name} isn't offered on the ${scheduleName} schedule — pick another unit below.`
+                : null
+        )
+    }
+
+    function handleSelectAccomodation(id){
+        setSelectedAccomodation(id)
+        setDroppedUnitNote(null)
     }
 
     // Seniors and kids are a subset of the total guests (pax). If the guest
@@ -244,10 +270,11 @@ export default function Booking(){
                             <div className="booking-step-body">
                                 <AccomodationList
                                     selectedAccomodation={selectedAccomodation}
-                                    onSelectAccomodation={setSelectedAccomodation}
+                                    onSelectAccomodation={handleSelectAccomodation}
                                     checkIn={dates.checkIn}
                                     checkOut={sameDayCheckout ? dates.checkIn : dates.checkOut}
                                     rateGroup={rateGroup}
+                                    droppedUnitNote={droppedUnitNote}
                                 />
                             </div>
                         </section>

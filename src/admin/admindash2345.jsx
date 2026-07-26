@@ -239,17 +239,13 @@ function AdminDash() {
                         <h1 className="admin-dash-title">Food Menu</h1>
                         <ClockDate />
                     </div>
-                    <Suspense fallback={<TabsSkeleton count={7} />}>
+                    <Suspense fallback={<TabsSkeleton count={5} />}>
                         <FoodTab active={activeFoodTab} onChange={setActiveFoodTab} />
                     </Suspense>
                     <Suspense fallback={<ListSkeleton rows={5} />}>
-                        {activeFoodTab === 'all' && <FoodList category="all" />}
-                        {activeFoodTab === 'breakfast' && <FoodList category="breakfast" />}
-                        {activeFoodTab === 'combo' && <FoodList category="combo" />}
-                        {activeFoodTab === 'pre-order' && <FoodList category="pre-order" />}
-                        {activeFoodTab === 'lunch' && <FoodList category="lunch" />}
-                        {activeFoodTab === 'dinner' && <FoodList category="dinner" />}
-                        {activeFoodTab === 'beverages' && <FoodList category="beverages" />}
+                        {/* FoodList filters itself, so new tabs in foodTab.jsx
+                            need no change here. */}
+                        <FoodList category={activeFoodTab} />
                     </Suspense>
                 </div>
 
