@@ -95,6 +95,86 @@
     white-space: nowrap;
 }
 
+.foodlist-note {
+    margin: 4px 0 0;
+    font-size: 0.75rem;
+    font-style: italic;
+    color: rgba(10, 22, 14, 0.55);
+}
+
+/* ---------- Coffee price tables (Bukal Cafe) ---------- */
+.foodlist-coffee {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.foodlist-coffee > .foodlist-note {
+    margin: 0;
+}
+
+.foodlist-coffee-group {
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.25);
+    border-radius: 12px;
+    padding: 14px 18px 16px;
+    font-family: 'Jost', sans-serif;
+    color: var(--forest-dark);
+}
+
+.foodlist-coffee-title {
+    margin: 0 0 10px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--forest-dark);
+}
+
+/* Size columns can outgrow a narrow panel — scroll the table, not the page. */
+.foodlist-coffee-scroll {
+    overflow-x: auto;
+}
+
+.foodlist-coffee-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.foodlist-coffee-table th,
+.foodlist-coffee-table td {
+    padding: 7px 10px;
+    text-align: right;
+    white-space: nowrap;
+    border-bottom: 1px solid rgba(198, 161, 91, 0.18);
+}
+
+.foodlist-coffee-table tbody tr:last-child th,
+.foodlist-coffee-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.foodlist-coffee-table th {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: rgba(10, 22, 14, 0.55);
+}
+
+.foodlist-coffee-table th.foodlist-coffee-flavor,
+.foodlist-coffee-table td.foodlist-coffee-flavor {
+    width: 100%;
+    text-align: left;
+    white-space: normal;
+}
+
+.foodlist-coffee-table td:not(.foodlist-coffee-flavor) {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
 /* ---------- User orders panel (right) ---------- */
 .foodlist-orders {
     display: flex;

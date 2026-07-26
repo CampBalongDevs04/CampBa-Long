@@ -164,6 +164,19 @@
     color: var(--gold);
 }
 
+/* Shown when a schedule change removes the unit the guest had selected —
+   e.g. arriving from the home page with the day-only Cottage picked, then
+   choosing an overnight stay. */
+.accomodation-dropped-note{
+    margin: 0 0 10px;
+    padding: 8px 12px;
+    border-left: 3px solid var(--gold);
+    border-radius: 6px;
+    background: rgba(198, 161, 91, 0.12);
+    font-size: 12px;
+    color: var(--forest-dark, #0a160e);
+}
+
 .accomodation-card.fully-booked{
     opacity: 0.55;
     cursor: not-allowed;

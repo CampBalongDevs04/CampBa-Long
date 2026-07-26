@@ -25,6 +25,8 @@ dist-ssr
 
 # Local notes / secrets - do not commit
 src/components/psw.md
-.claude/
+
+# agents
 .agents/
+.claude/
 skills-lock.json

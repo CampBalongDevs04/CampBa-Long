@@ -4,6 +4,7 @@ import './css/accommodations.css';
 import LotusDividerIcon from './LotusDividerIcon';
 import LeafDeco from './LeafDeco';
 import { getAvailability, getNextAvailableDate, formatShortDate } from '../data/accommodationInventory.js';
+import { getAccomodationOptions } from '../data/accomodationOptions.js';
 
 
 //---ACCOMMODATIONS---//
@@ -45,6 +46,13 @@ const ICONS = {
             <path d="M8 36 L24 12 L40 36 Z" />
             <line x1="24" y1="12" x2="24" y2="36" />
             <path d="M19 36 L24 24 L29 36" />
+        </>
+    ),
+    cottage: (
+        <>
+            <path d="M6 36 L24 12 L42 36 Z" />
+            <rect x="14" y="24" width="20" height="12" rx="1.5" />
+            <rect x="21" y="28" width="6" height="8" />
         </>
     ),
     small: (
@@ -100,6 +108,14 @@ const accommodations = [
         features: ['Dome tent setup', 'Sleeping mats x2', 'Flashlight', 'Forest view', 'Fire pit access'],
     },
     {
+        // Pax and price mirror RATES.day.cottage in data/accomodationOptions.js
+        // (and the FAQ answer) — the booking page sells it at 8-10 pax.
+        id: 'cottage', title: 'Cottage', paxMin: 8, paxMax: 10, price: 2000,
+        icon: ICONS.cottage, photoBg: 'linear-gradient(135deg,#C6A15B,#8a6b34)',
+        // image: CottagePhoto, // <- actual Cottage photo goes here
+        features: ['Roofed cottage', 'Table & chairs', 'Electric fan', 'Power outlets', 'Garden view'],
+    },
+    {
         id: 'small', title: 'A-House Small', paxMin: 1, paxMax: 2, price: 400,
         icon: ICONS.small, photoBg: 'linear-gradient(135deg,#C6A15B,#8a6b34)',
         image: smallHouse,
@@ -143,6 +159,11 @@ const ACCOMMODATION_DETAILS = {
             'The classic Camp Ba-long experience. Sleep under the trees in a pre-pitched dome tent with sleeping mats provided — just bring your sense of adventure. Fire pit access included for evening bonfires.',
         images: [null, null, null],
     },
+    cottage: {
+        description:
+            'A charming cottage perfect for couples or small families. Enjoy the comfort of a private space with modern amenities, while still being close to the natural beauty of the camp.',
+        images: [null, null, null],
+    },
     small: {
         description:
             'A cozy A-frame hideaway built for one or two. Wake up to a river view, unwind at your own table, and enjoy a comfortable mattress after a day of exploring the camp.',
@@ -167,6 +188,21 @@ const ACCOMMODATION_DETAILS = {
 
 const defaultIndex = Math.max(0, accommodations.findIndex((a) => a.featured));
 
+// Which stay schedules the booking page actually offers a unit under. Read
+// from the same rate table the booking flow uses, so a card can't promise a
+// stay the booking page won't sell (Cottage and Pavilion are day-only there,
+// the tents are overnight-only). Ids with no rate entry get no note.
+const DAY_UNIT_IDS = new Set(getAccomodationOptions('day').map((item) => item.id));
+const OVERNIGHT_UNIT_IDS = new Set(getAccomodationOptions('overnight').map((item) => item.id));
+
+function scheduleLimitLabel(id) {
+    const day = DAY_UNIT_IDS.has(id);
+    const overnight = OVERNIGHT_UNIT_IDS.has(id);
+    if (day && !overnight) return 'Day Time schedule only';
+    if (overnight && !day) return 'Overnight schedules only';
+    return null;
+}
+
 function paxLabel({ paxMin, paxMax }) {
     return paxMin === paxMax ? `${paxMin} pax` : `${paxMin}-${paxMax} pax`;
 }
@@ -179,6 +215,7 @@ function AccommodationModal({ acc, onClose, onBook }) {
     const availability = getAvailability(acc.id);
     const isFullyBooked = availability !== null && availability.available === 0;
     const nextAvailable = isFullyBooked ? getNextAvailableDate(acc.id) : null;
+    const scheduleLimit = scheduleLimitLabel(acc.id);
 
     // Close on Escape and keep the page from scrolling behind the modal.
     useEffect(() => {
@@ -256,6 +293,7 @@ function AccommodationModal({ acc, onClose, onBook }) {
                     <p className="acc-modal-meta">
                         {paxLabel(acc)} · <span className="acc-modal-price">PHP {acc.price.toLocaleString()}</span>
                     </p>
+                    {scheduleLimit && <p className="acc-schedule-limit">{scheduleLimit}</p>}
                     {availability !== null && (
                         <p className={`acc-availability${isFullyBooked ? ' booked-out' : ''}`}>
                             {isFullyBooked
@@ -296,8 +334,14 @@ export default function Accommodations() {
     const dragRef = useRef({ dragging: false, startX: 0 });
     const wheelLockRef = useRef(false);
     const currentIndexRef = useRef(defaultIndex);
-    currentIndexRef.current = currentIndex;
     const toastTimerRef = useRef(null);
+
+    // The wheel listener below is bound once, so it reads the active index
+    // through this ref. Syncing happens in an effect — refs must not be
+    // written during render.
+    useEffect(() => {
+        currentIndexRef.current = currentIndex;
+    }, [currentIndex]);
 
     const goTo = useCallback((index) => {
         setCurrentIndex(Math.max(0, Math.min(accommodations.length - 1, index)));
@@ -505,6 +549,9 @@ export default function Accommodations() {
                                         <h3>{acc.title}</h3>
                                         <p className="acc-pax">{paxLabel(acc)}</p>
                                         <p className="acc-price">PHP {acc.price.toLocaleString()}</p>
+                                        {scheduleLimitLabel(acc.id) && (
+                                            <p className="acc-schedule-limit">{scheduleLimitLabel(acc.id)}</p>
+                                        )}
                                         {availability !== null && (
                                             <p className={`acc-availability${isFullyBooked ? ' booked-out' : ''}`}>
                                                 {isFullyBooked
