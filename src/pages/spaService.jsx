@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Link } from 'react-router'
 import './components/css/spaService.css'
 import Footer from '../components/footer'
@@ -71,11 +71,75 @@ const hilotInclusions = [
 ]
 
 
-function SpaOrderModal({ item, onClose }) {
-    const { findOrderableBooking, addSpaOrderToBooking } = useBookings()
+// Kiosk-style order tray. Module-level (same pattern as bookingsStore in
+// mybooking.jsx and the food cart in foodmenu.jsx) so it survives
+// client-side navigation away from /spa and back — e.g. following the
+// "checkout blocked" links to go make a booking — and only resets on a
+// successful checkout, a real page refresh, or closing the tab.
+let spaCartStore = []
+let spaCartLineId = 0
+const spaCartListeners = new Set()
+
+function notifySpaCart() {
+    for (const listener of spaCartListeners) listener()
+}
+
+function updateSpaCart(updater) {
+    spaCartStore = updater(spaCartStore)
+    notifySpaCart()
+}
+
+function subscribeSpaCart(listener) {
+    spaCartListeners.add(listener)
+    return () => spaCartListeners.delete(listener)
+}
+
+function getSpaCartSnapshot() {
+    return spaCartStore
+}
+
+function useSpaCart() {
+    const cart = useSyncExternalStore(subscribeSpaCart, getSpaCartSnapshot)
+
+    return {
+        cart,
+        addToCart(entry) {
+            updateSpaCart((prev) => {
+                const existing = prev.find((line) => line.name === entry.name)
+                if (existing) {
+                    return prev.map((line) =>
+                        line.name === entry.name
+                            ? { ...line, quantity: line.quantity + entry.quantity, total: line.total + entry.total }
+                            : line
+                    )
+                }
+                spaCartLineId += 1
+                return [...prev, { id: spaCartLineId, ...entry }]
+            })
+        },
+        adjustQuantity(id, delta) {
+            updateSpaCart((prev) =>
+                prev
+                    .map((line) =>
+                        line.id === id
+                            ? { ...line, quantity: line.quantity + delta, total: line.unitPrice * (line.quantity + delta) }
+                            : line
+                    )
+                    .filter((line) => line.quantity > 0)
+            )
+        },
+        removeLine(id) {
+            updateSpaCart((prev) => prev.filter((line) => line.id !== id))
+        },
+        clearCart() {
+            updateSpaCart(() => [])
+        },
+    }
+}
+
+function SpaOrderModal({ item, onClose, onAddToCart }) {
     const [quantity, setQuantity] = useState(1)
     const [confirmed, setConfirmed] = useState(false)
-    const [blocked, setBlocked] = useState(false)
 
     useEffect(() => {
         const handleKey = (event) => {
@@ -91,7 +155,7 @@ function SpaOrderModal({ item, onClose }) {
 
     useEffect(() => {
         if (!confirmed) return
-        const timer = setTimeout(onClose, 1400)
+        const timer = setTimeout(onClose, 900)
         return () => clearTimeout(timer)
     }, [confirmed, onClose])
 
@@ -101,17 +165,12 @@ function SpaOrderModal({ item, onClose }) {
     const total = item.price * quantity
 
     const handleConfirm = () => {
-        const targetBooking = findOrderableBooking()
-        if (!targetBooking) {
-            setBlocked(true)
-            return
-        }
-        addSpaOrderToBooking(targetBooking.id, {
+        onAddToCart({
+            image: item.image,
             name: item.name,
             unitPrice: item.price,
             quantity,
             total,
-            orderedAt: new Date().toISOString(),
         })
         setConfirmed(true)
     }
@@ -132,23 +191,7 @@ function SpaOrderModal({ item, onClose }) {
                 {confirmed ? (
                     <div className="spa-order-confirmed">
                         <span className="spa-order-confirmed-icon" aria-hidden="true">✓</span>
-                        <p>Added to your booking receipt!</p>
-                    </div>
-                ) : blocked ? (
-                    <div className="spa-order-blocked">
-                        <span className="spa-order-blocked-icon" aria-hidden="true">!</span>
-                        <p>
-                            You need a confirmed booking with an uploaded down-payment
-                            receipt before you can add a spa service.
-                        </p>
-                        <div className="spa-order-blocked-actions">
-                            <Link to="/my-booking" className="spa-order-blocked-link">
-                                View My Bookings
-                            </Link>
-                            <Link to="/booking" className="spa-order-blocked-link spa-order-blocked-link-primary">
-                                Book Now
-                            </Link>
-                        </div>
+                        <p>Added to your order!</p>
                     </div>
                 ) : (
                     <div className="spa-order-body">
@@ -185,7 +228,7 @@ function SpaOrderModal({ item, onClose }) {
                             <p className="spa-order-total">Total: &#8369;{total.toLocaleString('en-PH')}</p>
 
                             <button type="button" className="spa-order-confirm" onClick={handleConfirm}>
-                                Add to Booking Receipt
+                                Add to Order
                             </button>
                         </div>
                     </div>
@@ -195,10 +238,150 @@ function SpaOrderModal({ item, onClose }) {
     )
 }
 
+function SpaCheckoutPanel({ cart, status, onIncrease, onDecrease, onRemove, onPlaceOrder, onDismissBlocked }) {
+    const [collapsed, setCollapsed] = useState(false)
+
+    if (cart.length === 0 && status !== 'success') return null
+
+    const itemCount = cart.reduce((sum, line) => sum + line.quantity, 0)
+    const subtotal = cart.reduce((sum, line) => sum + line.total, 0)
+
+    return (
+        <aside className={`spa-checkout${collapsed ? ' is-collapsed' : ''}`} aria-label="Your order">
+            <button
+                type="button"
+                className="spa-checkout-header"
+                onClick={() => setCollapsed((current) => !current)}
+                aria-expanded={!collapsed}
+            >
+                <span className="spa-checkout-header-left">
+                    <span className="spa-checkout-bag" aria-hidden="true">🧖</span>
+                    <span className="spa-checkout-title">Your Order</span>
+                    {itemCount > 0 && <span className="spa-checkout-count">{itemCount}</span>}
+                </span>
+                <span className="spa-checkout-chevron" aria-hidden="true">{collapsed ? '︿' : '﹀'}</span>
+            </button>
+
+            {!collapsed && (
+                <div className="spa-checkout-body">
+                    {status === 'success' ? (
+                        <div className="spa-checkout-success">
+                            <span className="spa-checkout-success-icon" aria-hidden="true">✓</span>
+                            <p>Order sent to your booking receipt!</p>
+                        </div>
+                    ) : status === 'blocked' ? (
+                        <div className="spa-checkout-blocked">
+                            <span className="spa-checkout-blocked-icon" aria-hidden="true">!</span>
+                            <p>
+                                You need a confirmed booking with an uploaded down-payment
+                                receipt before you can place this order.
+                            </p>
+                            <div className="spa-checkout-blocked-actions">
+                                <Link to="/my-booking" className="spa-checkout-blocked-link">
+                                    View My Bookings
+                                </Link>
+                                <Link to="/booking" className="spa-checkout-blocked-link primary">
+                                    Book Now
+                                </Link>
+                            </div>
+                            <button type="button" className="spa-checkout-back" onClick={onDismissBlocked}>
+                                ‹ Back to Order
+                            </button>
+                        </div>
+                    ) : (
+                        <>
+                            <ul className="spa-checkout-list">
+                                {cart.map((line) => (
+                                    <li className="spa-checkout-item" key={line.id}>
+                                        <div className={`spa-checkout-thumb${line.image ? '' : ' is-empty'}`}>
+                                            {line.image ? <img src={line.image} alt="" /> : <span aria-hidden="true">🧖</span>}
+                                        </div>
+                                        <div className="spa-checkout-item-info">
+                                            <p className="spa-checkout-item-name">{line.name}</p>
+                                            <p className="spa-checkout-item-price">&#8369;{line.unitPrice.toLocaleString('en-PH')} each</p>
+                                        </div>
+                                        <div className="spa-checkout-item-controls">
+                                            <div className="spa-checkout-stepper">
+                                                <button type="button" onClick={() => onDecrease(line.id)} aria-label={`Decrease ${line.name}`}>
+                                                    −
+                                                </button>
+                                                <span>{line.quantity}</span>
+                                                <button type="button" onClick={() => onIncrease(line.id)} aria-label={`Increase ${line.name}`}>
+                                                    +
+                                                </button>
+                                            </div>
+                                            <p className="spa-checkout-item-total">&#8369;{line.total.toLocaleString('en-PH')}</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className="spa-checkout-remove"
+                                            onClick={() => onRemove(line.id)}
+                                            aria-label={`Remove ${line.name} from order`}
+                                        >
+                                            &times;
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+
+                            <div className="spa-checkout-summary">
+                                <div className="spa-checkout-summary-row spa-checkout-summary-total">
+                                    <span>Total</span>
+                                    <span>&#8369;{subtotal.toLocaleString('en-PH')}</span>
+                                </div>
+                            </div>
+
+                            <button type="button" className="spa-checkout-place" onClick={onPlaceOrder}>
+                                Place Order · &#8369;{subtotal.toLocaleString('en-PH')}
+                            </button>
+                        </>
+                    )}
+                </div>
+            )}
+        </aside>
+    )
+}
+
 function SpaService() {
     const sectionsRef = useRef(null)
     const howToReserveRef = useRef(null)
     const [orderItem, setOrderItem] = useState(null)
+    const { findOrderableBooking, addSpaOrderToBooking } = useBookings()
+    const { cart, addToCart: addLineToCart, adjustQuantity, removeLine, clearCart } = useSpaCart()
+    const [checkoutStatus, setCheckoutStatus] = useState('idle') // idle | blocked | success
+
+    const addToCart = (entry) => {
+        setCheckoutStatus('idle')
+        addLineToCart(entry)
+    }
+
+    const handlePlaceOrder = () => {
+        // Eligibility is only checked at checkout, so browsing and building
+        // the order tray never requires a booking up front.
+        const targetBooking = findOrderableBooking()
+        if (!targetBooking) {
+            setCheckoutStatus('blocked')
+            return
+        }
+        const orderedAt = new Date().toISOString()
+        cart.forEach((line) => {
+            addSpaOrderToBooking(targetBooking.id, {
+                name: line.name,
+                unitPrice: line.unitPrice,
+                quantity: line.quantity,
+                total: line.total,
+                orderedAt,
+            })
+        })
+        clearCart()
+        setCheckoutStatus('success')
+    }
+
+    useEffect(() => {
+        if (checkoutStatus !== 'success') return
+        const timer = setTimeout(() => setCheckoutStatus('idle'), 2200)
+        return () => clearTimeout(timer)
+    }, [checkoutStatus])
 
     const scrollToHowToReserve = () => {
         howToReserveRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -364,7 +547,18 @@ function SpaService() {
 
             <Footer />
 
-            {orderItem && <SpaOrderModal item={orderItem} onClose={() => setOrderItem(null)} />}
+            {orderItem && (
+                <SpaOrderModal item={orderItem} onClose={() => setOrderItem(null)} onAddToCart={addToCart} />
+            )}
+            <SpaCheckoutPanel
+                cart={cart}
+                status={checkoutStatus}
+                onIncrease={(id) => adjustQuantity(id, 1)}
+                onDecrease={(id) => adjustQuantity(id, -1)}
+                onRemove={removeLine}
+                onPlaceOrder={handlePlaceOrder}
+                onDismissBlocked={() => setCheckoutStatus('idle')}
+            />
         </main>
     )
 }
