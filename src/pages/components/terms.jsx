@@ -6,7 +6,7 @@ const policies = [
     'Cancellation is no longer allowed once the down payment has been made.',
 ]
 
-export default function Terms({ agreed, onAgreeChange, onConfirm }){
+export default function Terms({ agreed, onAgreeChange, onConfirm, submitting = false }){
     return(
         <div className="terms">
             <div className="terms-card">
@@ -32,13 +32,15 @@ export default function Terms({ agreed, onAgreeChange, onConfirm }){
                 </span>
             </label>
 
+            {/* Held open while the unit is being reserved, so an impatient
+                second click can't create a second booking. */}
             <button
                 type="button"
                 className={`terms-confirm${agreed ? ' terms-confirm-ready' : ''}`}
-                disabled={!agreed}
+                disabled={!agreed || submitting}
                 onClick={onConfirm}
             >
-                Confirm Booking
+                {submitting ? 'Reserving your unit…' : 'Confirm Booking'}
             </button>
         </div>
     )

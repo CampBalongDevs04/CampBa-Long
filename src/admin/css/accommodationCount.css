@@ -194,6 +194,42 @@
     color: #b07d2b;
 }
 
+/* Which hours of the selected day are taken, and by whom. A unit can hold
+   more than one booking a day (Day Time 10-5, then Night-and-Day from 8pm). */
+.accommodation-unit-slots {
+    list-style: none;
+    margin: 2px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    width: 100%;
+}
+
+.accommodation-unit-slot {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+    padding-top: 3px;
+    border-top: 1px dashed rgba(10, 22, 14, 0.18);
+}
+
+.accommodation-slot-time {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.58rem;
+    font-weight: 700;
+    color: var(--forest-dark);
+}
+
+.accommodation-slot-guest {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.56rem;
+    color: var(--leaf);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 900px) {
     .accommodation-holder {

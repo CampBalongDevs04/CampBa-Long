@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import './css/accommodations.css';
 import LotusDividerIcon from './LotusDividerIcon';
 import LeafDeco from './LeafDeco';
-import { getAvailability, getNextAvailableDate, formatShortDate } from '../data/accommodationInventory.js';
+import { getAvailability, getNextAvailableDate, formatShortDate, useAccommodationDB } from '../data/accommodationDB.js';
 import { getAccomodationOptions } from '../data/accomodationOptions.js';
 
 
@@ -32,13 +32,12 @@ function UnitIcon({ paths }) {
 // `image` yet. Once you add `image:` to every accommodation below, this
 // whole ICONS block (and the UnitIcon component above) can be deleted.
 const ICONS = {
-    table: (
+    teepee: (
         <>
-            <line x1="6" y1="20" x2="42" y2="20" />
-            <line x1="11" y1="20" x2="7" y2="35" />
-            <line x1="37" y1="20" x2="41" y2="35" />
-            <line x1="5" y1="27" x2="18" y2="27" />
-            <line x1="30" y1="27" x2="43" y2="27" />
+            <path d="M11 38 L24 8 L37 38 Z" />
+            <line x1="20" y1="11" x2="16" y2="5" />
+            <line x1="28" y1="11" x2="32" y2="5" />
+            <path d="M20 38 L24 23 L28 38" />
         </>
     ),
     tent: (
@@ -46,6 +45,13 @@ const ICONS = {
             <path d="M8 36 L24 12 L40 36 Z" />
             <line x1="24" y1="12" x2="24" y2="36" />
             <path d="M19 36 L24 24 L29 36" />
+        </>
+    ),
+    tentLarge: (
+        <>
+            <path d="M4 38 L24 10 L44 38 Z" />
+            <line x1="24" y1="10" x2="24" y2="38" />
+            <path d="M15 38 L24 21 L33 38" />
         </>
     ),
     cottage: (
@@ -70,7 +76,7 @@ const ICONS = {
             <rect x="20" y="29" width="8" height="9" />
         </>
     ),
-    large: (
+    family: (
         <>
             <path d="M4 20 L24 6 L44 20" />
             <rect x="8" y="20" width="32" height="18" rx="1.5" />
@@ -91,77 +97,96 @@ const ICONS = {
     ),
 };
 
+// Presentation only — `id` and `title` must match ACCOMMODATION_TYPES in
+// data/accommodationDB.js so a card resolves to the same unit the admin board
+// and the booking page use. Order follows that table too.
+//
 // To show a real photo on a card, uncomment its `image:` line below and
 // make sure the matching import at the top of this file is uncommented too.
 // `photoBg` stays as the fallback background while the photo loads.
-const accommodations = [
+const ACCOMMODATION_CARDS = [
     {
-        id: 'table', title: 'Table', paxMin: 4, paxMax: 6, price: 250,
-        icon: ICONS.table, photoBg: 'linear-gradient(135deg,#4C6B4F,#1E3A2B)',
-        // image: TablePhoto, // <- actual Table photo goes here
-        features: ['Picnic table', 'Bench seats x2', 'Shade umbrella', 'Garden view'],
+        id: 'teepee', title: 'Teepee',
+        icon: ICONS.teepee, photoBg: 'linear-gradient(135deg,#5d7a5a,#24422f)',
+        // image: TeepeePhoto, // <- actual Teepee photo goes here
+        features: ['Canvas teepee', 'Bed mattress', 'Pillows & blankets', 'Garden view', 'Fire pit access'],
     },
     {
-        id: 'tent', title: 'Camping Tent', paxMin: 1, paxMax: 3, price: 350,
+        id: 'small', title: 'A-House Small',
+        icon: ICONS.small, photoBg: 'linear-gradient(135deg,#C6A15B,#8a6b34)',
+        image: smallHouse,
+        features: ['Bed mattress', '2 Pillows', 'Electric fan', 'River view', 'Table'],
+    },
+    {
+        id: 'medium', title: 'A-House Medium',
+        icon: ICONS.medium, photoBg: 'linear-gradient(135deg,#D9BD84,#96733a)',
+        image: mediumHouse,
+        features: ['Bed mattress', '5 Pillows', '3 Blankets', 'Electric fan', 'Tent', 'Table & Chair'],
+        featured: true,
+    },
+    {
+        id: 'family', title: 'A-House Family',
+        icon: ICONS.family, photoBg: 'linear-gradient(135deg,#C6A15B,#7a5c2a)',
+        image: largeHouse,
+        features: ['Bed mattress', '6 Pillows', '4 Blankets', 'Electric fan', 'Tent', 'Table & Chairs'],
+    },
+    {
+        id: 'tent-small', title: 'Small Tent',
         icon: ICONS.tent, photoBg: 'linear-gradient(135deg,#5d7a5a,#24422f)',
-        // image: TentPhoto, // <- actual Camping Tent photo goes here
+        // image: SmallTentPhoto, // <- actual Small Tent photo goes here
         features: ['Dome tent setup', 'Sleeping mats x2', 'Flashlight', 'Forest view', 'Fire pit access'],
     },
     {
-        // Pax and price mirror RATES.day.cottage in data/accomodationOptions.js
-        // (and the FAQ answer) — the booking page sells it at 8-10 pax.
-        id: 'cottage', title: 'Cottage', paxMin: 8, paxMax: 10, price: 2000,
+        id: 'tent-large', title: 'Big Tent',
+        icon: ICONS.tentLarge, photoBg: 'linear-gradient(135deg,#4C6B4F,#1E3A2B)',
+        // image: BigTentPhoto, // <- actual Big Tent photo goes here
+        features: ['Family-size dome tent', 'Sleeping mats x4', 'Flashlight', 'Forest view', 'Fire pit access'],
+    },
+    {
+        id: 'cottage', title: 'Cottage',
         icon: ICONS.cottage, photoBg: 'linear-gradient(135deg,#C6A15B,#8a6b34)',
         // image: CottagePhoto, // <- actual Cottage photo goes here
         features: ['Roofed cottage', 'Table & chairs', 'Electric fan', 'Power outlets', 'Garden view'],
     },
     {
-        id: 'small', title: 'A-House Small', paxMin: 1, paxMax: 2, price: 400,
-        icon: ICONS.small, photoBg: 'linear-gradient(135deg,#C6A15B,#8a6b34)',
-        image: smallHouse,
-        // image: AHouseSmallPhoto, // <- actual A-House Small photo goes here
-        features: ['Bed mattress', '2 Pillows', 'Electric fan', 'River view', 'Table'],
-    },
-    {
-        id: 'medium', title: 'A-House Medium', paxMin: 3, paxMax: 5, price: 1300,
-        icon: ICONS.medium, photoBg: 'linear-gradient(135deg,#D9BD84,#96733a)',
-        image: mediumHouse,
-        // image: AHouseMediumPhoto, // <- actual A-House Medium photo goes here
-        features: ['Bed mattress', '5 Pillows', '3 Blankets', 'Electric fan', 'Tent', 'Table & Chair'],
-        featured: true,
-    },
-    {
-        id: 'large', title: 'A-House Large', paxMin: 6, paxMax: 8, price: 1800,
-        icon: ICONS.large, photoBg: 'linear-gradient(135deg,#C6A15B,#7a5c2a)',
-        image: largeHouse,
-        // image: AHouseLargePhoto, // <- actual A-House Large photo goes here
-        features: ['Bed mattress', '6 Pillows', '4 Blankets', 'Electric fan', 'Tent', 'Table & Chairs'],
-    },
-    {
-        id: 'pavilion', title: 'Pavilion', paxMin: 15, paxMax: 30, price: 2500,
+        id: 'pavilion', title: 'Pavillion',
         icon: ICONS.pavilion, photoBg: 'linear-gradient(135deg,#4C6B4F,#16291E)',
         // image: PavilionPhoto, // <- actual Pavilion photo goes here
         features: ['Long table seating', 'Roofed shelter', 'Ceiling fans', 'Power outlets', 'Group capacity'],
     },
 ];
 
+// Pax range is READ from the booking rate table rather than repeated here, so
+// a card can never advertise a capacity the booking page won't honour. A unit
+// sold under both schedules (Teepee, the A-Houses) spans both pax ranges.
+//
+// Rates are deliberately NOT pulled in: the same unit costs different amounts
+// under Day Time vs the overnight schedules, so there is no one number to show
+// this early. The booking page quotes the price once a schedule is chosen.
+const PAX_BY_ID = new Map();
+for (const group of ['day', 'overnight']) {
+    for (const option of getAccomodationOptions(group)) {
+        const prev = PAX_BY_ID.get(option.id);
+        PAX_BY_ID.set(option.id, {
+            paxMin: Math.min(prev?.paxMin ?? Infinity, option.minPax ?? Infinity),
+            paxMax: Math.max(prev?.paxMax ?? 0, option.maxPax ?? 0),
+        });
+    }
+}
+
+// A card with no rate entry can't be booked, so it isn't offered at all —
+// better a missing card than one that dead-ends on the booking page.
+const accommodations = ACCOMMODATION_CARDS
+    .filter((card) => PAX_BY_ID.has(card.id))
+    .map((card) => ({ ...card, ...PAX_BY_ID.get(card.id) }));
+
 // Extended info shown inside the "view more" modal, keyed by accommodation id.
 // Every entry in `images` is a null placeholder for now — replace each null
 // with an imported photo later (e.g. `images: [smallInterior, smallView]`).
 const ACCOMMODATION_DETAILS = {
-    table: {
+    teepee: {
         description:
-            'A shaded picnic table right in the heart of the camp gardens. Perfect for day visitors who want a home base for meals, games, and relaxing between dips in the river.',
-        images: [null, null, null],
-    },
-    tent: {
-        description:
-            'The classic Camp Ba-long experience. Sleep under the trees in a pre-pitched dome tent with sleeping mats provided — just bring your sense of adventure. Fire pit access included for evening bonfires.',
-        images: [null, null, null],
-    },
-    cottage: {
-        description:
-            'A charming cottage perfect for couples or small families. Enjoy the comfort of a private space with modern amenities, while still being close to the natural beauty of the camp.',
+            'A canvas teepee tucked into the camp gardens, with a real mattress and bedding inside. All the romance of sleeping under canvas without giving up a good night of rest.',
         images: [null, null, null],
     },
     small: {
@@ -174,14 +199,29 @@ const ACCOMMODATION_DETAILS = {
             'Our most popular unit. This mid-size A-frame comfortably fits small groups and barkadas, with bedding for five, an extra tent, and its own table and chair set for shared meals.',
         images: [null, null, null],
     },
-    large: {
+    family: {
         description:
-            'The family favorite. A spacious A-frame that sleeps up to eight, with full bedding, an extra tent for the kids, and a table and chairs set — ideal for reunions and weekend getaways.',
+            'The family favorite. A spacious A-frame that sleeps up to ten, with full bedding, an extra tent for the kids, and a table and chairs set — ideal for reunions and weekend getaways.',
+        images: [null, null, null],
+    },
+    'tent-small': {
+        description:
+            'The classic Camp Ba-long experience. Sleep under the trees in a pre-pitched dome tent with sleeping mats provided — just bring your sense of adventure. Fire pit access included for evening bonfires.',
+        images: [null, null, null],
+    },
+    'tent-large': {
+        description:
+            'A roomier pre-pitched dome tent for barkadas and small families, with sleeping mats for four. Same easy camping setup as the Small Tent, with space to spare for your gear.',
+        images: [null, null, null],
+    },
+    cottage: {
+        description:
+            'A charming cottage perfect for couples or small families. Enjoy the comfort of a private space with modern amenities, while still being close to the natural beauty of the camp.',
         images: [null, null, null],
     },
     pavilion: {
         description:
-            'A roofed open-air pavilion made for big celebrations. Long table seating for up to 30 guests, ceiling fans, and power outlets make it the go-to spot for birthdays, team buildings, and family events.',
+            'A roofed open-air pavilion made for big celebrations. Long table seating, ceiling fans, and power outlets make it the go-to spot for birthdays, team buildings, and family events.',
         images: [null, null, null],
     },
 };
@@ -290,9 +330,10 @@ function AccommodationModal({ acc, onClose, onBook }) {
 
                 <div className="acc-modal-info">
                     <h3>{acc.title}</h3>
-                    <p className="acc-modal-meta">
-                        {paxLabel(acc)} · <span className="acc-modal-price">PHP {acc.price.toLocaleString()}</span>
-                    </p>
+                    {/* No rate shown here on purpose — a unit's price depends on
+                        the stay schedule, so the booking page quotes it once the
+                        guest has picked Day Time / Day-and-Night / Night-and-Day. */}
+                    <p className="acc-modal-meta">{paxLabel(acc)}</p>
                     {scheduleLimit && <p className="acc-schedule-limit">{scheduleLimit}</p>}
                     {availability !== null && (
                         <p className={`acc-availability${isFullyBooked ? ' booked-out' : ''}`}>
@@ -324,6 +365,9 @@ function AccommodationModal({ acc, onClose, onBook }) {
 
 export default function Accommodations() {
     const navigate = useNavigate();
+    // Today's availability comes straight from the accommodation database, so
+    // the carousel updates the moment a booking is made or cancelled.
+    useAccommodationDB();
     const [currentIndex, setCurrentIndex] = useState(defaultIndex);
     const [paxValue, setPaxValue] = useState('');
     const [toast, setToast] = useState({ message: '', visible: false });
@@ -548,7 +592,6 @@ export default function Accommodations() {
                                     <div className="acc-card-info">
                                         <h3>{acc.title}</h3>
                                         <p className="acc-pax">{paxLabel(acc)}</p>
-                                        <p className="acc-price">PHP {acc.price.toLocaleString()}</p>
                                         {scheduleLimitLabel(acc.id) && (
                                             <p className="acc-schedule-limit">{scheduleLimitLabel(acc.id)}</p>
                                         )}

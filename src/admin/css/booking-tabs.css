@@ -57,6 +57,88 @@
     margin-top: 12px;
 }
 
+.booking-row-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.booking-row-guest {
+    font-size: 0.98rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.booking-row-stage {
+    flex-shrink: 0;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+}
+
+.stage-pending {
+    background: rgba(198, 161, 91, 0.24);
+    color: #8a6a1f;
+}
+
+.stage-upcoming {
+    background: rgba(91, 141, 198, 0.15);
+    color: #2f5c94;
+}
+
+.stage-active {
+    background: rgba(91, 168, 108, 0.18);
+    color: #2c7a44;
+}
+
+.stage-completed {
+    background: rgba(120, 120, 120, 0.16);
+    color: #555;
+}
+
+.stage-cancelled {
+    background: rgba(198, 91, 91, 0.16);
+    color: #a23a3a;
+}
+
+.booking-row-meta {
+    margin: 6px 0 0;
+    font-size: 0.85rem;
+    color: rgba(10, 22, 14, 0.75);
+}
+
+.booking-row-sub {
+    margin-top: 2px;
+    font-size: 0.76rem;
+    color: rgba(10, 22, 14, 0.55);
+}
+
+/* Opens the guest's proof of payment for verification. */
+.booking-row-receipt {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    border: 1px solid rgba(198, 161, 91, 0.5);
+    background: #fff;
+    color: var(--forest-dark);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-family: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.booking-row-receipt:hover {
+    background: var(--forest-dark);
+    border-color: var(--forest-dark);
+    color: var(--cream);
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 860px) {
     .booking-panel {

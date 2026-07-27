@@ -1,0 +1,243 @@
+/* ---------- Receipt lightbox (proof of payment) ---------- */
+.receipt-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(10, 22, 14, 0.62);
+    backdrop-filter: blur(3px);
+    font-family: 'Jost', sans-serif;
+}
+
+.receipt-modal {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 620px;
+    /* The panel never outgrows the viewport: the image area is the only part
+       that scrolls, so the header and the Approve button stay reachable. */
+    max-height: 100%;
+    box-sizing: border-box;
+    background: var(--cream, #f7f3ea);
+    border: 1px solid rgba(198, 161, 91, 0.45);
+    border-radius: 18px;
+    box-shadow: 0 24px 60px -20px rgba(10, 22, 14, 0.7);
+    overflow: hidden;
+}
+
+/* ---------- Header ---------- */
+.receipt-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid rgba(198, 161, 91, 0.3);
+}
+
+.receipt-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--forest-dark, #0a160e);
+}
+
+.receipt-subtitle {
+    margin: 4px 0 0;
+    font-size: 0.86rem;
+    color: rgba(10, 22, 14, 0.6);
+}
+
+.receipt-close {
+    flex: none;
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(198, 161, 91, 0.45);
+    border-radius: 50%;
+    background: #fff;
+    color: var(--forest-dark, #0a160e);
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.receipt-close:hover {
+    background: var(--forest-dark, #0a160e);
+    color: var(--cream, #f7f3ea);
+}
+
+/* ---------- What the receipt is being checked against ---------- */
+.receipt-facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 18px;
+    margin: 0;
+    padding: 14px 20px;
+    background: rgba(198, 161, 91, 0.1);
+    border-bottom: 1px solid rgba(198, 161, 91, 0.3);
+}
+
+.receipt-fact dt {
+    margin: 0 0 2px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: rgba(10, 22, 14, 0.55);
+}
+
+.receipt-fact dd {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--forest-dark, #0a160e);
+}
+
+/* The amount being verified — the one figure staff compare against the image. */
+.receipt-fact dd.receipt-fact-strong {
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+/* ---------- Image stage ---------- */
+.receipt-stage {
+    flex: 1;
+    min-height: 220px;
+    display: flex;
+    padding: 16px;
+    background: rgba(10, 22, 14, 0.06);
+    overflow: auto;
+}
+
+/* Centred with auto margins, NOT align-items:center — a centred flex item that
+   overflows its scroll container has its top edge cut off and unreachable,
+   which for a tall phone screenshot hides the top of the receipt. Auto margins
+   only absorb spare space, so an overflowing image still scrolls from the top. */
+.receipt-image,
+.receipt-note {
+    margin: auto;
+}
+
+.receipt-image {
+    display: block;
+    max-width: 100%;
+    /* Receipts are phone screenshots: fit the whole thing first, then let a
+       click blow it up to full width so the reference number is readable. */
+    max-height: 58vh;
+    object-fit: contain;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 8px 24px -14px rgba(10, 22, 14, 0.6);
+    cursor: zoom-in;
+}
+
+.receipt-stage.is-zoomed .receipt-image {
+    max-height: none;
+    width: 100%;
+    cursor: zoom-out;
+}
+
+.receipt-note {
+    padding: 24px 8px;
+    text-align: center;
+    font-size: 0.9rem;
+    color: rgba(10, 22, 14, 0.6);
+}
+
+.receipt-note-warn {
+    max-width: 380px;
+    color: #8a6a1f;
+}
+
+/* ---------- Footer actions ---------- */
+.receipt-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 20px;
+    border-top: 1px solid rgba(198, 161, 91, 0.3);
+}
+
+.receipt-foot-left,
+.receipt-foot-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.receipt-btn {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgba(198, 161, 91, 0.5);
+    background: #fff;
+    color: var(--forest-dark, #0a160e);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-family: inherit;
+    font-size: 0.82rem;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.receipt-btn:hover {
+    background: var(--forest-dark, #0a160e);
+    border-color: var(--forest-dark, #0a160e);
+    color: var(--cream, #f7f3ea);
+}
+
+.receipt-btn-primary {
+    background: #2c7a44;
+    border-color: #2c7a44;
+    color: #fff;
+    font-weight: 600;
+}
+
+.receipt-btn-primary:hover {
+    background: #236637;
+    border-color: #236637;
+    color: #fff;
+}
+
+.receipt-btn-danger {
+    border-color: rgba(198, 91, 91, 0.55);
+    color: #a23a3a;
+}
+
+.receipt-btn-danger:hover {
+    background: #a23a3a;
+    border-color: #a23a3a;
+    color: #fff;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 620px) {
+    .receipt-overlay {
+        padding: 12px;
+    }
+
+    .receipt-facts {
+        grid-template-columns: 1fr;
+    }
+
+    .receipt-foot {
+        justify-content: stretch;
+    }
+
+    .receipt-foot-left,
+    .receipt-foot-right {
+        width: 100%;
+    }
+
+    .receipt-foot-right {
+        justify-content: flex-end;
+    }
+}

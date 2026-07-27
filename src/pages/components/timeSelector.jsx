@@ -1,3 +1,8 @@
+// The stay schedules themselves live in the accommodation database
+// (STAY_SCHEDULES in data/accommodationDB.js), because each one defines the
+// hours a unit is actually held for — availability is computed from the very
+// same numbers this selector renders.
+//
 // entranceFee is charged per head. Day Time is ₱150; the two overnight
 // schedules are ₱350. Kids 7 & below are exempt; seniors get 10% off.
 //
@@ -5,33 +10,7 @@
 // getAccomodationOptions in accomodationOptions.js): Day Time has its own
 // rates, while the two overnight schedules share the same "overnight" rates
 // and unit list.
-const timeOptions = [
-    {
-        checkIn: 'Day Time: ',
-        time: '10:00 AM - 5:00 PM',
-        description: "7 Hours",
-        note: 'Check-in/out is fixed by schedule: 10:00 AM to 5:00 PM. Late arrivals are not allowed.',
-        entranceFee: 150,
-        rateGroup: 'day',
-        sameDay: true
-    },
-    {
-        checkIn: 'Day and night Time: ',
-        time: '10:00 AM - 8:00 AM',
-        description: "22 Hours",
-        note: 'Please arrive or depart early to avoid a late check-in. By schedule: 10:00 AM - 8:00 AM. Late arrivals are not allowed.',
-        entranceFee: 350,
-        rateGroup: 'overnight'
-    },
-    {
-        checkIn: 'Night and Day Time: ',
-        time: '8:00 PM - 6:00 PM',
-        description: '22 Hours',
-        note: 'Please arrive or depart early to avoid a late check-in. By schedule: 8:00 PM - 6:00 PM. Late arrivals are not allowed.',
-        entranceFee: 350,
-        rateGroup: 'overnight'
-    }
-]
+import { STAY_SCHEDULES } from '../../data/accommodationDB.js'
 
 export default function TimeSelector({ selectedTime, onSelectTime, checkIn }){
     // Sunday check-ins can't stay overnight — Monday is maintenance day,
@@ -45,11 +24,11 @@ export default function TimeSelector({ selectedTime, onSelectTime, checkIn }){
             </h3>
 
             <div className="time-choices">
-                {timeOptions.map((time, index) => {
+                {STAY_SCHEDULES.map((time, index) => {
                     const isDisabled = sundayCheckIn && time.sameDay !== true
                     return (
                         <button
-                            key={index}
+                            key={time.key}
                             type="button"
                             className={`time-card ${selectedTime === index ? 'selected' : ''} ${isDisabled ? 'time-card-disabled' : ''}`}
                             disabled={isDisabled}
@@ -76,5 +55,3 @@ export default function TimeSelector({ selectedTime, onSelectTime, checkIn }){
         </div>
     )
 }
-
-export { timeOptions }

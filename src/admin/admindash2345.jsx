@@ -1,5 +1,6 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import './css/admin.css'
+import { supabase } from '../lib/supabaseClient.js'
 import Header from '../components/Header.jsx'
 import AdminNavbar from './items/navbar.jsx'
 import AdminSidebar from './items/sidebar.jsx'
@@ -37,13 +38,17 @@ const SpaService = lazy(() => import('./items/spaService-Tab.jsx'))
 const SpaServiceList = lazy(() => import('./items/spaServiceList.jsx'))
 const SpaServiceAvails = lazy(() => import('./items/SpaServiceAvails.jsx'))
 
-const ADMIN_PASSCODE = 'campbalong2025'
-const ADMIN_EMAIL ='campbalong@gmail.com'
-
+// Staff sign in with Supabase Auth, not a passcode baked into the bundle.
+// The session is what unlocks the bookings table: RLS grants `authenticated`
+// full access and gives everyone else nothing, so guest names, emails and
+// receipts are never reachable with the public key alone.
+//
+// Create the staff user once in the Supabase dashboard
+// (Authentication → Users → Add user), then sign in with it here.
 const ADMIN_PROFILE = {
   name: 'Camp Ba-long Admin',
   role: 'Admin In-Charge',
-  email: ADMIN_EMAIL,
+  email: '',
 }
 
 const SECTION_LABELS = {
@@ -61,6 +66,8 @@ function AdminDash() {
   const [input, setInput] = useState('')
   const [inputEmail, setInputEmail] = useState('')
   const [error, setError] = useState('')
+  const [signingIn, setSigningIn] = useState(false)
+  const [profile, setProfile] = useState(ADMIN_PROFILE)
   const [activeSection, setActiveSection] = useState('overview')
   const [activeBookingTab, setActiveBookingTab] = useState('all')
   const [activeServiceTab, setActiveServiceTab] = useState('all')
@@ -68,23 +75,60 @@ function AdminDash() {
   const [activeSpaTab, setActiveSpaTab] = useState('services')
 
 
-  const handleLogout = () => {
+  // A session survives a page refresh, so staff aren't kicked out every time
+  // they reload the dashboard.
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session) return
+      const { data: staff } = await supabase.rpc('is_staff')
+      if (staff !== true) return
+      setUnlocked(true)
+      setProfile({ ...ADMIN_PROFILE, email: data.session.user.email ?? '' })
+    })
+  }, [])
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
     setUnlocked(false)
     setInput('')
     setInputEmail('')
+    setError('')
     setActiveSection('overview')
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    if (inputEmail !== ADMIN_EMAIL) {
-      setError('Wrong email')
-    } else if (input !== ADMIN_PASSCODE) {
-      setError('Wrong passcode')
-    } else {
-      setUnlocked(true)
-      setError('')
+    if (signingIn) return
+    setSigningIn(true)
+    setError('')
+
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      email: inputEmail.trim(),
+      password: input,
+    })
+
+    if (signInError) {
+      // Supabase does not say which of the two was wrong, and neither should
+      // we — that would let someone probe for valid staff addresses.
+      setSigningIn(false)
+      setError('Wrong email or password.')
+      return
     }
+
+    // Signing in is not the same as being staff: the bookings table is gated
+    // on the staff roster, so say so here rather than showing an empty board.
+    const { data: staff } = await supabase.rpc('is_staff')
+    setSigningIn(false)
+
+    if (staff !== true) {
+      await supabase.auth.signOut()
+      setError('This account is not authorised for the dashboard.')
+      return
+    }
+
+    setProfile({ ...ADMIN_PROFILE, email: data.user?.email ?? '' })
+    setUnlocked(true)
+    setInput('')
   }
 
   if (!unlocked) {
@@ -110,17 +154,18 @@ function AdminDash() {
                             />
                         </div>
                         <div className="admin-login-field">
-                            <label htmlFor="admin-passcode">Passcode</label>
+                            <label htmlFor="admin-passcode">Password</label>
                             <input
                                 id="admin-passcode"
                                 type="password"
                                 value={input}
-                                placeholder="Enter passcode"
+                                placeholder="Enter password"
+                                autoComplete="current-password"
                                 onChange={(e) => setInput(e.target.value)}
                             />
                         </div>
-                        <button type="submit" className="admin-login-btn">
-                            Enter Dashboard
+                        <button type="submit" className="admin-login-btn" disabled={signingIn}>
+                            {signingIn ? 'Signing in…' : 'Enter Dashboard'}
                         </button>
                     </form>
                     {error && <p className="admin-login-error">{error}</p>}
@@ -137,7 +182,7 @@ function AdminDash() {
             activeItem={activeSection}
             onSelect={setActiveSection}
             onLogout={handleLogout}
-            profile={ADMIN_PROFILE}
+            profile={profile}
         />
         <main className="admin-dash-section has-sidebar">
             {activeSection === 'overview' ? (
@@ -147,7 +192,7 @@ function AdminDash() {
                         <h1 className="admin-dash-title">Overview</h1>
                         <ClockDate />
                     </div>
-                    <Suspense fallback={<StatCardsSkeleton count={5} />}>
+                    <Suspense fallback={<StatCardsSkeleton count={6} />}>
                         <Units />
                     </Suspense>
                     <Suspense fallback={<TabsSkeleton count={6} />}>

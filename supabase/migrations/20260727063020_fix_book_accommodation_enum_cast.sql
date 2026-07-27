@@ -1,0 +1,8 @@
+-- Applied to campBalongWeb as a hotfix: book_accommodation() failed with
+--   column "payment" is of type payment_status but expression is of type text
+-- because a CASE result is untyped text and needs an explicit enum cast.
+--
+-- The corrected function body is already in
+-- 20260727062903_accommodation_functions.sql, so a fresh database gets it
+-- right the first time and this migration is intentionally a no-op. It exists
+-- only to keep the local migration history aligned with the remote one.

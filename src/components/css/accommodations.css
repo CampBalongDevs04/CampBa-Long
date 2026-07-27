@@ -409,15 +409,6 @@
     color: var(--gold-soft);
 }
 
-.acc-card-info .acc-price{
-    margin: 5px 0 0;
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1.05rem;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    color: var(--gold-soft);
-}
-
 .acc-details{
     background: var(--cream);
     padding: 11px 14px 12px;
@@ -728,12 +719,6 @@
     letter-spacing: 1.2px;
     text-transform: uppercase;
     color: #5b5b4c;
-}
-.acc-modal-price{
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--gold);
 }
 .acc-modal-info .acc-availability{
     margin: 8px 0 0;

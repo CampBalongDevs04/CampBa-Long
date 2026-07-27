@@ -5,15 +5,21 @@ import {
     getAvailability,
     getNextAvailableDate,
     formatShortDate,
-} from '../../data/accommodationInventory.js'
+    useAccommodationDB,
+    getSchedule,
+} from '../../data/accommodationDB.js'
 import { getAccomodationOptions } from '../../data/accomodationOptions.js'
 
-export default function AccomodationList({ selectedAccomodation, onSelectAccomodation, checkIn, checkOut, rateGroup, droppedUnitNote }){
+export default function AccomodationList({ selectedAccomodation, onSelectAccomodation, checkIn, checkOut, rateGroup, scheduleKey, droppedUnitNote }){
     const trackRef = useRef(null)
+    // Re-renders whenever anything is booked or cancelled — anywhere in the
+    // app — so the counts below are never stale.
+    useAccommodationDB()
     const hasDates = !!checkIn
     const stayStart = checkIn ?? new Date()
     const stayEnd = checkOut ?? null
     const list = getAccomodationOptions(rateGroup)
+    const schedule = getSchedule(scheduleKey)
 
     const scrollByCard = (direction) => {
         const track = trackRef.current
@@ -36,7 +42,7 @@ export default function AccomodationList({ selectedAccomodation, onSelectAccomod
         <div className="accomodation-list">
             <p className="accomodation-availability-note">
                 {hasDates
-                    ? `Showing availability for ${formatShortDate(stayStart)}${stayEnd && formatShortDate(stayEnd) !== formatShortDate(stayStart) ? ` – ${formatShortDate(stayEnd)}` : ''}`
+                    ? `Showing availability for ${formatShortDate(stayStart)}${stayEnd && formatShortDate(stayEnd) !== formatShortDate(stayStart) ? ` – ${formatShortDate(stayEnd)}` : ''}${schedule ? `, ${schedule.time}` : ''}`
                     : 'Showing availability for today — pick your dates in step 1 to check your stay.'}
             </p>
             {!rateGroup && (
@@ -60,10 +66,12 @@ export default function AccomodationList({ selectedAccomodation, onSelectAccomod
                 <div className="accomodation-track" ref={trackRef}>
                     {list.map((item) => {
                         const unlimited = item.unlimited === true
-                        const availability = unlimited ? null : getAvailability(item.id, stayStart, stayEnd)
+                        const availability = unlimited
+                            ? null
+                            : getAvailability(item.id, stayStart, stayEnd, scheduleKey)
                         const isFullyBooked = !unlimited && availability !== null && availability.available === 0
                         const nextAvailable = isFullyBooked
-                            ? getNextAvailableDate(item.id, stayStart)
+                            ? getNextAvailableDate(item.id, stayStart, 60, scheduleKey)
                             : null
 
                         return (

@@ -1,4 +1,5 @@
 import '../css/units.css'
+import { useAccommodationDB, getBookingStats, getDayOccupancy } from '../../data/accommodationDB.js'
 
 const units = [
     {
@@ -27,6 +28,11 @@ const units = [
         count: null,
         key: "pendingPayment",
     },
+    {
+        name: "Units Free Today",
+        count: null,
+        key: "unitsFreeToday",
+    },
 ]
 
 function formatCount(unit, stats) {
@@ -37,12 +43,22 @@ function formatCount(unit, stats) {
     return Number(value).toLocaleString()
 }
 
+// Counts come from the accommodation database unless a `stats` prop overrides
+// them, so the cards move the moment a guest books or an admin cancels.
 export default function Units({ stats }) {
+    useAccommodationDB()
+    const occupancy = getDayOccupancy()
+    const live = {
+        ...getBookingStats(),
+        unitsFreeToday: occupancy.available,
+        ...stats,
+    }
+
     return (
         <div className="units-holder">
             {units.map((unit) => (
                 <div className="unit-card" key={unit.name}>
-                    <p className="unit-card-count">{formatCount(unit, stats)}</p>
+                    <p className="unit-card-count">{formatCount(unit, live)}</p>
                     <p className="unit-card-name">{unit.name}</p>
                 </div>
             ))}

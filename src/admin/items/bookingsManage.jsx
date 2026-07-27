@@ -1,54 +1,29 @@
 import { useMemo, useState } from 'react'
 import '../css/bookings-manage.css'
+import ReceiptViewer from './receiptViewer'
+import {
+    useAccommodationDB,
+    getBookingStage,
+    confirmBooking,
+    markBookingPaidFull,
+    cancelBooking,
+} from '../../data/accommodationDB.js'
 
-// Sample data — replace with database bookings later.
-// Shape is intentionally close to what a booking record will hold so the
-// table columns below map straight onto the real data when it arrives.
-const SAMPLE_BOOKINGS = [
-    {
-        id: 'CB-1042',
-        guestName: 'Maria Santos',
-        unit: 'Villa 2',
-        checkIn: '2026-07-25',
-        checkOut: '2026-07-26',
-        schedule: 'Day and Night',
-        total: 8500,
-        payment: 'paid-full',
-        status: 'upcomming',
-    },
-    {
-        id: 'CB-1041',
-        guestName: 'Jose Reyes',
-        unit: 'Cabin 1',
-        checkIn: '2026-07-22',
-        checkOut: '2026-07-22',
-        schedule: 'Day Time',
-        total: 4200,
-        payment: 'down-payment',
-        status: 'active',
-    },
-    {
-        id: 'CB-1039',
-        guestName: 'Andrea Cruz',
-        unit: 'Villa 1',
-        checkIn: '2026-07-18',
-        checkOut: '2026-07-19',
-        schedule: 'Night and Day',
-        total: 9100,
-        payment: 'paid-full',
-        status: 'completed',
-    },
-]
+// Rows come straight from the accommodation database — the same records the
+// booking page writes. Approving one here flips it to "upcoming" for the
+// guest; cancelling releases the unit's dates back into availability.
 
 const STATUS_FILTERS = [
     { id: 'all', label: 'All' },
+    { id: 'pending', label: 'For Verification' },
     { id: 'upcomming', label: 'Upcomming' },
     { id: 'active', label: 'Active' },
     { id: 'completed', label: 'Completed' },
 ]
 
 const STATUS_BADGE = {
-    upcomming: { label: 'Upcomming', className: 'is-upcomming' },
+    pending: { label: 'For Verification', className: 'is-pending' },
+    upcoming: { label: 'Upcomming', className: 'is-upcomming' },
     active: { label: 'Active', className: 'is-active' },
     completed: { label: 'Completed', className: 'is-completed' },
     cancelled: { label: 'Cancelled', className: 'is-cancelled' },
@@ -69,32 +44,55 @@ function formatDate(iso) {
     })
 }
 
-function formatRange(checkIn, checkOut) {
-    if (checkIn === checkOut) return formatDate(checkIn)
-    return `${formatDate(checkIn)} → ${formatDate(checkOut)}`
+function formatRange(booking) {
+    const from = formatDate(booking.checkIn)
+    const to = formatDate(booking.checkOut)
+    return from === to ? from : `${from} → ${to}`
+}
+
+// The unit the database assigned, e.g. "A-House Small · AHS-02". Tent pitching
+// has no unit to assign, so it falls back to the type name alone.
+function unitLabel(booking) {
+    if (!booking.unitId) return booking.accomodationName
+    return `${booking.accomodationName} · ${booking.unitId}`
 }
 
 export default function BookingsManage() {
-    // Swap SAMPLE_BOOKINGS for real data (props / fetch) when the backend is ready.
-    const [bookings] = useState(SAMPLE_BOOKINGS)
+    const bookings = useAccommodationDB()
     const [filter, setFilter] = useState('all')
     const [query, setQuery] = useState('')
+    // The receipt under review, held by id rather than by object so the open
+    // lightbox follows the live row — approving it there repaints the footer
+    // instead of leaving a stale Approve button behind.
+    const [reviewingId, setReviewingId] = useState(null)
+
+    const rows = useMemo(
+        () => bookings.map((booking) => ({ ...booking, stage: getBookingStage(booking) })),
+        [bookings],
+    )
+
+    const reviewing = rows.find((b) => b.id === reviewingId) ?? null
 
     const visible = useMemo(() => {
         const q = query.trim().toLowerCase()
-        return bookings.filter((b) => {
-            const matchesFilter = filter === 'all' || b.status === filter
+        return rows.filter((b) => {
+            const matchesFilter =
+                filter === 'all' ||
+                (filter === 'upcomming' ? b.stage === 'upcoming' : b.stage === filter)
             const matchesQuery =
                 q === '' ||
-                b.guestName.toLowerCase().includes(q) ||
-                b.id.toLowerCase().includes(q) ||
-                b.unit.toLowerCase().includes(q)
+                (b.guest?.fullName ?? '').toLowerCase().includes(q) ||
+                (b.code ?? '').toLowerCase().includes(q) ||
+                unitLabel(b).toLowerCase().includes(q)
             return matchesFilter && matchesQuery
         })
-    }, [bookings, filter, query])
+    }, [rows, filter, query])
 
-    const countFor = (id) =>
-        id === 'all' ? bookings.length : bookings.filter((b) => b.status === id).length
+    const countFor = (id) => {
+        if (id === 'all') return rows.length
+        const stage = id === 'upcomming' ? 'upcoming' : id
+        return rows.filter((b) => b.stage === stage).length
+    }
 
     return (
         <div className="bookings-manage">
@@ -167,6 +165,7 @@ export default function BookingsManage() {
                                     <th>Stay</th>
                                     <th>Schedule</th>
                                     <th>Payment</th>
+                                    <th>Receipt</th>
                                     <th>Status</th>
                                     <th className="col-total">Total</th>
                                     <th className="col-actions">Actions</th>
@@ -174,30 +173,97 @@ export default function BookingsManage() {
                             </thead>
                             <tbody>
                                 {visible.map((b) => {
-                                    const status = STATUS_BADGE[b.status] || {}
+                                    const status = STATUS_BADGE[b.stage] || {}
                                     const payment = PAYMENT_BADGE[b.payment] || {}
                                     return (
                                         <tr key={b.id}>
-                                            <td className="col-id">{b.id}</td>
-                                            <td>{b.guestName}</td>
-                                            <td>{b.unit}</td>
-                                            <td>{formatRange(b.checkIn, b.checkOut)}</td>
-                                            <td>{b.schedule}</td>
+                                            {/* Staff quote the CBL-… code to guests, not the uuid. */}
+                                            <td className="col-id">{b.code ?? b.id}</td>
+                                            <td>{b.guest?.fullName || '—'}</td>
+                                            <td>{unitLabel(b)}</td>
+                                            <td>{formatRange(b)}</td>
+                                            <td>{b.schedule?.time ?? '—'}</td>
                                             <td>
                                                 <span className={`bookings-badge ${payment.className || ''}`}>
                                                     {payment.label || b.payment}
                                                 </span>
                                             </td>
+                                            {/* Proof of payment. The image has to be
+                                                read before Approve is pressed, so the
+                                                button sits in its own column rather
+                                                than among the row actions. */}
+                                            <td className="col-receipt">
+                                                {b.receiptPath ? (
+                                                    <button
+                                                        type="button"
+                                                        className="bookings-action bookings-action-receipt"
+                                                        onClick={() => setReviewingId(b.id)}
+                                                    >
+                                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                            <path d="M1.5 12S5 5.5 12 5.5 22.5 12 22.5 12 19 18.5 12 18.5 1.5 12 1.5 12Z" />
+                                                            <circle cx="12" cy="12" r="3" />
+                                                        </svg>
+                                                        View
+                                                    </button>
+                                                ) : b.hasReceipt ? (
+                                                    /* Booked before receipt images were
+                                                       kept — flagged, not hidden, so
+                                                       staff know to ask the guest. */
+                                                    <button
+                                                        type="button"
+                                                        className="bookings-action bookings-action-receipt is-missing"
+                                                        onClick={() => setReviewingId(b.id)}
+                                                    >
+                                                        No image
+                                                    </button>
+                                                ) : (
+                                                    <span className="bookings-receipt-none">None</span>
+                                                )}
+                                            </td>
                                             <td>
                                                 <span className={`bookings-badge ${status.className || ''}`}>
-                                                    {status.label || b.status}
+                                                    {status.label || b.stage}
                                                 </span>
                                             </td>
-                                            <td className="col-total">₱{Number(b.total).toLocaleString()}</td>
+                                            <td className="col-total">₱{Number(b.total ?? 0).toLocaleString()}</td>
                                             <td className="col-actions">
-                                                <button type="button" className="bookings-action">
-                                                    View
-                                                </button>
+                                                {/* Verifying the receipt turns the hold into a
+                                                    confirmed stay on the guest's side — so when
+                                                    there is an image to check, this opens it and
+                                                    Approve lives inside the viewer. Approving
+                                                    without looking is the one thing this screen
+                                                    should not make easy. */}
+                                                {b.stage === 'pending' && (
+                                                    <button
+                                                        type="button"
+                                                        className="bookings-action"
+                                                        onClick={() =>
+                                                            b.receiptPath
+                                                                ? setReviewingId(b.id)
+                                                                : confirmBooking(b.id)
+                                                        }
+                                                    >
+                                                        {b.receiptPath ? 'Review' : 'Approve'}
+                                                    </button>
+                                                )}
+                                                {b.stage !== 'cancelled' && b.payment !== 'paid-full' && (
+                                                    <button
+                                                        type="button"
+                                                        className="bookings-action"
+                                                        onClick={() => markBookingPaidFull(b.id)}
+                                                    >
+                                                        Mark Paid
+                                                    </button>
+                                                )}
+                                                {b.stage !== 'cancelled' && b.stage !== 'completed' && (
+                                                    <button
+                                                        type="button"
+                                                        className="bookings-action bookings-action-danger"
+                                                        onClick={() => cancelBooking(b.id)}
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                )}
                                             </td>
                                         </tr>
                                     )
@@ -207,6 +273,18 @@ export default function BookingsManage() {
                     </div>
                 )}
             </div>
+
+            {/* Mounted per booking: a fresh mount is what re-mints the
+                short-lived signed URL for the image. */}
+            {reviewing && (
+                <ReceiptViewer
+                    key={reviewing.id}
+                    booking={reviewing}
+                    onClose={() => setReviewingId(null)}
+                    onApprove={(booking) => confirmBooking(booking.id)}
+                    onCancel={(booking) => cancelBooking(booking.id)}
+                />
+            )}
         </div>
     )
 }
