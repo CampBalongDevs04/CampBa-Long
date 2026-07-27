@@ -73,6 +73,22 @@ const RATES = {
     },
 }
 
+// How a group size sits against one unit's capacity:
+//
+//   'fit'   — inside minPax–maxPax, or a unit with no capacity at all
+//             (Tent Pitching), which always fits.
+//   'under' — fewer heads than minPax. STILL BOOKABLE: the rate is charged per
+//             unit and not per head, so a smaller group simply pays for the
+//             whole unit. Worth saying out loud, never worth blocking.
+//   'over'  — more heads than maxPax. NOT bookable: that's how many people the
+//             unit physically holds.
+export function getPaxFit(pax, option){
+    if (!pax || !option || option.maxPax == null) return 'fit'
+    if (pax > option.maxPax) return 'over'
+    if (option.minPax != null && pax < option.minPax) return 'under'
+    return 'fit'
+}
+
 // Cards for a given rate group ('day' | 'overnight'), merged with that
 // group's price/pax. With no group (no schedule picked yet) every unit is
 // returned with price/pax left null, so the UI can show its own
