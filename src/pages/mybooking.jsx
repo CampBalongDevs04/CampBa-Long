@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router'
 import './components/css/mybooking.css'
 import Footer from '../components/footer'
 import {
-    useAccommodationDB,
+    useMyBookings,
     cancelBooking as dbCancelBooking,
     deleteBooking as dbDeleteBooking,
     addFoodOrder,
@@ -23,7 +23,10 @@ import {
 // answers with the rows matching this device's owner token and nothing else,
 // so a guest on another phone sees their own reservations here, never these.
 export function useBookings(){
-    const bookings = useAccommodationDB()
+    // Deliberately NOT the admin store. Signing in as staff must not change
+    // what this page shows — that is how a staff phone ended up displaying
+    // every guest's reservation on the guest-facing page.
+    const bookings = useMyBookings()
 
     return {
         bookings,

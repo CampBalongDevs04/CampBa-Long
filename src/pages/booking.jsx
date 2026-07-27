@@ -5,7 +5,7 @@ import BookingCalendar from './components/BookingCalendar'
 import TimeSelector from './components/timeSelector'
 import ScheduleNote from './components/scheduleNote'
 import AccomodationList from './components/accomodationList'
-import { getAccomodationOptions, FREE_ENTRANCE_PAX } from '../data/accomodationOptions.js'
+import { getAccomodationOptions, getPaxFit, FREE_ENTRANCE_PAX } from '../data/accomodationOptions.js'
 import PaxInput from './components/paxInput'
 import KidsCount from './components/kidscount'
 import SeniorCount from './components/seniorCount'
@@ -158,9 +158,22 @@ export default function Booking(){
         !receipt && 'Payment',
     ].filter(Boolean)
 
+    // A group larger than the unit's maxPax is the one pax rule that blocks
+    // the booking — that's how many people it physically holds. Under minPax
+    // is deliberately allowed (the rate is per unit, not per head); PaxInput
+    // just notes it. Not a "missing step": every field is filled, the numbers
+    // simply don't work together, so it gets its own message.
+    const selectedUnit = selectedAccomodation
+        ? getAccomodationOptions(rateGroup).find((item) => item.id === selectedAccomodation) ?? null
+        : null
+    const capacityIssue = getPaxFit(pax, selectedUnit) === 'over'
+        ? `${selectedUnit.name} holds up to ${selectedUnit.maxPax} pax.`
+            + ` Lower your guest count or pick a bigger accommodation for your group of ${pax}.`
+        : null
+
     async function handleConfirm(){
         setAttemptedConfirm(true)
-        if (missingSteps.length > 0 || submitting) return
+        if (missingSteps.length > 0 || capacityIssue || submitting) return
         setSubmitting(true)
 
         const schedule = selectedTime !== null ? timeOptions[selectedTime] : null
@@ -348,6 +361,11 @@ export default function Booking(){
                                 {attemptedConfirm && missingSteps.length > 0 && (
                                     <p className="booking-confirm-alert" role="alert">
                                         Please complete the following before confirming: {missingSteps.join(', ')}.
+                                    </p>
+                                )}
+                                {attemptedConfirm && capacityIssue && (
+                                    <p className="booking-confirm-alert" role="alert">
+                                        {capacityIssue}
                                     </p>
                                 )}
                                 {bookingError && (

@@ -1,45 +1,58 @@
 import '../components/css/paxInput.css'
-import { getAccomodationOptions } from '../../data/accomodationOptions.js'
+import { getAccomodationOptions, getPaxFit } from '../../data/accomodationOptions.js'
 
+// Site-wide range for the counter. A unit's own minPax/maxPax shapes the note
+// below rather than the counter: the guest is allowed to type the real size of
+// their group and be told how it sits against the unit they picked.
 const MIN_PAX = 1
 const MAX_PAX = 20
 
-// Units with no minPax/maxPax (e.g. Tent Pitching) have no capacity limit,
-// so they always "fit" regardless of group size.
-function fitsPax(pax, item){
-    return item.minPax == null || (pax >= item.minPax && pax <= item.maxPax)
-}
-
-function getFitNote(pax, selectedAccomodation, rateGroup){
+function getFitNote(pax, selected, options){
     if (!pax) return null
 
-    const options = getAccomodationOptions(rateGroup)
-    const fitting = options.filter((item) => fitsPax(pax, item))
-
-    const selected = selectedAccomodation
-        ? options.find((item) => item.id === selectedAccomodation)
-        : null
+    // Units that hold this group comfortably, and — as a fallback — the ones
+    // that hold them at all, even if the group is under the usual size.
+    const fitting = options.filter((item) => getPaxFit(pax, item) === 'fit')
+    const roomy = options.filter((item) => getPaxFit(pax, item) !== 'over')
 
     if (selected){
         const paxLabel = selected.pax ?? 'schedule not yet selected'
-        const fits = fitsPax(pax, selected)
-        if (fits){
+        const fit = getPaxFit(pax, selected)
+
+        // Over capacity — the unit cannot physically take them, so this is a
+        // blocking warning, not a hint. Confirm is held until it's resolved.
+        if (fit === 'over'){
+            const alternatives = (fitting.length > 0 ? fitting : roomy)
+                .map((item) => item.name)
+                .join(', ')
             return {
-                tone: 'fit',
-                title: 'Good fit',
-                text: `${selected.name} (${paxLabel}) is fit for your group of ${pax}.`,
+                tone: 'unfit',
+                title: 'Not a fit',
+                text: `${selected.name} (${paxLabel}) holds up to ${selected.maxPax} pax`
+                    + ` — your group of ${pax} is over its capacity.`
+                    + (alternatives ? ` Consider: ${alternatives}.` : ' Contact us for group arrangements.'),
             }
         }
-        const suggestions = fitting.map((item) => item.name).join(', ')
+
+        // Under the usual group size — allowed. The rate is per unit, so a
+        // smaller group just books the whole thing; say so and move on.
+        if (fit === 'under'){
+            return {
+                tone: 'warn',
+                title: 'Below the usual group size',
+                text: `${selected.name} is set for ${paxLabel}. You can still book it for ${pax}`
+                    + ` — the rate is per unit, so the full price applies.`,
+            }
+        }
+
         return {
-            tone: 'unfit',
-            title: 'Not a fit',
-            text: `${selected.name} (${paxLabel}) is not fit for your group of ${pax}.`
-                + (suggestions ? ` Consider: ${suggestions}.` : ''),
+            tone: 'fit',
+            title: 'Good fit',
+            text: `${selected.name} (${paxLabel}) is fit for your group of ${pax}.`,
         }
     }
 
-    if (fitting.length === 0){
+    if (roomy.length === 0){
         return {
             tone: 'unfit',
             title: 'Group booking',
@@ -50,16 +63,40 @@ function getFitNote(pax, selectedAccomodation, rateGroup){
     return {
         tone: 'info',
         title: 'Suggested for you',
-        text: `For ${pax} pax: ${fitting.map((item) => item.name).join(', ')}.`,
+        text: `For ${pax} pax: ${(fitting.length > 0 ? fitting : roomy).map((item) => item.name).join(', ')}.`,
     }
 }
 
 export default function PaxInput({ pax, onPaxChange, selectedAccomodation, guest, onGuestChange, rateGroup }){
-    const note = getFitNote(pax, selectedAccomodation, rateGroup)
+    const options = getAccomodationOptions(rateGroup)
+    const selected = selectedAccomodation
+        ? options.find((item) => item.id === selectedAccomodation) ?? null
+        : null
+    const note = getFitNote(pax, selected, options)
+
+    // The counter is NOT capped at the unit's maxPax. Silently refusing the
+    // 6th guest of a 5-pax cottage looks like a broken button; letting the
+    // number through and answering with the warning above tells them what is
+    // actually wrong, and Confirm is what holds the booking back (booking.jsx).
+    // minPax is never enforced at all — the rate is per unit, not per head, so
+    // a smaller group is free to book and only gets the yellow note.
+    const capacity = selected?.maxPax ?? null
+    const limited = capacity != null
 
     const clamp = (value) => Math.min(MAX_PAX, Math.max(MIN_PAX, value))
     const step = (delta) => onPaxChange?.(clamp((pax ?? 0) + delta))
     const setField = (field) => (e) => onGuestChange?.({ ...guest, [field]: e.target.value })
+
+    const overCapacity = limited && pax != null && pax > capacity
+    const capacityTitle = limited
+        ? `${selected.name} takes ${selected.pax}.`
+        : undefined
+    // '2–3' for a unit with a minimum, plain '4' when it only has a ceiling.
+    const rangeLabel = limited
+        ? (selected.minPax != null && selected.minPax !== capacity
+            ? `${selected.minPax}–${capacity}`
+            : `${capacity}`)
+        : null
 
     return(
         <div className="guest-info">
@@ -118,11 +155,12 @@ export default function PaxInput({ pax, onPaxChange, selectedAccomodation, guest
                         </button>
 
                         <input
-                            className="pax-count"
+                            className={`pax-count${overCapacity ? ' pax-count-over' : ''}`}
                             type="number"
                             id="pax"
                             min={MIN_PAX}
                             max={MAX_PAX}
+                            aria-invalid={overCapacity || undefined}
                             placeholder="0"
                             aria-label="Number of guests"
                             value={pax ?? ''}
@@ -137,12 +175,18 @@ export default function PaxInput({ pax, onPaxChange, selectedAccomodation, guest
                             className="pax-step"
                             aria-label="Add one guest"
                             onClick={() => step(1)}
-                            disabled={pax >= MAX_PAX}
+                            disabled={pax != null && pax >= MAX_PAX}
+                            title={capacityTitle}
                         >
                             +
                         </button>
 
-                        <span className="pax-counter-hint">pax</span>
+                        <span
+                            className={`pax-counter-hint${overCapacity ? ' pax-counter-hint-over' : ''}`}
+                            title={capacityTitle}
+                        >
+                            {limited ? `pax · fits ${rangeLabel}` : 'pax'}
+                        </span>
                     </div>
                 </div>
             </div>

@@ -260,9 +260,20 @@ export function findTypeForUnit(unitId) {
 
 // ===================================================================== store
 
-// Bookings we can actually see. Staff sessions hold every row; a guest holds
-// only the ones they created this session (RLS hides everyone else's).
+// TWO different sets of rows, deliberately kept apart.
+//
+//   bookings    — every reservation in the resort. Only ever filled for a
+//                 signed-in staff session; the admin dashboard reads this.
+//   myBookings  — the reservations made by THIS browser, matched by owner
+//                 token. My Bookings reads this, and reads ONLY this.
+//
+// These used to be one array whose meaning flipped with the session, which
+// meant a staff member signed in on their own phone opened My Bookings and got
+// every guest's name, email and payment. Being staff is a reason to see the
+// admin board; it is never a reason for the guest page to show someone else's
+// reservation. Keeping them apart is what makes that structurally impossible.
 let bookings = []
+let myBookings = []
 // Type-level availability answered by the database, keyed by the query.
 const availabilityCache = new Map()
 // Queries already in flight, so a re-render storm makes one request, not fifty.
@@ -286,15 +297,30 @@ export function getBookingsSnapshot() {
     return bookings
 }
 
-// Subscribe a component to the database. Any booking, cancellation or freshly
-// resolved availability query re-renders every screen that calls this.
+export function getMyBookingsSnapshot() {
+    return myBookings
+}
+
+// Subscribe an ADMIN screen to every booking. Returns nothing without a staff
+// session, which is what makes the dashboard empty rather than wrong.
 export function useAccommodationDB() {
     return useSyncExternalStore(subscribeBookings, getBookingsSnapshot)
+}
+
+// Subscribe a GUEST screen to this device's own bookings. Never returns
+// anyone else's, staff session or not.
+export function useMyBookings() {
+    return useSyncExternalStore(subscribeBookings, getMyBookingsSnapshot)
 }
 
 // A new array identity is what tells useSyncExternalStore something changed.
 function commit(next) {
     bookings = next
+    notify()
+}
+
+function commitMine(next) {
+    myBookings = next
     notify()
 }
 
@@ -370,10 +396,12 @@ function fromRow(row) {
     }
 }
 
+// Guest-side writes (a new booking, an add-on) land in the guest's own list.
+// Never in `bookings` — that array belongs to the admin board.
 function upsertLocal(booking) {
-    const index = bookings.findIndex((item) => item.id === booking.id)
-    if (index === -1) commit([booking, ...bookings])
-    else commit(bookings.map((item) => (item.id === booking.id ? booking : item)))
+    const index = myBookings.findIndex((item) => item.id === booking.id)
+    if (index === -1) commitMine([booking, ...myBookings])
+    else commitMine(myBookings.map((item) => (item.id === booking.id ? booking : item)))
 }
 
 // =================================================================== loading
@@ -452,7 +480,7 @@ async function loadMyBookings() {
     }
 
     const next = (data ?? []).map(fromRow)
-    if (!sameBookings(bookings, next)) commit(next)
+    if (!sameBookings(myBookings, next)) commitMine(next)
 }
 
 // Cheap equality over the fields a guest can see change: staff confirming a
@@ -472,17 +500,22 @@ function sameBookings(a, b) {
     })
 }
 
-// Decide which of the two sets applies and load it. Called on boot, after
-// sign-in / sign-out, and whenever something may have changed underneath.
+// Load both sets. The guest list is loaded unconditionally — a staff member is
+// also a person who books stays, and their My Bookings page must show theirs
+// and no one else's. Only the admin board additionally gets the whole table.
 async function loadBookings() {
     const { data: session } = await supabase.auth.getSession()
     // Being signed in is not the same as being staff — a non-staff account is
-    // just a guest with a login, and gets the guest view.
+    // just a guest with a login, and gets nothing extra.
     staffSession = Boolean(session?.session) && (await checkStaff())
 
-    if (staffSession && (await loadStaffBookings())) return
-    staffSession = false
     await loadMyBookings()
+
+    if (staffSession) {
+        if (!(await loadStaffBookings())) staffSession = false
+    } else {
+        commit([])
+    }
 }
 
 async function checkStaff() {
@@ -512,7 +545,7 @@ export function bookingsPersistOnThisDevice() {
 export async function forgetMyBookings() {
     forgetOwnerToken()
     clearCaches()
-    if (!staffSession) commit([])
+    commitMine([])
 }
 
 const REALTIME_CHANNEL = 'bookings-changes'
@@ -571,8 +604,10 @@ function startRevalidating() {
             const { from, to, scheduleKey } = lastQuery
             fetchAvailability(from, to ?? null, scheduleKey)
         }
-        // Staff already get row changes pushed to them.
-        if (!staffSession) loadMyBookings()
+        // The guest list is polled for everyone: staff get row changes pushed
+        // to them for the admin board, but Realtime says nothing about which
+        // of those rows are the signed-in person's own.
+        loadMyBookings()
     }, AVAILABILITY_TTL_MS)
 }
 
@@ -596,8 +631,8 @@ supabase.auth.onAuthStateChange((event) => {
         staffSession = false
         stopRealtime()
         clearCaches()
-        commit([])
-        loadMyBookings()
+        commit([])          // the admin board empties …
+        loadMyBookings()    // … the guest's own list is unaffected
     }
 })
 
@@ -962,6 +997,28 @@ export async function createBooking(draft) {
     return { ok: true, booking }
 }
 
+// A booking can sit in both lists at once — a staff member's own stay is on
+// the admin board AND in their My Bookings. So local edits touch both, in one
+// notify, rather than leaving one screen showing a stale copy of the other.
+function applyPatch(id, patch) {
+    bookings = bookings.map((b) => (b.id === id ? { ...b, ...patch } : b))
+    myBookings = myBookings.map((b) => (b.id === id ? { ...b, ...patch } : b))
+    notify()
+}
+
+function removeLocal(id) {
+    bookings = bookings.filter((b) => b.id !== id)
+    myBookings = myBookings.filter((b) => b.id !== id)
+    notify()
+}
+
+// Is this one of the caller's OWN bookings? Decides which write path a
+// mutation takes, so a staff member cancelling their own stay from My Bookings
+// goes through the ownership RPC rather than the admin's table write.
+function ownedByThisDevice(id) {
+    return myBookings.some((booking) => booking.id === id)
+}
+
 // Staff-only. A guest's update on this table is refused outright, which is why
 // the guest paths below go through their own RPCs rather than sharing this.
 async function patchBooking(id, patch) {
@@ -971,7 +1028,7 @@ async function patchBooking(id, patch) {
         return { ok: false, message: error.message }
     }
     clearCaches()
-    commit(bookings.map((b) => (b.id === id ? { ...b, ...patch } : b)))
+    applyPatch(id, patch)
     return { ok: true }
 }
 
@@ -989,7 +1046,10 @@ export function markBookingPaidFull(id) {
 // write the row directly; a guest proves the booking is theirs first, and
 // cancel_my_booking() refuses if it is not.
 export async function cancelBooking(id) {
-    if (staffSession) return patchBooking(id, { status: 'cancelled' })
+    // Someone else's booking on the admin board — the staff write path.
+    if (!ownedByThisDevice(id) && staffSession) {
+        return patchBooking(id, { status: 'cancelled' })
+    }
 
     const { error } = await supabase.rpc('cancel_my_booking', {
         p_booking_id: id,
@@ -1002,7 +1062,7 @@ export async function cancelBooking(id) {
     }
 
     clearCaches()
-    commit(bookings.map((b) => (b.id === id ? { ...b, status: 'cancelled' } : b)))
+    applyPatch(id, { status: 'cancelled' })
     return { ok: true }
 }
 
@@ -1010,7 +1070,7 @@ export async function cancelBooking(id) {
 // their own list — the row stays in Postgres, because a cancellation is part of
 // the resort's record and not a guest's to erase.
 export async function deleteBooking(id) {
-    if (staffSession) {
+    if (!ownedByThisDevice(id) && staffSession) {
         const { error } = await supabase.from('bookings').delete().eq('id', id)
         if (error) {
             console.error('Could not delete booking:', error.message)
@@ -1028,7 +1088,7 @@ export async function deleteBooking(id) {
     }
 
     clearCaches()
-    commit(bookings.filter((booking) => booking.id !== id))
+    removeLocal(id)
     return { ok: true }
 }
 
@@ -1125,7 +1185,10 @@ export function getBookingStats() {
 // The most recent booking food/spa add-ons can attach to: it needs a receipt
 // on file and must not be over or cancelled.
 export function findOrderableBooking() {
-    return bookings.find((booking) => booking.hasReceipt && isBookingActive(booking)) ?? null
+    // This device's own bookings only. Reading the admin list here would let a
+    // signed-in staff member's food order attach itself to whichever guest
+    // happened to be at the top of the table.
+    return myBookings.find((booking) => booking.hasReceipt && isBookingActive(booking)) ?? null
 }
 
 // True once a staff session is reading the real booking rows. The admin
