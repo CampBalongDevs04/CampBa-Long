@@ -173,6 +173,13 @@
     color: #2c7a44;
 }
 
+/* Receipt uploaded, waiting for staff to verify it. The unit is already
+   held for these dates, so it never shows as available meanwhile. */
+.bookings-badge.is-pending {
+    background: rgba(198, 161, 91, 0.24);
+    color: #8a6a1f;
+}
+
 .bookings-badge.is-completed {
     background: rgba(120, 120, 120, 0.16);
     color: #555;
@@ -198,7 +205,35 @@
     color: #a23a3a;
 }
 
-/* ---------- Row action ---------- */
+/* ---------- Receipt column ---------- */
+.bookings-action-receipt {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+}
+
+/* A booking taken before receipt images were stored: there is nothing to open,
+   which staff need to notice rather than mistake for a verified payment. */
+.bookings-action-receipt.is-missing {
+    border-color: rgba(198, 161, 91, 0.7);
+    color: #8a6a1f;
+}
+
+.bookings-receipt-none {
+    font-size: 0.8rem;
+    color: rgba(10, 22, 14, 0.45);
+}
+
+/* ---------- Row actions ---------- */
+.col-actions {
+    white-space: nowrap;
+}
+
+.col-actions .bookings-action + .bookings-action {
+    margin-left: 6px;
+}
+
 .bookings-action {
     border: 1px solid rgba(198, 161, 91, 0.5);
     background: #fff;
@@ -215,6 +250,18 @@
     background: var(--forest-dark);
     border-color: var(--forest-dark);
     color: var(--cream);
+}
+
+/* Cancelling frees the unit's dates again — flag it as destructive. */
+.bookings-action-danger {
+    border-color: rgba(198, 91, 91, 0.55);
+    color: #a23a3a;
+}
+
+.bookings-action-danger:hover {
+    background: #a23a3a;
+    border-color: #a23a3a;
+    color: #fff;
 }
 
 /* ---------- Empty state ---------- */

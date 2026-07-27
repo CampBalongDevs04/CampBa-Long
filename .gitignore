@@ -26,6 +26,11 @@ dist-ssr
 # Local notes / secrets - do not commit
 src/components/psw.md
 
+# Environment. .env.example is committed as the template; real values are not.
+.env
+.env.*
+!.env.example
+
 # agents
 .agents/
 .claude/

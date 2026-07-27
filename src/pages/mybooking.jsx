@@ -1,88 +1,40 @@
-import { useEffect, useSyncExternalStore } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import './components/css/mybooking.css'
 import Footer from '../components/footer'
+import {
+    useAccommodationDB,
+    cancelBooking as dbCancelBooking,
+    deleteBooking as dbDeleteBooking,
+    addFoodOrder,
+    addSpaOrder,
+    findOrderableBooking,
+    getBookingStage,
+    bookingsPersistOnThisDevice,
+    forgetMyBookings,
+} from '../data/accommodationDB.js'
 
-// In-memory only — no localStorage, no Provider. This is a module-level
-// singleton store: the ES module is loaded once per page load, so the
-// array survives client-side navigation (booking -> menu -> my-booking)
-// but resets to empty on a real refresh or tab close, same as any other
-// in-memory JS state. Shared with booking.jsx and foodmenu.jsx.
-let bookingsStore = []
-const listeners = new Set()
-
-function notify(){
-    for (const listener of listeners) listener()
-}
-
-function updateBookings(updater){
-    bookingsStore = updater(bookingsStore)
-    notify()
-}
-
-function subscribe(listener){
-    listeners.add(listener)
-    return () => listeners.delete(listener)
-}
-
-function getSnapshot(){
-    return bookingsStore
-}
-
-function isBookingActive(booking){
-    if (booking.status === 'cancelled') return false
-    if (booking.status === 'upcoming' && booking.checkOut && new Date(booking.checkOut).getTime() < Date.now()) {
-        return false
-    }
-    return true
-}
-
+// Guest-facing view over the accommodation database. Everything lives in
+// data/accommodationDB.js so a cancellation here immediately frees the unit's
+// dates for the next guest and updates the admin Units board — there is only
+// one copy of the data.
+//
+// This list is scoped to the browser that made the bookings. The database
+// answers with the rows matching this device's owner token and nothing else,
+// so a guest on another phone sees their own reservations here, never these.
 export function useBookings(){
-    const bookings = useSyncExternalStore(subscribe, getSnapshot)
+    const bookings = useAccommodationDB()
 
     return {
         bookings,
-
-        addBooking(booking){
-            updateBookings((prev) => [booking, ...prev])
-        },
-
-        cancelBooking(id){
-            updateBookings((prev) =>
-                prev.map((booking) => (booking.id === id ? { ...booking, status: 'cancelled' } : booking))
-            )
-        },
-
-        deleteBooking(id){
-            updateBookings((prev) => prev.filter((booking) => booking.id !== id))
-        },
-
-        // Food can only be added to a booking that has an uploaded down-payment
-        // receipt on file. The most recent eligible booking (bookings are
-        // stored newest-first) is the one an order gets attached to.
-        findOrderableBooking(){
-            return bookingsStore.find((booking) => booking.hasReceipt && isBookingActive(booking)) ?? null
-        },
-
-        addFoodOrderToBooking(bookingId, order){
-            updateBookings((prev) =>
-                prev.map((booking) =>
-                    booking.id === bookingId
-                        ? { ...booking, foodOrders: [...(booking.foodOrders ?? []), order] }
-                        : booking
-                )
-            )
-        },
-
-        addSpaOrderToBooking(bookingId, order){
-            updateBookings((prev) =>
-                prev.map((booking) =>
-                    booking.id === bookingId
-                        ? { ...booking, spaOrders: [...(booking.spaOrders ?? []), order] }
-                        : booking
-                )
-            )
-        },
+        cancelBooking: dbCancelBooking,
+        deleteBooking: dbDeleteBooking,
+        // Food/spa can only be added to a booking that has an uploaded
+        // down-payment receipt on file. The most recent eligible booking
+        // (bookings are stored newest-first) is the one an order attaches to.
+        findOrderableBooking,
+        addFoodOrderToBooking: addFoodOrder,
+        addSpaOrderToBooking: addSpaOrder,
     }
 }
 
@@ -106,24 +58,18 @@ function to24Hour(label){
     return `${String(parsed.getHours()).padStart(2, '0')}:${String(parsed.getMinutes()).padStart(2, '0')}`
 }
 
+// Defensive on purpose: this runs against fields that come back from the
+// database, and one missing number used to take the whole page down with it.
 function formatPeso(amount){
-    return `₱${amount.toLocaleString('en-PH')}`
+    return `₱${Number(amount ?? 0).toLocaleString('en-PH')}`
 }
 
 const STATUS_LABELS = {
     pending: 'For Verification',
     upcoming: 'Upcoming',
+    active: 'Checked In',
     completed: 'Completed',
     cancelled: 'Cancelled',
-}
-
-function getStatus(booking){
-    if (booking.status === 'cancelled') return 'cancelled'
-    if (booking.status !== 'upcoming') return 'pending'
-    // Only a verified ("upcoming") booking can lapse into "completed" —
-    // an unverified one stays "pending" even after its stay date passes.
-    if (booking.checkOut && new Date(booking.checkOut).getTime() < Date.now()) return 'completed'
-    return 'upcoming'
 }
 
 function foodOrderSummary(booking){
@@ -156,7 +102,7 @@ function stayLabel(booking){
 }
 
 function BookingCard({ booking, onCancel, onBookAgain, onDelete }){
-    const status = getStatus(booking)
+    const status = getBookingStage(booking)
     const { start, end } = splitTimes(booking.schedule)
     const paymentKnown = booking.downpayment != null
 
@@ -171,7 +117,14 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete }){
                 </div>
                 <div className="booking-card-heading">
                     <h3 className="booking-card-name">{booking.accomodationName}</h3>
-                    <p className="booking-card-id">Booking ID: {booking.id}</p>
+                    <p className="booking-card-id">
+                        {/* The CBL-… code is the human reference; `id` is the
+                            database uuid and never shown to guests. */}
+                        Booking ID: {booking.code ?? booking.id}
+                        {/* The exact unit held for these hours, assigned by the
+                            database when the booking was made. */}
+                        {booking.unitId ? ` • Unit ${booking.unitId}` : ''}
+                    </p>
                 </div>
                 <span className={`booking-card-status status-${status}`}>
                     {STATUS_LABELS[status]}
@@ -334,17 +287,34 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete }){
 function MyBooking() {
     const navigate = useNavigate()
     const { bookings, cancelBooking, deleteBooking } = useBookings()
+    const [error, setError] = useState(null)
+    // False in a private window that blocks localStorage: the reservation is
+    // real and staff have it, but this tab is the only thing holding the key
+    // to the list. Better to say so than to let it vanish unexplained.
+    const persistent = bookingsPersistOnThisDevice()
 
     useEffect(() => {
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     }, [])
 
-    function handleCancel(id){
-        cancelBooking(id)
+    // Cancelling and clearing are database writes that the database can refuse
+    // — a stay that has already ended, or a booking that isn't this device's.
+    // Both used to be assumed to work; now the guest is told when they don't.
+    async function handleCancel(id){
+        setError(null)
+        const result = await cancelBooking(id)
+        if (result && !result.ok) setError(result.message)
     }
 
-    function handleDelete(id){
-        deleteBooking(id)
+    async function handleDelete(id){
+        setError(null)
+        const result = await deleteBooking(id)
+        if (result && !result.ok) setError(result.message)
+    }
+
+    async function handleForget(){
+        setError(null)
+        await forgetMyBookings()
     }
 
     function handleBookAgain(booking){
@@ -360,7 +330,23 @@ function MyBooking() {
                     <p className="my-booking-tagline">
                         Review your reservation history and manage upcoming stays.
                     </p>
+                    <p className="my-booking-privacy">
+                        Only the bookings made on this device appear here. Open the site on
+                        another phone or browser and you will see that device&apos;s bookings
+                        instead — your details are never shown to another guest.
+                    </p>
+                    {!persistent && (
+                        <p className="my-booking-warning" role="status">
+                            This browser is not saving anything, so this list will be empty when
+                            you come back. Keep your booking ID — staff can find your reservation
+                            with it.
+                        </p>
+                    )}
                 </header>
+
+                {error && (
+                    <p className="my-booking-error" role="alert">{error}</p>
+                )}
 
                 {bookings.length === 0 ? (
                     <section className="my-booking-empty" aria-live="polite">
@@ -398,6 +384,16 @@ function MyBooking() {
                         <Link to="/booking" className="my-booking-browse-more">
                             Browse more accommodation
                         </Link>
+
+                        {/* For a shared or borrowed phone: drop this device's key
+                            to the list. The reservations stay with the resort. */}
+                        <button
+                            type="button"
+                            className="my-booking-forget"
+                            onClick={handleForget}
+                        >
+                            Not your bookings? Clear them from this device
+                        </button>
                     </>
                 )}
             </div>

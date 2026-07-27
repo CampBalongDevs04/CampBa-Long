@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import './components/css/booking.css'
 import BookingCalendar from './components/BookingCalendar'
-import TimeSelector, { timeOptions } from './components/timeSelector'
+import TimeSelector from './components/timeSelector'
 import ScheduleNote from './components/scheduleNote'
 import AccomodationList from './components/accomodationList'
 import { getAccomodationOptions, FREE_ENTRANCE_PAX } from '../data/accomodationOptions.js'
@@ -14,9 +14,7 @@ import { computeEntranceFee } from '../data/entranceFee.js'
 import Terms from './components/terms'
 import BookingSummary from './components/bookingSummary'
 import Footer from '../components/footer'
-import { useBookings } from './mybooking.jsx'
-
-const DOWNPAYMENT_RATE = 0.5
+import { createBooking, uploadReceipt, STAY_SCHEDULES as timeOptions } from '../data/accommodationDB.js'
 
 const steps = [
     {
@@ -62,7 +60,6 @@ function StepHeader({ index }){
 export default function Booking(){
     const location = useLocation()
     const navigate = useNavigate()
-    const { addBooking } = useBookings()
     const [selectedTime, setSelectedTime] = useState(null)
     const [dates, setDates] = useState({ checkIn: null, checkOut: null })
     const [selectedAccomodation, setSelectedAccomodation] = useState(
@@ -76,9 +73,15 @@ export default function Booking(){
     const [receipt, setReceipt] = useState(null)
     const [agreed, setAgreed] = useState(false)
     const [attemptedConfirm, setAttemptedConfirm] = useState(false)
+    // Set when the database refuses the reservation — e.g. the last unit of
+    // that type was taken while this form was being filled in.
+    const [bookingError, setBookingError] = useState(null)
+    // Blocks a second Confirm while the reservation round-trip is in flight.
+    const [submitting, setSubmitting] = useState(false)
 
     const sameDayCheckout = selectedTime !== null && timeOptions[selectedTime].sameDay === true
     const rateGroup = selectedTime !== null ? timeOptions[selectedTime].rateGroup : null
+    const scheduleKey = selectedTime !== null ? timeOptions[selectedTime].key : null
 
     // Switching schedules can change which units are even offered (e.g.
     // Cottage is day-only, tents are overnight-only) — drop a selection
@@ -116,6 +119,7 @@ export default function Booking(){
     function handleSelectAccomodation(id){
         setSelectedAccomodation(id)
         setDroppedUnitNote(null)
+        setBookingError(null)
     }
 
     // Seniors and kids are a subset of the total guests (pax). If the guest
@@ -154,16 +158,16 @@ export default function Booking(){
         !receipt && 'Payment',
     ].filter(Boolean)
 
-    function handleConfirm(){
+    async function handleConfirm(){
         setAttemptedConfirm(true)
-        if (missingSteps.length > 0) return
+        if (missingSteps.length > 0 || submitting) return
+        setSubmitting(true)
 
         const schedule = selectedTime !== null ? timeOptions[selectedTime] : null
         const unit = selectedAccomodation
             ? getAccomodationOptions(schedule?.rateGroup).find((item) => item.id === selectedAccomodation)
             : null
         const checkOut = sameDayCheckout ? dates.checkIn : dates.checkOut
-        const downpayment = unit?.price != null ? unit.price * DOWNPAYMENT_RATE : null
         const entrance = computeEntranceFee({
             perHead: schedule?.entranceFee ?? 0,
             pax: pax ?? 0,
@@ -172,20 +176,29 @@ export default function Booking(){
             freeEntrance: unit && !unit.freeEntranceExempt ? FREE_ENTRANCE_PAX : 0,
         })
 
-        const booking = {
-            id: `CBL-${Date.now().toString().slice(-10)}`,
-            // Newly confirmed bookings await staff verification of the
-            // uploaded receipt — they aren't "upcoming" until approved.
-            status: 'pending',
-            accomodationId: unit?.id ?? null,
-            accomodationName: unit?.name ?? 'Accommodation',
-            accomodationPax: unit?.pax ?? null,
-            checkIn: dates.checkIn ? dates.checkIn.toISOString() : null,
-            checkOut: checkOut ? checkOut.toISOString() : null,
-            sameDayCheckout,
-            schedule: schedule
-                ? { checkIn: schedule.checkIn, time: schedule.time, description: schedule.description }
-                : null,
+        // Store the screenshot first. Staff have to see it to verify the down
+        // payment before approving, so a booking must never be created with a
+        // receipt that failed to upload — the guest would be told they're
+        // waiting on a review that can't happen.
+        const upload = await uploadReceipt(receipt)
+        if (!upload.ok) {
+            setSubmitting(false)
+            setBookingError(upload.message)
+            document.getElementById('step-payment')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            return
+        }
+
+        // The database picks and holds a free unit for exactly these hours.
+        // If someone else took the last one while this form was open, it says
+        // so instead of creating an overlapping reservation.
+        const result = await createBooking({
+            typeId: unit?.id ?? null,
+            typeName: unit?.name ?? 'Accommodation',
+            typePax: unit?.pax ?? null,
+            scheduleKey,
+            checkIn: dates.checkIn,
+            checkOut,
+            guest,
             pax,
             kids,
             seniors,
@@ -196,14 +209,25 @@ export default function Booking(){
                 freeSavings: entrance.freeSavings,
                 total: entrance.total,
             },
-            guest,
-            downpayment,
+            price: unit?.price ?? null,
             hasReceipt: !!receipt,
-            createdAt: new Date().toISOString(),
+            receiptPath: upload.path,
+        })
+
+        setSubmitting(false)
+
+        if (!result.ok) {
+            setBookingError(result.message)
+            // Only an "unavailable" answer means the unit is gone; a network or
+            // server error should leave the guest's selection intact to retry.
+            if (result.reason === 'unavailable') {
+                setSelectedAccomodation(null)
+                document.getElementById('step-accommodation')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }
+            return
         }
 
-        addBooking(booking)
-
+        setBookingError(null)
         navigate('/my-booking')
     }
 
@@ -274,6 +298,7 @@ export default function Booking(){
                                     checkIn={dates.checkIn}
                                     checkOut={sameDayCheckout ? dates.checkIn : dates.checkOut}
                                     rateGroup={rateGroup}
+                                    scheduleKey={scheduleKey}
                                     droppedUnitNote={droppedUnitNote}
                                 />
                             </div>
@@ -325,10 +350,16 @@ export default function Booking(){
                                         Please complete the following before confirming: {missingSteps.join(', ')}.
                                     </p>
                                 )}
+                                {bookingError && (
+                                    <p className="booking-confirm-alert" role="alert">
+                                        {bookingError}
+                                    </p>
+                                )}
                                 <Terms
                                     agreed={agreed}
                                     onAgreeChange={setAgreed}
                                     onConfirm={handleConfirm}
+                                    submitting={submitting}
                                 />
                             </div>
                         </section>

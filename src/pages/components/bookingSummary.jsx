@@ -2,8 +2,9 @@ import { useEffect, useMemo } from 'react'
 import '../components/css/bookingSummary.css'
 import { getAccomodationOptions, FREE_ENTRANCE_PAX } from '../../data/accomodationOptions.js'
 import { computeEntranceFee } from '../../data/entranceFee.js'
-
-const DOWNPAYMENT_RATE = 0.5
+// Same rate the database stores on the booking record, so the figure quoted
+// here is exactly the one that ends up on the admin's payment column.
+import { DOWNPAYMENT_RATE } from '../../data/accommodationDB.js'
 
 function formatDate(date){
     if (!date) return null
