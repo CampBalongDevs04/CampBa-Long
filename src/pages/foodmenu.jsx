@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Link } from 'react-router'
 import './foodmenu.css'
 import Footer from '../components/footer'
@@ -154,6 +154,72 @@ export const coffeeItems = coffeeMenu.flatMap((category) =>
   )
 )
 
+// Kiosk-style order tray. Module-level (same pattern as bookingsStore in
+// mybooking.jsx) so it survives client-side navigation away from /menu and
+// back — e.g. following the "checkout blocked" links to go make a booking —
+// and only resets on a successful checkout, a real page refresh, or closing
+// the tab.
+let cartStore = []
+let cartLineId = 0
+const cartListeners = new Set()
+
+function notifyCart() {
+  for (const listener of cartListeners) listener()
+}
+
+function updateCart(updater) {
+  cartStore = updater(cartStore)
+  notifyCart()
+}
+
+function subscribeCart(listener) {
+  cartListeners.add(listener)
+  return () => cartListeners.delete(listener)
+}
+
+function getCartSnapshot() {
+  return cartStore
+}
+
+function useCart() {
+  const cart = useSyncExternalStore(subscribeCart, getCartSnapshot)
+
+  return {
+    cart,
+    addToCart(entry) {
+      updateCart((prev) => {
+        const existing = prev.find((line) => line.name === entry.name)
+        if (existing) {
+          return prev.map((line) =>
+            line.name === entry.name
+              ? { ...line, quantity: line.quantity + entry.quantity, total: line.total + entry.total }
+              : line
+          )
+        }
+        cartLineId += 1
+        return [...prev, { id: cartLineId, ...entry }]
+      })
+    },
+    adjustQuantity(id, delta) {
+      updateCart((prev) =>
+        prev
+          .map((line) =>
+            line.id === id
+              ? { ...line, quantity: line.quantity + delta, total: line.unitPrice * (line.quantity + delta) }
+              : line
+          )
+          .filter((line) => line.quantity > 0)
+      )
+    },
+    removeLine(id) {
+      updateCart((prev) => prev.filter((line) => line.id !== id))
+    },
+    clearCart() {
+      updateCart(() => [])
+    },
+  }
+}
+
 function SubcategoryToggle({ label, expanded, onToggle }) {
   return (
     <button
@@ -181,11 +247,9 @@ function CategoryTitle({ children, plain }) {
   )
 }
 
-function FoodOrderModal({ item, onClose }) {
-  const { findOrderableBooking, addFoodOrderToBooking } = useBookings()
+function FoodOrderModal({ item, onClose, onAddToCart }) {
   const [quantity, setQuantity] = useState(1)
   const [confirmed, setConfirmed] = useState(false)
-  const [blocked, setBlocked] = useState(false)
   const [coffeeChoice, setCoffeeChoice] = useState(
     item.hasCoffeeOption ? classicCoffeeOptions[0] : null
   )
@@ -206,7 +270,7 @@ function FoodOrderModal({ item, onClose }) {
 
   useEffect(() => {
     if (!confirmed) return
-    const timer = setTimeout(onClose, 1400)
+    const timer = setTimeout(onClose, 900)
     return () => clearTimeout(timer)
   }, [confirmed, onClose])
 
@@ -219,20 +283,13 @@ function FoodOrderModal({ item, onClose }) {
   const total = unitPrice * quantity
 
   const handleConfirm = () => {
-    // Eligibility is only checked once the guest actually tries to
-    // confirm, so the ordering form is what they see first.
-    const targetBooking = findOrderableBooking()
-    if (!targetBooking) {
-      setBlocked(true)
-      return
-    }
     const orderName = item.hasCoffeeOption && coffeeChoice ? `${item.name} (${coffeeChoice})` : item.name
-    addFoodOrderToBooking(targetBooking.id, {
+    onAddToCart({
+      image: item.image,
       name: orderName,
       unitPrice,
       quantity,
       total,
-      orderedAt: new Date().toISOString(),
     })
     setConfirmed(true)
   }
@@ -253,23 +310,7 @@ function FoodOrderModal({ item, onClose }) {
         {confirmed ? (
           <div className="food-order-confirmed">
             <span className="food-order-confirmed-icon" aria-hidden="true">✓</span>
-            <p>Added to your booking receipt!</p>
-          </div>
-        ) : blocked ? (
-          <div className="food-order-blocked">
-            <span className="food-order-blocked-icon" aria-hidden="true">!</span>
-            <p>
-              You need a confirmed booking with an uploaded down-payment
-              receipt before you can order food.
-            </p>
-            <div className="food-order-blocked-actions">
-              <Link to="/my-booking" className="food-order-blocked-link">
-                View My Bookings
-              </Link>
-              <Link to="/booking" className="food-order-blocked-link food-order-blocked-link-primary">
-                Book Now
-              </Link>
-            </div>
+            <p>Added to your order!</p>
           </div>
         ) : (
           <div className={`food-order-body${item.image ? '' : ' no-image'}`}>
@@ -331,7 +372,7 @@ function FoodOrderModal({ item, onClose }) {
                       ‹ Back
                     </button>
                     <button type="button" className="food-order-confirm" onClick={handleConfirm}>
-                      Add to Booking Receipt
+                      Add to Order
                     </button>
                   </div>
                 </>
@@ -365,7 +406,7 @@ function FoodOrderModal({ item, onClose }) {
                     className="food-order-confirm"
                     onClick={item.hasCoffeeOption ? () => setStep('coffee') : handleConfirm}
                   >
-                    {item.hasCoffeeOption ? 'Next' : 'Add to Booking Receipt'}
+                    {item.hasCoffeeOption ? 'Next' : 'Add to Order'}
                   </button>
                 </>
               )}
@@ -530,8 +571,113 @@ function CoffeeMenuSection({ onAddToOrder }) {
   )
 }
 
+function CheckoutPanel({ cart, status, onIncrease, onDecrease, onRemove, onPlaceOrder, onDismissBlocked }) {
+  const [collapsed, setCollapsed] = useState(false)
+
+  if (cart.length === 0 && status !== 'success') return null
+
+  const itemCount = cart.reduce((sum, line) => sum + line.quantity, 0)
+  const subtotal = cart.reduce((sum, line) => sum + line.total, 0)
+
+  return (
+    <aside className={`kiosk-checkout${collapsed ? ' is-collapsed' : ''}`} aria-label="Your order">
+      <button
+        type="button"
+        className="kiosk-checkout-header"
+        onClick={() => setCollapsed((current) => !current)}
+        aria-expanded={!collapsed}
+      >
+        <span className="kiosk-checkout-header-left">
+          <span className="kiosk-checkout-bag" aria-hidden="true">🛍</span>
+          <span className="kiosk-checkout-title">Your Order</span>
+          {itemCount > 0 && <span className="kiosk-checkout-count">{itemCount}</span>}
+        </span>
+        <span className="kiosk-checkout-chevron" aria-hidden="true">{collapsed ? '︿' : '﹀'}</span>
+      </button>
+
+      {!collapsed && (
+        <div className="kiosk-checkout-body">
+          {status === 'success' ? (
+            <div className="kiosk-checkout-success">
+              <span className="kiosk-checkout-success-icon" aria-hidden="true">✓</span>
+              <p>Order sent to your booking receipt!</p>
+            </div>
+          ) : status === 'blocked' ? (
+            <div className="kiosk-checkout-blocked">
+              <span className="kiosk-checkout-blocked-icon" aria-hidden="true">!</span>
+              <p>
+                You need a confirmed booking with an uploaded down-payment
+                receipt before you can place this order.
+              </p>
+              <div className="kiosk-checkout-blocked-actions">
+                <Link to="/my-booking" className="kiosk-checkout-blocked-link">
+                  View My Bookings
+                </Link>
+                <Link to="/booking" className="kiosk-checkout-blocked-link primary">
+                  Book Now
+                </Link>
+              </div>
+              <button type="button" className="kiosk-checkout-back" onClick={onDismissBlocked}>
+                ‹ Back to Order
+              </button>
+            </div>
+          ) : (
+            <>
+              <ul className="kiosk-checkout-list">
+                {cart.map((line) => (
+                  <li className="kiosk-checkout-item" key={line.id}>
+                    <div className={`kiosk-checkout-thumb${line.image ? '' : ' is-empty'}`}>
+                      {line.image ? <img src={line.image} alt="" /> : <span aria-hidden="true">☕</span>}
+                    </div>
+                    <div className="kiosk-checkout-item-info">
+                      <p className="kiosk-checkout-item-name">{line.name}</p>
+                      <p className="kiosk-checkout-item-price">PHP {line.unitPrice.toFixed(2)} each</p>
+                    </div>
+                    <div className="kiosk-checkout-item-controls">
+                      <div className="kiosk-checkout-stepper">
+                        <button type="button" onClick={() => onDecrease(line.id)} aria-label={`Decrease ${line.name}`}>
+                          −
+                        </button>
+                        <span>{line.quantity}</span>
+                        <button type="button" onClick={() => onIncrease(line.id)} aria-label={`Increase ${line.name}`}>
+                          +
+                        </button>
+                      </div>
+                      <p className="kiosk-checkout-item-total">PHP {line.total.toFixed(2)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="kiosk-checkout-remove"
+                      onClick={() => onRemove(line.id)}
+                      aria-label={`Remove ${line.name} from order`}
+                    >
+                      &times;
+                    </button>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="kiosk-checkout-summary">
+                <div className="kiosk-checkout-summary-row kiosk-checkout-summary-total">
+                  <span>Total</span>
+                  <span>PHP {subtotal.toFixed(2)}</span>
+                </div>
+              </div>
+
+              <button type="button" className="kiosk-checkout-place" onClick={onPlaceOrder}>
+                Place Order · PHP {subtotal.toFixed(2)}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </aside>
+  )
+}
+
 function FoodMenuPage() {
   const howToOrderRef = useRef(null)
+  const { findOrderableBooking, addFoodOrderToBooking } = useBookings()
 
   const [expanded, setExpanded] = useState({
     breakfast: true,
@@ -542,6 +688,11 @@ function FoodMenuPage() {
 
   const [orderItem, setOrderItem] = useState(null)
 
+  // Items picked in the modal land here first — a kiosk-style order tray —
+  // and only get pushed onto the booking receipt once the guest checks out.
+  const { cart, addToCart: addLineToCart, adjustQuantity: adjustCartQuantity, removeLine: removeCartLine, clearCart } = useCart()
+  const [checkoutStatus, setCheckoutStatus] = useState('idle') // idle | blocked | success
+
   const toggleSection = (key) => {
     setExpanded((prev) => ({ ...prev, [key]: !prev[key] }))
   }
@@ -549,6 +700,39 @@ function FoodMenuPage() {
   const scrollToHowToOrder = () => {
     howToOrderRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
+
+  const addToCart = (entry) => {
+    setCheckoutStatus('idle')
+    addLineToCart(entry)
+  }
+
+  const handlePlaceOrder = () => {
+    // Eligibility is only checked at checkout, so browsing and building
+    // the order tray never requires a booking up front.
+    const targetBooking = findOrderableBooking()
+    if (!targetBooking) {
+      setCheckoutStatus('blocked')
+      return
+    }
+    const orderedAt = new Date().toISOString()
+    cart.forEach((line) => {
+      addFoodOrderToBooking(targetBooking.id, {
+        name: line.name,
+        unitPrice: line.unitPrice,
+        quantity: line.quantity,
+        total: line.total,
+        orderedAt,
+      })
+    })
+    clearCart()
+    setCheckoutStatus('success')
+  }
+
+  useEffect(() => {
+    if (checkoutStatus !== 'success') return
+    const timer = setTimeout(() => setCheckoutStatus('idle'), 2200)
+    return () => clearTimeout(timer)
+  }, [checkoutStatus])
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
@@ -662,8 +846,17 @@ function FoodMenuPage() {
 
     <Footer />
     {orderItem && (
-      <FoodOrderModal item={orderItem} onClose={() => setOrderItem(null)} />
+      <FoodOrderModal item={orderItem} onClose={() => setOrderItem(null)} onAddToCart={addToCart} />
     )}
+    <CheckoutPanel
+      cart={cart}
+      status={checkoutStatus}
+      onIncrease={(id) => adjustCartQuantity(id, 1)}
+      onDecrease={(id) => adjustCartQuantity(id, -1)}
+      onRemove={removeCartLine}
+      onPlaceOrder={handlePlaceOrder}
+      onDismissBlocked={() => setCheckoutStatus('idle')}
+    />
   </>
   )
 }
