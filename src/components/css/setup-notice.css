@@ -1,0 +1,33 @@
+/* The misconfiguration banner. Deliberately loud and un-dismissable: it only
+   appears when the site cannot take a single booking, so it should not be
+   mistaken for a cookie bar. Sits above the sticky header rather than in the
+   page flow, so it is the first thing on screen on every route. */
+.setup-notice {
+    position: sticky;
+    top: 0;
+    z-index: 9999;
+
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.6rem;
+
+    padding: 0.75rem 1.25rem;
+    background: #7f1d1d;
+    color: #fff5f5;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    border-bottom: 2px solid #fca5a5;
+}
+
+.setup-notice-title {
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.setup-notice-body {
+    /* Takes the remaining width on desktop, wraps onto its own line on a
+       phone rather than squeezing the title to one word per line. */
+    flex: 1 1 20rem;
+    opacity: 0.95;
+}
