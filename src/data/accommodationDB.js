@@ -58,7 +58,12 @@
 // ============================================================================
 
 import { useSyncExternalStore } from 'react'
-import { supabase, isSupabaseConfigured } from '../lib/supabaseClient.js'
+import {
+    supabase,
+    isSupabaseConfigured,
+    describeSupabaseError,
+    SUPABASE_SETUP_MESSAGE,
+} from '../lib/supabaseClient.js'
 import { getOwnerToken, isOwnerTokenPersistent, forgetOwnerToken } from './bookingOwner.js'
 
 // ---------------------------------------------------------------- constants
@@ -872,6 +877,15 @@ function randomKey() {
 export async function uploadReceipt(file) {
     if (!file) return { ok: true, path: null }
 
+    // Checked before the request rather than after it fails. Without keys the
+    // upload is aimed at a placeholder host and comes back "Failed to fetch",
+    // which reads as a broken storage bucket — this is the one failure whose
+    // cause the app already knows for certain, so it says it outright.
+    if (!isSupabaseConfigured) {
+        console.error('Receipt upload skipped:', SUPABASE_SETUP_MESSAGE)
+        return { ok: false, message: SUPABASE_SETUP_MESSAGE }
+    }
+
     const { extension, mime } = receiptFormat(file)
     const path = `${randomKey()}/receipt.${extension}`
 
@@ -884,7 +898,7 @@ export async function uploadReceipt(file) {
         console.error('Receipt upload failed:', error.message)
         return {
             ok: false,
-            message: `Could not upload your receipt: ${error.message}. Please try again.`,
+            message: `Could not upload your receipt: ${describeSupabaseError(error)}`,
         }
     }
 
@@ -898,13 +912,17 @@ export async function getReceiptUrl(path) {
         return { ok: false, message: 'This booking has no receipt image on file.' }
     }
 
+    if (!isSupabaseConfigured) {
+        return { ok: false, message: SUPABASE_SETUP_MESSAGE }
+    }
+
     const { data, error } = await supabase.storage
         .from(RECEIPT_BUCKET)
         .createSignedUrl(path, RECEIPT_URL_TTL_SECONDS)
 
     if (error) {
         console.error('Could not open receipt:', error.message)
-        return { ok: false, message: `Could not open the receipt: ${error.message}` }
+        return { ok: false, message: `Could not open the receipt: ${describeSupabaseError(error)}` }
     }
 
     return { ok: true, url: data.signedUrl }
@@ -941,6 +959,12 @@ export async function createBooking(draft) {
 
     if (!checkIn || !scheduleKey) {
         return { ok: false, reason: 'invalid', message: 'Pick your dates and a stay schedule first.' }
+    }
+
+    // Same reasoning as uploadReceipt(): name the missing .env instead of
+    // letting it surface as a network error against the placeholder host.
+    if (!isSupabaseConfigured) {
+        return { ok: false, reason: 'error', message: SUPABASE_SETUP_MESSAGE }
     }
 
     const schedule = getSchedule(scheduleKey)
@@ -984,7 +1008,7 @@ export async function createBooking(draft) {
             reason: unavailable ? 'unavailable' : 'error',
             message: unavailable
                 ? [error.message, error.details].filter(Boolean).join(' ')
-                : `Could not save your booking: ${error.message}`,
+                : `Could not save your booking: ${describeSupabaseError(error)}`,
         }
     }
 

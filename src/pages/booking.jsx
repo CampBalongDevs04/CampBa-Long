@@ -241,7 +241,10 @@ export default function Booking(){
         }
 
         setBookingError(null)
-        navigate('/my-booking')
+        // The code travels with the navigation so My Bookings can greet the
+        // guest with this reservation and offer to save its receipt, rather
+        // than dropping them into an undifferentiated list.
+        navigate('/my-booking', { state: { justBooked: result.booking.code } })
     }
 
     return(

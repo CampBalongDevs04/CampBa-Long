@@ -307,6 +307,7 @@
 
 .booking-card-cancel,
 .booking-card-delete,
+.booking-card-receipt,
 .booking-card-again{
     display: inline-flex;
     align-items: center;
@@ -346,6 +347,19 @@
 .booking-card-delete:hover{
     background-color: #8A2C2C;
     box-shadow: 0 6px 16px rgba(178, 58, 58, 0.3);
+}
+
+/* Quieter than Book Again: useful on every card, but not the thing the page
+   is steering the guest towards. */
+.booking-card-receipt{
+    color: var(--forest);
+    background-color: #FFFFFF;
+    border: 1px solid var(--gold-soft);
+}
+
+.booking-card-receipt:hover{
+    border-color: var(--gold);
+    background-color: var(--cream);
 }
 
 .booking-card-again{
@@ -420,6 +434,62 @@
     border: 1px solid #F0C2C2;
 }
 
+/* ---- just-booked confirmation ---- */
+.my-booking-confirmed{
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 6px;
+    margin: 0 auto 24px;
+    max-width: 560px;
+    padding: 20px 24px;
+    background-color: rgba(61, 163, 93, 0.08);
+    border: 1px solid rgba(61, 163, 93, 0.4);
+    border-radius: 14px;
+}
+
+.my-booking-confirmed-title{
+    margin: 0;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: #2E7D46;
+}
+
+.my-booking-confirmed-text{
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--ink);
+    opacity: 0.85;
+}
+
+.my-booking-confirmed-save{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 8px;
+    padding: 10px 26px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: #FFFFFF;
+    background-color: var(--forest);
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(30, 58, 43, 0.25);
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.my-booking-confirmed-save:hover{
+    background-color: var(--forest-dark);
+    box-shadow: 0 6px 16px rgba(30, 58, 43, 0.3);
+}
+
 /* Deliberately quiet: useful on a shared phone, not something to click by
    accident, because forgetting the token cannot be undone. */
 .my-booking-forget{
@@ -482,6 +552,7 @@
     }
 
     .booking-card-cancel,
+    .booking-card-receipt,
     .booking-card-again{
         flex: 1;
     }

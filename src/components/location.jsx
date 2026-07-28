@@ -26,7 +26,7 @@ const contactDetails = [
     {
         icon: emailSvg,
         label: 'Email',
-        lines: ['campBalongExample@gmail.com']
+        lines: ['campbalongnaturefarm@gmail.com']
     },
     {
         icon: adminSvg,

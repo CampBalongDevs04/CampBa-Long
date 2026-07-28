@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import './components/css/mybooking.css'
 import Footer from '../components/footer'
+import { saveReceiptImage } from './components/receiptImage.js'
 import {
     useMyBookings,
     cancelBooking as dbCancelBooking,
@@ -104,7 +105,7 @@ function stayLabel(booking){
     return `${nights} night${nights > 1 ? 's' : ''} stay`
 }
 
-function BookingCard({ booking, onCancel, onBookAgain, onDelete }){
+function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt }){
     const status = getBookingStage(booking)
     const { start, end } = splitTimes(booking.schedule)
     const paymentKnown = booking.downpayment != null
@@ -277,6 +278,13 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete }){
                 )}
                 <button
                     type="button"
+                    className="booking-card-receipt"
+                    onClick={() => onSaveReceipt(booking)}
+                >
+                    Save Receipt
+                </button>
+                <button
+                    type="button"
                     className="booking-card-again"
                     onClick={() => onBookAgain(booking)}
                 >
@@ -289,12 +297,18 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete }){
 
 function MyBooking() {
     const navigate = useNavigate()
+    const location = useLocation()
     const { bookings, cancelBooking, deleteBooking } = useBookings()
     const [error, setError] = useState(null)
     // False in a private window that blocks localStorage: the reservation is
     // real and staff have it, but this tab is the only thing holding the key
     // to the list. Better to say so than to let it vanish unexplained.
     const persistent = bookingsPersistOnThisDevice()
+
+    // Set when the guest arrives straight from a completed booking.
+    const justBooked = location.state?.justBooked
+        ? bookings.find((booking) => booking.code === location.state.justBooked)
+        : null
 
     useEffect(() => {
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
@@ -324,6 +338,18 @@ function MyBooking() {
         navigate('/booking', { state: { accomodationId: booking.accomodationId } })
     }
 
+    // Draws the booking as a PNG and hands it to the browser's downloader.
+    // Nothing leaves the device: the image is built from the row already on
+    // screen, so this works with no signal at the resort's gate.
+    async function handleSaveReceipt(booking){
+        setError(null)
+        const result = await saveReceiptImage(
+            booking,
+            STATUS_LABELS[getBookingStage(booking)],
+        )
+        if (!result.ok) setError(result.message)
+    }
+
     return (
         <main className="page my-booking-page">
             <div className="my-booking-shell">
@@ -349,6 +375,25 @@ function MyBooking() {
 
                 {error && (
                     <p className="my-booking-error" role="alert">{error}</p>
+                )}
+
+                {justBooked && (
+                    <section className="my-booking-confirmed" role="status">
+                        <p className="my-booking-confirmed-title">
+                            Booking {justBooked.code} received
+                        </p>
+                        <p className="my-booking-confirmed-text">
+                            Save a copy for check-in — it downloads as an image you
+                            can keep in your photos.
+                        </p>
+                        <button
+                            type="button"
+                            className="my-booking-confirmed-save"
+                            onClick={() => handleSaveReceipt(justBooked)}
+                        >
+                            Save Receipt
+                        </button>
+                    </section>
                 )}
 
                 {bookings.length === 0 ? (
@@ -380,6 +425,7 @@ function MyBooking() {
                                     onCancel={handleCancel}
                                     onBookAgain={handleBookAgain}
                                     onDelete={handleDelete}
+                                    onSaveReceipt={handleSaveReceipt}
                                 />
                             ))}
                         </div>

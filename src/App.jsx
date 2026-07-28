@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Routes, Route, useLocation } from 'react-router'
 import './App.css'
 import Header from './components/Header.jsx'
+import SetupNotice from './components/SetupNotice.jsx'
 import {
   HomeSkeleton,
   FoodMenuSkeleton,
@@ -27,6 +28,9 @@ function App() {
 
   return (
     <>
+      {/* Renders nothing when the keys are present, so this costs a fully
+          configured site exactly one boolean check. */}
+      <SetupNotice />
       {!isAdminPage && <Header />}
       <Routes>
         <Route path="/" element={
