@@ -40,6 +40,10 @@ function stayLabel(booking) {
     return booking.schedule ? `${dates} · ${booking.schedule.time}` : dates
 }
 
+function orderTotal(orders) {
+    return orders.reduce((sum, order) => sum + order.total, 0)
+}
+
 export default function ReceiptViewer({ booking, onClose, onApprove, onCancel }) {
     // null until the signed URL comes back — that absence IS the loading state,
     // so nothing has to be set from inside the effect body.
@@ -100,6 +104,10 @@ export default function ReceiptViewer({ booking, onClose, onApprove, onCancel })
             ? 'This booking was made before receipt images were kept, so there is no image to show. Verify the payment with the guest directly.'
             : 'This guest did not upload a receipt.'
 
+    const foodOrders = booking.foodOrders ?? []
+    const spaOrders = booking.spaOrders ?? []
+    const hasAddOns = foodOrders.length > 0 || spaOrders.length > 0
+
     return (
         <div
             className="receipt-overlay"
@@ -132,54 +140,91 @@ export default function ReceiptViewer({ booking, onClose, onApprove, onCancel })
                     </button>
                 </header>
 
-                <dl className="receipt-facts">
-                    <div className="receipt-fact">
-                        <dt>Expected down payment</dt>
-                        <dd className="receipt-fact-strong">{formatPeso(expected)}</dd>
-                    </div>
-                    <div className="receipt-fact">
-                        <dt>Unit</dt>
-                        <dd>
-                            {booking.accomodationName}
-                            {booking.unitId ? ` · ${booking.unitId}` : ''}
-                        </dd>
-                    </div>
-                    <div className="receipt-fact">
-                        <dt>Stay</dt>
-                        <dd>{stayLabel(booking)}</dd>
-                    </div>
-                    <div className="receipt-fact">
-                        <dt>Mobile</dt>
-                        <dd>{booking.guest?.mobile || '—'}</dd>
-                    </div>
-                </dl>
+                {/* The only part that scrolls — the food/spa breakdown can grow
+                    arbitrarily long, and without this the header and, worse,
+                    the Approve/Reject footer would get pushed past the modal's
+                    max-height and clipped off entirely. */}
+                <div className="receipt-body">
+                    <dl className="receipt-facts">
+                        <div className="receipt-fact">
+                            <dt>Expected down payment</dt>
+                            <dd className="receipt-fact-strong">{formatPeso(expected)}</dd>
+                        </div>
+                        <div className="receipt-fact">
+                            <dt>Unit</dt>
+                            <dd>
+                                {booking.accomodationName}
+                                {booking.unitId ? ` · ${booking.unitId}` : ''}
+                            </dd>
+                        </div>
+                        <div className="receipt-fact">
+                            <dt>Stay</dt>
+                            <dd>{stayLabel(booking)}</dd>
+                        </div>
+                        <div className="receipt-fact">
+                            <dt>Mobile</dt>
+                            <dd>{booking.guest?.mobile || '—'}</dd>
+                        </div>
+                    </dl>
 
-                <div className={`receipt-stage ${zoomed ? 'is-zoomed' : ''}`}>
-                    {missingImage && (
-                        <p className="receipt-note receipt-note-warn" role="alert">
-                            {missingImage}
-                        </p>
+                    {hasAddOns && (
+                        <div className="receipt-orders">
+                            {foodOrders.length > 0 && (
+                                <div className="receipt-orders-group">
+                                    <p className="receipt-orders-title">Food orders</p>
+                                    {foodOrders.map((order, index) => (
+                                        <div className="receipt-order-row" key={`food-${index}`}>
+                                            <span>{order.name} × {order.quantity}</span>
+                                            <span>{formatPeso(order.total)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {spaOrders.length > 0 && (
+                                <div className="receipt-orders-group">
+                                    <p className="receipt-orders-title">Spa orders</p>
+                                    {spaOrders.map((order, index) => (
+                                        <div className="receipt-order-row" key={`spa-${index}`}>
+                                            <span>{order.name} × {order.quantity}</span>
+                                            <span>{formatPeso(order.total)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            <div className="receipt-order-row receipt-order-total">
+                                <span>Add-ons total</span>
+                                <span>{formatPeso(orderTotal(foodOrders) + orderTotal(spaOrders))}</span>
+                            </div>
+                        </div>
                     )}
 
-                    {!missingImage && !resolved && (
-                        <p className="receipt-note">Loading receipt…</p>
-                    )}
+                    <div className={`receipt-stage ${zoomed ? 'is-zoomed' : ''}`}>
+                        {missingImage && (
+                            <p className="receipt-note receipt-note-warn" role="alert">
+                                {missingImage}
+                            </p>
+                        )}
 
-                    {resolved?.error && (
-                        <p className="receipt-note receipt-note-warn" role="alert">
-                            {resolved.error}
-                        </p>
-                    )}
+                        {!missingImage && !resolved && (
+                            <p className="receipt-note">Loading receipt…</p>
+                        )}
 
-                    {resolved?.url && (
-                        <img
-                            className="receipt-image"
-                            src={resolved.url}
-                            alt={`Payment receipt uploaded by ${booking.guest?.fullName || 'the guest'}`}
-                            onClick={() => setZoomed((value) => !value)}
-                            title={zoomed ? 'Click to fit' : 'Click to zoom'}
-                        />
-                    )}
+                        {resolved?.error && (
+                            <p className="receipt-note receipt-note-warn" role="alert">
+                                {resolved.error}
+                            </p>
+                        )}
+
+                        {resolved?.url && (
+                            <img
+                                className="receipt-image"
+                                src={resolved.url}
+                                alt={`Payment receipt uploaded by ${booking.guest?.fullName || 'the guest'}`}
+                                onClick={() => setZoomed((value) => !value)}
+                                title={zoomed ? 'Click to fit' : 'Click to zoom'}
+                            />
+                        )}
+                    </div>
                 </div>
 
                 <footer className="receipt-foot">
