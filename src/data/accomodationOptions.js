@@ -4,23 +4,29 @@
 import houseSmall from '../assets/temp/A-House-Small.png'
 import houseMedium from '../assets/temp/A-House-Medium.png'
 import houseFamily from '../assets/temp/A-House-Family.png'
+import teepeeImage from '../assets/images/acc1.png'
+import cottageImage from '../assets/images/acc2.png'
+import pavilionImage from '../assets/images/acc3.png'
+import tentSmallImage from '../assets/images/acc4.png'
+import tentLargeImage from '../assets/images/acc5.png'
+import tentPitchingImage from '../assets/images/acc6.png'
 
 // Info that doesn't change with the stay schedule.
 // `freeEntranceExempt` marks units left out of the "free entrance for 2 pax"
 // perk (see INCLUSIONS below) — cottage/pavilion on the Day rate and tent
 // pitching on the overnight rate charge entrance for every head.
 const ACCOMMODATION_INFO = [
-    { id: 'teepee', name: 'Teepee', image: null },
+    { id: 'teepee', name: 'Teepee', image: teepeeImage },
     { id: 'small', name: 'A-House Small', image: houseSmall },
     { id: 'medium', name: 'A-House Medium', image: houseMedium },
     { id: 'family', name: 'A-House Family', image: houseFamily },
-    { id: 'tent-small', name: 'Small Tent', image: null },
-    { id: 'tent-large', name: 'Big Tent', image: null },
-    { id: 'cottage', name: 'Cottage', image: null, freeEntranceExempt: true },
-    { id: 'pavilion', name: 'Pavillion', image: null, freeEntranceExempt: true },
+    { id: 'tent-small', name: 'Small Tent', image: tentSmallImage },
+    { id: 'tent-large', name: 'Big Tent', image: tentLargeImage },
+    { id: 'cottage', name: 'Cottage', image: cottageImage, freeEntranceExempt: true },
+    { id: 'pavilion', name: 'Pavillion', image: pavilionImage, freeEntranceExempt: true },
     // Guests pitching their own tent: flat per-tent fee, no capacity limit,
     // so it has no minPax/maxPax and isn't tracked in accommodationInventory.js.
-    { id: 'tent-pitching', name: 'Tent Pitching', image: null, unlimited: true, freeEntranceExempt: true },
+    { id: 'tent-pitching', name: 'Tent Pitching', image: tentPitchingImage, unlimited: true, freeEntranceExempt: true },
 ]
 
 // Free-entrance headcount granted per booking under the perk above.

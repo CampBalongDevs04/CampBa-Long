@@ -11,6 +11,11 @@ import { getAccomodationOptions } from '../data/accomodationOptions.js';
 import smallHouse from '../assets/temp/A-House-Small.png';
 import mediumHouse from '../assets/temp/A-House-Medium.png';
 import largeHouse from '../assets/temp/A-House-Family.png';
+import teepeeImage from '../assets/images/acc1.png';
+import cottageImage from '../assets/images/acc2.png';
+import pavilionImage from '../assets/images/acc3.png';
+import tentSmallImage from '../assets/images/acc4.png';
+import tentLargeImage from '../assets/images/acc5.png';
 
 
 function UnitIcon({ paths }) {
@@ -108,7 +113,7 @@ const ACCOMMODATION_CARDS = [
     {
         id: 'teepee', title: 'Teepee',
         icon: ICONS.teepee, photoBg: 'linear-gradient(135deg,#5d7a5a,#24422f)',
-        // image: TeepeePhoto, // <- actual Teepee photo goes here
+        image: teepeeImage,
         features: ['Canvas teepee', 'Bed mattress', 'Pillows & blankets', 'Garden view', 'Fire pit access'],
     },
     {
@@ -133,25 +138,25 @@ const ACCOMMODATION_CARDS = [
     {
         id: 'tent-small', title: 'Small Tent',
         icon: ICONS.tent, photoBg: 'linear-gradient(135deg,#5d7a5a,#24422f)',
-        // image: SmallTentPhoto, // <- actual Small Tent photo goes here
+        image: tentSmallImage,
         features: ['Dome tent setup', 'Sleeping mats x2', 'Flashlight', 'Forest view', 'Fire pit access'],
     },
     {
         id: 'tent-large', title: 'Big Tent',
         icon: ICONS.tentLarge, photoBg: 'linear-gradient(135deg,#4C6B4F,#1E3A2B)',
-        // image: BigTentPhoto, // <- actual Big Tent photo goes here
+        image: tentLargeImage,
         features: ['Family-size dome tent', 'Sleeping mats x4', 'Flashlight', 'Forest view', 'Fire pit access'],
     },
     {
         id: 'cottage', title: 'Cottage',
         icon: ICONS.cottage, photoBg: 'linear-gradient(135deg,#C6A15B,#8a6b34)',
-        // image: CottagePhoto, // <- actual Cottage photo goes here
+        image: cottageImage,
         features: ['Roofed cottage', 'Table & chairs', 'Electric fan', 'Power outlets', 'Garden view'],
     },
     {
         id: 'pavilion', title: 'Pavillion',
         icon: ICONS.pavilion, photoBg: 'linear-gradient(135deg,#4C6B4F,#16291E)',
-        // image: PavilionPhoto, // <- actual Pavilion photo goes here
+        image: pavilionImage,
         features: ['Long table seating', 'Roofed shelter', 'Ceiling fans', 'Power outlets', 'Group capacity'],
     },
 ];
