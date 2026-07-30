@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import '../css/calendar.css'
+import { formatRangeLabel } from './calendarRange.js'
 
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 const MONTHS = [
@@ -30,13 +31,6 @@ function buildMonthCells(year, month) {
     for (let i = 0; i < leadingBlanks; i++) cells.push(null)
     for (let day = 1; day <= daysInMonth; day++) cells.push(new Date(year, month, day))
     return cells
-}
-
-export function formatRangeLabel(start, end) {
-    if (!start) return 'No dates selected'
-    const opts = { month: 'short', day: 'numeric', year: 'numeric' }
-    if (!end) return `${start.toLocaleDateString(undefined, opts)} — pick an end date`
-    return `${start.toLocaleDateString(undefined, opts)} — ${end.toLocaleDateString(undefined, opts)}`
 }
 
 export default function Calendar({ startDate = null, endDate = null, onRangeChange }) {

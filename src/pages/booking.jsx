@@ -9,13 +9,14 @@ import { getAccomodationOptions, getPaxFit, FREE_ENTRANCE_PAX } from '../data/ac
 import PaxInput from './components/paxInput'
 import KidsCount from './components/kidscount'
 import SeniorCount from './components/seniorCount'
-import Payment from './components/payment'
 import { computeEntranceFee } from '../data/entranceFee.js'
 import Terms from './components/terms'
 import BookingSummary from './components/bookingSummary'
 import Footer from '../components/footer'
-import { createBooking, uploadReceipt, STAY_SCHEDULES as timeOptions } from '../data/accommodationDB.js'
+import { createBooking, STAY_SCHEDULES as timeOptions } from '../data/accommodationDB.js'
 
+// Paying is deliberately NOT one of these steps any more. It happens from My
+// Bookings, after the unit is held — see the comment on handleConfirm.
 const steps = [
     {
         id: 'step-schedule',
@@ -33,14 +34,9 @@ const steps = [
         sub: 'Tell us who is booking so we can confirm your reservation.',
     },
     {
-        id: 'step-payment',
-        title: 'Payment',
-        sub: 'Settle the 50% down payment and upload your receipt as proof.',
-    },
-    {
         id: 'step-confirm',
-        title: 'Review & Confirm',
-        sub: 'Read our resort policy, then confirm your booking.',
+        title: 'Review & Reserve',
+        sub: 'Read our resort policy, then reserve your unit and continue to payment.',
     },
 ]
 
@@ -70,7 +66,6 @@ export default function Booking(){
     const [kids, setKids] = useState(0)
     const [seniors, setSeniors] = useState(0)
     const [guest, setGuest] = useState({ fullName: '', mobile: '', email: '' })
-    const [receipt, setReceipt] = useState(null)
     const [agreed, setAgreed] = useState(false)
     const [attemptedConfirm, setAttemptedConfirm] = useState(false)
     // Set when the database refuses the reservation — e.g. the last unit of
@@ -147,15 +142,14 @@ export default function Booking(){
     }
 
     // One entry per step above — a step counts as done only once every
-    // field it collects is filled in, so Confirm can be blocked until
-    // all five are complete.
+    // field it collects is filled in, so Reserve can be blocked until
+    // all three are complete.
     const missingSteps = [
         !(dates.checkIn && (sameDayCheckout || dates.checkOut) && selectedTime !== null)
             && 'Dates & Schedule',
         !selectedAccomodation && 'Accommodation',
         !(pax && guest.fullName.trim() && guest.mobile.trim() && guest.email.trim())
             && 'Guest Information',
-        !receipt && 'Payment',
     ].filter(Boolean)
 
     // A group larger than the unit's maxPax is the one pax rule that blocks
@@ -189,18 +183,16 @@ export default function Booking(){
             freeEntrance: unit && !unit.freeEntranceExempt ? FREE_ENTRANCE_PAX : 0,
         })
 
-        // Store the screenshot first. Staff have to see it to verify the down
-        // payment before approving, so a booking must never be created with a
-        // receipt that failed to upload — the guest would be told they're
-        // waiting on a review that can't happen.
-        const upload = await uploadReceipt(receipt)
-        if (!upload.ok) {
-            setSubmitting(false)
-            setBookingError(upload.message)
-            document.getElementById('step-payment')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            return
-        }
-
+        // No payment happens here any more, and that is the point: the unit is
+        // held FIRST. Paying used to come before the reservation existed, which
+        // meant nothing was reserved while the guest was away in their banking
+        // app — the last unit could be taken from under them, and by the time
+        // they found out the money had already been sent. It also made it
+        // impossible for food and spa to be part of the down payment, since
+        // add-ons attach to a booking that did not yet exist.
+        //
+        // The guest is handed to My Bookings to settle 50% of the whole stay.
+        //
         // The database picks and holds a free unit for exactly these hours.
         // If someone else took the last one while this form was open, it says
         // so instead of creating an overlapping reservation.
@@ -223,8 +215,6 @@ export default function Booking(){
                 total: entrance.total,
             },
             price: unit?.price ?? null,
-            hasReceipt: !!receipt,
-            receiptPath: upload.path,
         })
 
         setSubmitting(false)
@@ -241,10 +231,12 @@ export default function Booking(){
         }
 
         setBookingError(null)
-        // The code travels with the navigation so My Bookings can greet the
-        // guest with this reservation and offer to save its receipt, rather
-        // than dropping them into an undifferentiated list.
-        navigate('/my-booking', { state: { justBooked: result.booking.code } })
+        // The code travels with the navigation so My Bookings can single this
+        // reservation out and open its payment panel, rather than dropping the
+        // guest into an undifferentiated list with a bill somewhere in it.
+        navigate('/my-booking', {
+            state: { justBooked: result.booking.code, payNow: true },
+        })
     }
 
     return(
@@ -254,8 +246,9 @@ export default function Booking(){
                     <p className="booking-eyebrow">Camp Ba-long Reservations</p>
                     <h1 className="book-title">Complete Your Booking</h1>
                     <p className="booking-tagline">
-                        Reserve your stay in five simple steps. Your booking is
-                        confirmed once we verify your down-payment receipt.
+                        Reserve your stay in four simple steps — your unit is held
+                        first, then you settle the down payment from My Bookings.
+                        We confirm once the receipt is verified.
                     </p>
 
                     <ul className="booking-trust" aria-label="Booking assurances">
@@ -264,7 +257,7 @@ export default function Booking(){
                                 <rect x="4" y="10" width="16" height="10" rx="2.5" />
                                 <path d="M8 10V7a4 4 0 0 1 8 0v3" />
                             </svg>
-                            Secure down payment via GCash or bank transfer
+                            Your unit is reserved before you pay a peso
                         </li>
                         <li className="booking-trust-item">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -348,18 +341,8 @@ export default function Booking(){
                             </div>
                         </section>
 
-                        <section className="booking-step" aria-labelledby="step-payment">
-                            <StepHeader index={3} />
-                            <div className="booking-step-body">
-                                <Payment
-                                    receipt={receipt}
-                                    onReceiptChange={setReceipt}
-                                />
-                            </div>
-                        </section>
-
                         <section className="booking-step" aria-labelledby="step-confirm">
-                            <StepHeader index={4} />
+                            <StepHeader index={3} />
                             <div className="booking-step-body">
                                 {attemptedConfirm && missingSteps.length > 0 && (
                                     <p className="booking-confirm-alert" role="alert">
@@ -381,6 +364,7 @@ export default function Booking(){
                                     onAgreeChange={setAgreed}
                                     onConfirm={handleConfirm}
                                     submitting={submitting}
+                                    confirmLabel="Reserve & Proceed to Payment"
                                 />
                             </div>
                         </section>
@@ -395,7 +379,6 @@ export default function Booking(){
                         pax={pax}
                         kids={kids}
                         seniors={seniors}
-                        receipt={receipt}
                     />
                 </div>
             </div>

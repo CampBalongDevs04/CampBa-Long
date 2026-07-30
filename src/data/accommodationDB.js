@@ -71,7 +71,10 @@ import { getOwnerToken, isOwnerTokenPersistent, forgetOwnerToken } from './booki
 const MINUTE_MS = 60 * 1000
 const DAY_MS = 24 * 60 * MINUTE_MS
 
-// Share of the unit rate collected upfront; the balance is paid on-site.
+// Share of the WHOLE STAY collected upfront — unit rate, entrance fees and any
+// food/spa add-ons — with the balance paid on-site. The database computes the
+// figure itself (bookings.downpayment is a generated column), so this constant
+// is only for quoting an amount on the booking form, before a row exists.
 export const DOWNPAYMENT_RATE = 0.5
 
 // Receipt screenshots live in a PRIVATE storage bucket. Guests may upload but
@@ -383,6 +386,10 @@ function fromRow(row) {
         },
 
         price: row.price != null ? Number(row.price) : null,
+        // 50% of the whole stay, computed by Postgres. Not a number this app
+        // works out — see the generated column in
+        // supabase/migrations/*_payment_after_booking.sql — so the amount a
+        // guest is asked for and the amount staff verify cannot drift apart.
         downpayment: row.downpayment != null ? Number(row.downpayment) : null,
         total: row.price != null ? Number(row.price) : null,
         payment: row.payment,
@@ -397,8 +404,38 @@ function fromRow(row) {
 
         foodOrders: row.food_orders ?? [],
         spaOrders: row.spa_orders ?? [],
+        addonsTotal: addonsTotal(row),
+        // Everything this stay costs. The down payment is half of it and the
+        // rest is settled on-site, so both figures come off this one number.
+        stayTotal:
+            Number(row.price ?? 0) +
+            Number(row.entrance_total ?? 0) +
+            addonsTotal(row),
+        // What the guest has already sent proof for, and when. Guests get the
+        // amounts only — the storage paths are staff-only, and my_bookings()
+        // strips them before the rows ever leave Postgres.
+        receipts: receiptList(row),
+        paidSubmitted: receiptList(row).reduce((sum, entry) => sum + entry.amount, 0),
         createdAt: row.created_at,
     }
+}
+
+function addonsTotal(row) {
+    const sum = (orders) =>
+        (orders ?? []).reduce((total, order) => total + Number(order.total ?? 0), 0)
+    return sum(row.food_orders) + sum(row.spa_orders)
+}
+
+// The staff path reads the table and gets the storage path with each entry; the
+// guest path comes through my_bookings() and gets amount + timestamp only. Both
+// are read the same way here, and neither is trusted to be an array.
+function receiptList(row) {
+    if (!Array.isArray(row.receipt_uploads)) return []
+    return row.receipt_uploads.map((entry) => ({
+        path: entry.path ?? null,
+        uploadedAt: entry.uploadedAt ?? null,
+        amount: Number(entry.amount ?? 0),
+    }))
 }
 
 // Guest-side writes (a new booking, an add-on) land in the guest's own list.
@@ -489,7 +526,10 @@ async function loadMyBookings() {
 }
 
 // Cheap equality over the fields a guest can see change: staff confirming a
-// booking, a cancellation, or an add-on landing.
+// booking, a cancellation, an add-on landing, or a payment being credited.
+// `downpayment` and `paidSubmitted` are in here because the payment panel is
+// built out of them — miss those and a guest who just paid keeps being shown
+// the bill until they reload.
 function sameBookings(a, b) {
     if (a.length !== b.length) return false
     return a.every((booking, index) => {
@@ -499,6 +539,8 @@ function sameBookings(a, b) {
             booking.status === other.status &&
             booking.payment === other.payment &&
             booking.unitId === other.unitId &&
+            booking.downpayment === other.downpayment &&
+            booking.paidSubmitted === other.paidSubmitted &&
             booking.foodOrders.length === other.foodOrders.length &&
             booking.spaOrders.length === other.spaOrders.length
         )
@@ -1116,6 +1158,37 @@ export async function deleteBooking(id) {
     return { ok: true }
 }
 
+// Settle a booking that already exists. This is "Proceed to Payment": the
+// reservation was made first, so the guest is paying against a real row whose
+// amount already includes whatever food and spa they have ordered.
+//
+// The upload happens before the RPC for the same reason it did on the old
+// booking form — a receipt that failed to upload must never be recorded as
+// received, or the guest is told they are waiting on a review of nothing.
+export async function payBooking(bookingId, file) {
+    if (!file) {
+        return { ok: false, message: 'Choose a screenshot of your payment first.' }
+    }
+
+    const upload = await uploadReceipt(file)
+    if (!upload.ok) return upload
+
+    const { data, error } = await supabase.rpc('pay_my_booking', {
+        p_booking_id: bookingId,
+        p_owner_token: getOwnerToken(),
+        p_receipt_path: upload.path,
+    })
+
+    if (error) {
+        console.error('Could not record your payment:', error.message)
+        return { ok: false, message: error.message }
+    }
+
+    const row = Array.isArray(data) ? data[0] : data
+    upsertLocal(fromRow(row))
+    return { ok: true }
+}
+
 async function addAddon(bookingId, kind, order) {
     const { data, error } = await supabase.rpc('add_booking_addon', {
         p_booking_id: bookingId,
@@ -1206,13 +1279,117 @@ export function getBookingStats() {
     return { totalBooking, upcomming, active, revenue, pendingPayment }
 }
 
-// The most recent booking food/spa add-ons can attach to: it needs a receipt
-// on file and must not be over or cancelled.
+// ------------------------------------------------------ add-on order views
+// The food and spa orders a guest placed live as JSONB on their booking row
+// (bookings.food_orders / spa_orders), because they are only ever read with
+// their booking. The admin dashboard, though, wants them the other way round:
+// "what is the kitchen making" and "which treatments were availed". These two
+// selectors are that turn, so no screen has to dig through booking rows itself.
+//
+// Both read the ADMIN list, so they answer with nothing at all without a staff
+// session — the same reason the overview tabs come up empty rather than wrong.
+
+// A booking's add-on lines are ordered oldest-first on the row; the dashboard
+// wants the newest order at the top.
+function addonLines(booking, kind) {
+    const orders = kind === 'spa' ? booking.spaOrders : booking.foodOrders
+    return (orders ?? []).map((order, index) => ({
+        // Two guests can order the same dish in the same second, and one guest
+        // can order it twice — the booking and the line's own position are what
+        // make a stable key.
+        key: `${booking.id}-${kind}-${index}`,
+        kind,
+        bookingId: booking.id,
+        code: booking.code ?? booking.id,
+        guestName: booking.guest?.fullName || 'Guest',
+        guestMobile: booking.guest?.mobile ?? '',
+        accomodationName: booking.accomodationName,
+        unitId: booking.unitId,
+        checkIn: booking.checkIn,
+        stage: getBookingStage(booking),
+        // Null on orders placed before the catalog existed, and on a line whose
+        // menu row has since been deleted — the name is still the truth of what
+        // was ordered, so it is what the screens fall back to displaying.
+        itemId: order.itemId ?? null,
+        name: order.name,
+        quantity: Number(order.quantity ?? 0),
+        unitPrice: Number(order.unitPrice ?? 0),
+        total: Number(order.total ?? 0),
+        orderedAt: order.orderedAt ?? null,
+    }))
+}
+
+// Every add-on line across every booking, newest first.
+// `kind` is 'all' | 'food' | 'spa'.
+export function listAddonOrders(kind = 'all') {
+    const lines = []
+    for (const booking of bookings) {
+        if (getBookingStage(booking) === 'cancelled') continue
+        if (kind !== 'spa') lines.push(...addonLines(booking, 'food'))
+        if (kind !== 'food') lines.push(...addonLines(booking, 'spa'))
+    }
+    return lines.sort((a, b) => new Date(b.orderedAt ?? 0) - new Date(a.orderedAt ?? 0))
+}
+
+// The same lines grouped back under the booking that placed them — one card per
+// guest rather than one row per dish. Bookings with no add-ons of the requested
+// kind drop out entirely, which is what makes the dashboard's Food and Spa tabs
+// different lists rather than the same list with empty cards in it.
+export function listBookingsWithAddons(kind = 'all') {
+    return bookings
+        .filter((booking) => getBookingStage(booking) !== 'cancelled')
+        .map((booking) => {
+            const food = kind === 'spa' ? [] : addonLines(booking, 'food')
+            const spa = kind === 'food' ? [] : addonLines(booking, 'spa')
+            return {
+                booking,
+                food,
+                spa,
+                foodTotal: food.reduce((sum, line) => sum + line.total, 0),
+                spaTotal: spa.reduce((sum, line) => sum + line.total, 0),
+            }
+        })
+        .filter((entry) => entry.food.length > 0 || entry.spa.length > 0)
+}
+
+// Add-on lines rolled up per catalog item: how many were ordered, what they
+// came to, and which guests are waiting on them. Falls back to grouping by name
+// for the older orders that carry no itemId.
+export function summariseAddonOrders(kind) {
+    const summary = new Map()
+
+    for (const line of listAddonOrders(kind)) {
+        const key = line.itemId ?? `name:${line.name}`
+        if (!summary.has(key)) {
+            summary.set(key, {
+                key,
+                itemId: line.itemId,
+                name: line.name,
+                quantity: 0,
+                total: 0,
+                guests: [],
+            })
+        }
+        const entry = summary.get(key)
+        entry.quantity += line.quantity
+        entry.total += line.total
+        entry.guests.push(line)
+    }
+
+    return [...summary.values()].sort((a, b) => b.quantity - a.quantity)
+}
+
+// The most recent booking food/spa add-ons can attach to: any live one.
+//
+// It used to have to carry a receipt as well. That requirement made sense while
+// paying came first, but payment now happens after the booking and the down
+// payment includes the add-ons — so demanding a receipt up front would make it
+// impossible to order the very things the payment is supposed to cover.
 export function findOrderableBooking() {
     // This device's own bookings only. Reading the admin list here would let a
     // signed-in staff member's food order attach itself to whichever guest
     // happened to be at the top of the table.
-    return myBookings.find((booking) => booking.hasReceipt && isBookingActive(booking)) ?? null
+    return myBookings.find((booking) => isBookingActive(booking)) ?? null
 }
 
 // True once a staff session is reading the real booking rows. The admin

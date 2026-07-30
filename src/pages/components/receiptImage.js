@@ -75,19 +75,24 @@ function orderTotal(orders){
 // another guest's reservation.
 function buildReceipt(booking, statusLabel, savedAt){
     const rate = booking.price != null ? Number(booking.price) : null
-    // What the resort has actually collected, not what was quoted — 'unpaid'
-    // means the receipt never landed, so nothing is credited here.
-    const paid = booking.payment === 'paid-full'
-        ? rate
-        : booking.payment === 'down-payment'
-            ? Number(booking.downpayment ?? 0)
-            : 0
-    const balance = rate != null ? Math.max(0, rate - (paid ?? 0)) : null
-
     const entrance = Number(booking.entrance?.total ?? 0)
     const foodOrders = booking.foodOrders ?? []
     const spaOrders = booking.spaOrders ?? []
-    const dueOnArrival = (balance ?? 0) + entrance + orderTotal(foodOrders) + orderTotal(spaOrders)
+    const addOns = orderTotal(foodOrders) + orderTotal(spaOrders)
+
+    // Everything this stay costs. The down payment is half of it — unit rate,
+    // entrance fees and add-ons alike — and the rest is settled on arrival.
+    const stayTotal = Number(
+        booking.stayTotal ?? (rate ?? 0) + entrance + addOns,
+    )
+    const downPayment = Number(booking.downpayment ?? stayTotal * 0.5)
+
+    // What the resort has actually been sent proof of, not what was asked for.
+    // 'unpaid' means no receipt ever landed, so nothing is credited.
+    const paid = booking.payment === 'paid-full'
+        ? stayTotal
+        : Number(booking.paidSubmitted ?? 0)
+    const dueOnArrival = Math.max(0, stayTotal - paid)
 
     const guests = [
         booking.pax ? `${booking.pax} pax` : null,
@@ -99,6 +104,9 @@ function buildReceipt(booking, statusLabel, savedAt){
     const checkOutTime = formatClock(booking.endsAt)
     const length = stayLength(booking)
 
+    // Every line the stay is made of, then what has been paid against it. The
+    // order matters: a guest reading this at the gate should be able to follow
+    // it top to bottom and arrive at the figure they are being asked for.
     const charges = [
         {
             label: 'Accommodation rate',
@@ -106,18 +114,6 @@ function buildReceipt(booking, statusLabel, savedAt){
             value: rate != null ? formatPeso(rate) : 'To be advised',
         },
     ]
-    if (paid > 0){
-        charges.push({
-            label: booking.payment === 'paid-full' ? 'Paid in full' : 'Down payment received',
-            sub: booking.payment === 'paid-full' ? null : '50% of the unit rate, paid online',
-            value: `− ${formatPeso(paid)}`,
-            tone: 'credit',
-        })
-    }
-    charges.push({
-        label: 'Balance on accommodation',
-        value: balance != null ? formatPeso(balance) : 'To be advised',
-    })
     if (entrance > 0){
         charges.push({
             label: 'Entrance fee',
@@ -147,11 +143,35 @@ function buildReceipt(booking, statusLabel, savedAt){
             value: formatPeso(order.total),
         })
     }
+    charges.push({
+        label: 'Stay subtotal',
+        value: formatPeso(stayTotal),
+    })
+    charges.push({
+        label: 'Down payment (50%)',
+        sub: 'unit rate, entrance fees and any add-ons',
+        value: formatPeso(downPayment),
+    })
+    if (paid > 0){
+        charges.push({
+            label: booking.payment === 'paid-full' ? 'Paid in full' : 'Payment received',
+            sub: booking.payment === 'paid-full' ? null : 'proof of payment on file',
+            value: `− ${formatPeso(paid)}`,
+            tone: 'credit',
+        })
+    }
 
     const notes = [
-        'Present this receipt at check-in. Entrance fees and any remaining balance'
-            + ' are settled on-site. Seniors must show a valid ID for the discount to apply.',
+        'Present this receipt at check-in. The remaining balance above is settled'
+            + ' on-site. Seniors must show a valid ID for the discount to apply.',
     ]
+    if (paid > 0 && paid < downPayment){
+        notes.push(
+            `Your down payment is short by ${formatPeso(downPayment - paid)} —`
+                + ' add-ons ordered after paying raised the total. Settle the'
+                + ' difference from My Bookings.',
+        )
+    }
     if (statusLabel === 'For Verification'){
         notes.push(
             'Your reservation is held pending our review of the down-payment receipt.'
@@ -194,9 +214,15 @@ function buildReceipt(booking, statusLabel, savedAt){
             { title: 'Charges', rows: charges },
         ],
         total: formatPeso(dueOnArrival),
-        totalNote: rate == null
-            ? 'Plus the accommodation balance, which is still to be advised.'
-            : null,
+        // A guest who has not paid online yet would otherwise read the figure
+        // above as the whole story. Name what is still owed on the down payment
+        // so the sheet cannot be mistaken for a settled account.
+        totalNote: [
+            rate == null ? 'Plus the accommodation balance, which is still to be advised.' : null,
+            paid < downPayment
+                ? `Down payment still outstanding: ${formatPeso(downPayment - paid)}.`
+                : null,
+        ].filter(Boolean).join(' ') || null,
         notes,
         footer: [
             booking.createdAt ? `Booked ${formatLongDate(booking.createdAt)}` : null,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import '../css/receipt-viewer.css'
 import {
     getReceiptUrl,
@@ -33,6 +33,20 @@ function formatDate(iso) {
     })
 }
 
+// When a screenshot was sent. The time matters here in a way the date alone
+// does not: two receipts on the same day are told apart by it.
+function formatDateTime(iso) {
+    if (!iso) return null
+    const date = new Date(iso)
+    if (Number.isNaN(date.getTime())) return null
+    return date.toLocaleString('en-PH', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+    })
+}
+
 function stayLabel(booking) {
     const from = formatDate(booking.checkIn)
     const to = formatDate(booking.checkOut)
@@ -45,28 +59,51 @@ function orderTotal(orders) {
 }
 
 export default function ReceiptViewer({ booking, onClose, onApprove, onCancel }) {
-    // null until the signed URL comes back — that absence IS the loading state,
+    // null until the signed URLs come back — that absence IS the loading state,
     // so nothing has to be set from inside the effect body.
     const [resolved, setResolved] = useState(null)
     // Receipts are phone screenshots: tall and narrow. Fitted to the panel by
-    // default so the whole thing is visible, with a click to blow it up on the
-    // reference number, which is usually the part staff need to read.
-    const [zoomed, setZoomed] = useState(false)
+    // default so the whole thing is visible, with a click to blow one up on the
+    // reference number, which is usually the part staff need to read. Held per
+    // sheet, because a booking can carry more than one.
+    const [zoomedIndex, setZoomedIndex] = useState(null)
 
-    const receiptPath = booking?.receiptPath ?? null
+    // EVERY screenshot on this booking, oldest first. A guest who orders food
+    // after paying owes the difference and sends a second one, so showing only
+    // the latest would leave staff verifying a part-payment against the full
+    // amount with no way to see where the rest went.
+    const receipts = useMemo(() => {
+        const withPaths = (booking?.receipts ?? []).filter((entry) => entry.path)
+        if (withPaths.length > 0) return withPaths
+        // Bookings taken before receipts became a list carry a single path on
+        // the row and no history to go with it.
+        return booking?.receiptPath
+            ? [{ path: booking.receiptPath, amount: null, uploadedAt: null }]
+            : []
+    }, [booking?.receipts, booking?.receiptPath])
+
+    // A stable dependency. The booking object is rebuilt on every store poll, so
+    // depending on the array itself would re-mint every signed URL twice a
+    // minute and flicker the images out from under whoever is reading them.
+    const pathKey = receipts.map((entry) => entry.path).join('|')
 
     useEffect(() => {
-        if (!receiptPath) return
-        // A reply that lands after this viewer is gone must not be applied.
+        if (!pathKey) return
+        // Replies that land after this viewer is gone must not be applied.
         let current = true
-        getReceiptUrl(receiptPath).then((result) => {
-            if (!current) return
-            setResolved(result.ok ? { url: result.url } : { error: result.message })
-        })
+        Promise.all(pathKey.split('|').map((path) => getReceiptUrl(path)))
+            .then((results) => {
+                if (!current) return
+                setResolved(
+                    results.map((result) =>
+                        result.ok ? { url: result.url } : { error: result.message },
+                    ),
+                )
+            })
         return () => {
             current = false
         }
-    }, [receiptPath])
+    }, [pathKey])
 
     // The dashboard behind must not scroll while the overlay is up. Kept apart
     // from the key handler below so it locks once on open and unlocks once on
@@ -91,14 +128,23 @@ export default function ReceiptViewer({ booking, onClose, onApprove, onCancel })
 
     const stage = getBookingStage(booking)
     const pending = stage === 'pending'
-    // What the receipt should actually say: the down payment, not the total.
-    // This is the figure being verified.
+    // What the receipt should actually say: the down payment, not the stay
+    // total. This is the figure being verified — 50% of the unit rate, the
+    // entrance fees and any food or spa the guest ordered, computed by the
+    // database rather than here so it always matches what the guest was shown.
     const expected = booking.downpayment
-        ?? (booking.total != null ? booking.total * DOWNPAYMENT_RATE : null)
+        ?? (booking.stayTotal != null ? booking.stayTotal * DOWNPAYMENT_RATE : null)
+    // What has been credited across every screenshot, and whether that covers
+    // the amount asked for. A shortfall is normal rather than suspicious: it is
+    // what add-ons ordered after a payment look like.
+    const submitted = Number(booking.paidSubmitted ?? 0)
+    const shortfall = expected != null
+        ? Math.max(0, Math.round((expected - submitted) * 100) / 100)
+        : 0
 
     // No image to show — either the guest uploaded nothing, or the booking
     // predates the storage bucket and only recorded that a receipt existed.
-    const missingImage = receiptPath
+    const missingImage = receipts.length > 0
         ? null
         : booking.hasReceipt
             ? 'This booking was made before receipt images were kept, so there is no image to show. Verify the payment with the guest directly.'
@@ -151,6 +197,14 @@ export default function ReceiptViewer({ booking, onClose, onApprove, onCancel })
                             <dd className="receipt-fact-strong">{formatPeso(expected)}</dd>
                         </div>
                         <div className="receipt-fact">
+                            <dt>Submitted so far</dt>
+                            <dd>
+                                {formatPeso(submitted)}
+                                {receiptCount > 1 ? ` · ${receiptCount} receipts` : ''}
+                                {shortfall > 0 ? ` · ${formatPeso(shortfall)} short` : ''}
+                            </dd>
+                        </div>
+                        <div className="receipt-fact">
                             <dt>Unit</dt>
                             <dd>
                                 {booking.accomodationName}
@@ -198,58 +252,98 @@ export default function ReceiptViewer({ booking, onClose, onApprove, onCancel })
                         </div>
                     )}
 
-                    <div className={`receipt-stage ${zoomed ? 'is-zoomed' : ''}`}>
+                    <div className="receipt-stage">
                         {missingImage && (
                             <p className="receipt-note receipt-note-warn" role="alert">
                                 {missingImage}
                             </p>
                         )}
 
-                        {!missingImage && !resolved && (
-                            <p className="receipt-note">Loading receipt…</p>
-                        )}
+                        {receipts.length > 0 && (
+                            <div className="receipt-sheets">
+                                {receipts.map((entry, index) => {
+                                    const state = resolved?.[index]
+                                    const zoomed = zoomedIndex === index
+                                    const when = formatDateTime(entry.uploadedAt)
+                                    return (
+                                        <figure
+                                            className={`receipt-sheet${zoomed ? ' is-zoomed' : ''}`}
+                                            key={`${entry.path}-${index}`}
+                                        >
+                                            {/* A single receipt needs no label —
+                                                it is obvious what it is. */}
+                                            {receipts.length > 1 && (
+                                                <figcaption className="receipt-sheet-caption">
+                                                    <span className="receipt-sheet-index">
+                                                        Receipt {index + 1} of {receipts.length}
+                                                    </span>
+                                                    <span className="receipt-sheet-meta">
+                                                        {entry.amount != null ? formatPeso(entry.amount) : ''}
+                                                        {entry.amount != null && when ? ' · ' : ''}
+                                                        {when ?? ''}
+                                                    </span>
+                                                </figcaption>
+                                            )}
 
-                        {resolved?.error && (
-                            <p className="receipt-note receipt-note-warn" role="alert">
-                                {resolved.error}
-                            </p>
-                        )}
+                                            {!state && (
+                                                <p className="receipt-note">Loading receipt…</p>
+                                            )}
 
-                        {resolved?.url && (
-                            <img
-                                className="receipt-image"
-                                src={resolved.url}
-                                alt={`Payment receipt uploaded by ${booking.guest?.fullName || 'the guest'}`}
-                                onClick={() => setZoomed((value) => !value)}
-                                title={zoomed ? 'Click to fit' : 'Click to zoom'}
-                            />
+                                            {state?.error && (
+                                                <p className="receipt-note receipt-note-warn" role="alert">
+                                                    {state.error}
+                                                </p>
+                                            )}
+
+                                            {state?.url && (
+                                                <>
+                                                    <img
+                                                        className="receipt-image"
+                                                        src={state.url}
+                                                        alt={
+                                                            receipts.length > 1
+                                                                ? `Payment receipt ${index + 1} of ${receipts.length} uploaded by ${booking.guest?.fullName || 'the guest'}`
+                                                                : `Payment receipt uploaded by ${booking.guest?.fullName || 'the guest'}`
+                                                        }
+                                                        onClick={() =>
+                                                            setZoomedIndex(zoomed ? null : index)
+                                                        }
+                                                        title={zoomed ? 'Click to fit' : 'Click to zoom'}
+                                                    />
+                                                    {/* Full resolution in its own
+                                                        tab, for a screenshot too
+                                                        dense to read inline. The
+                                                        signed link expires shortly
+                                                        either way. */}
+                                                    <a
+                                                        className="receipt-sheet-link"
+                                                        href={state.url}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                    >
+                                                        Open full size
+                                                    </a>
+                                                </>
+                                            )}
+                                        </figure>
+                                    )
+                                })}
+                            </div>
                         )}
                     </div>
                 </div>
 
                 <footer className="receipt-foot">
+                    {/* Zooming and opening full size are per screenshot now, so
+                        they live under each image rather than down here where
+                        they could only ever have meant one of them. */}
                     <div className="receipt-foot-left">
-                        {resolved?.url && (
-                            <>
-                                <button
-                                    type="button"
-                                    className="receipt-btn"
-                                    onClick={() => setZoomed((value) => !value)}
-                                >
-                                    {zoomed ? 'Fit to screen' : 'Zoom in'}
-                                </button>
-                                {/* Full resolution in its own tab, for a
-                                    screenshot too dense to read inline. The
-                                    signed link expires shortly either way. */}
-                                <a
-                                    className="receipt-btn"
-                                    href={resolved.url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                >
-                                    Open full size
-                                </a>
-                            </>
+                        {receipts.length > 0 && (
+                            <p className="receipt-foot-hint">
+                                {receipts.length > 1
+                                    ? `${receipts.length} receipts on this booking — click any image to zoom`
+                                    : 'Click the image to zoom'}
+                            </p>
                         )}
                     </div>
 

@@ -46,10 +46,12 @@ build` refuses to run at all — see [Why the build fails](#why-the-build-fails-
 This is almost always a **missing `.env`**, and it is confusing because the
 site looks completely healthy until you hit it:
 
-- The accommodation list has built-in fallback values, so the cards still render.
+- The accommodation list and the food/spa menus have built-in fallback values, so
+  every card still renders.
 - The whole booking form still works — dates, units, guest details.
-- Nothing fails visibly until the very last step, where the upload dies with a
-  bare `Failed to fetch` that reads like a broken storage bucket.
+- Nothing fails visibly until the guest submits a payment in My Bookings, where
+  the upload dies with a bare `Failed to fetch` that reads like a broken storage
+  bucket.
 
 **Check, in order:**
 
@@ -84,15 +86,45 @@ Same cause as above: a valid login that is not on the staff roster.
 
 ---
 
+## How payment works
+
+Paying happens **after** the booking, not during it. The booking form ends at
+"Reserve & Proceed to Payment", which holds a unit and drops the guest into My
+Bookings with the payment panel open.
+
+That ordering is the point. When payment came first, nothing was reserved while
+the guest was away in their banking app — the last unit could be taken from
+under them after the money had already been sent. It also made it impossible for
+food and spa to be part of the down payment, because add-ons attach to a booking
+that did not exist yet.
+
+**The down payment is 50% of the whole stay:**
+
+```
+50% × (unit rate + entrance fees + food orders + spa services)
+```
+
+`bookings.downpayment` is a **generated column** computing exactly that, so the
+amount the guest is asked for and the amount staff verify cannot drift apart —
+and ordering a meal after the booking moves the figure on its own. Entrance fees
+are therefore **half prepaid**; only the remaining half is settled on-site.
+
 ## How receipts work
 
-1. The guest picks a screenshot on the booking form.
+1. The guest picks a screenshot in the My Bookings payment panel.
 2. `uploadReceipt()` puts it in the private `receipts` bucket under a **random**
-   folder and returns the path. This runs *before* the booking is created, so a
-   failed upload never leaves a reservation behind.
-3. The path is stored on the booking row in `receipt_url`.
+   folder and returns the path. This runs *before* the row is touched, so a
+   failed upload is never recorded as a payment received.
+3. `pay_my_booking()` stores the path in `receipt_url` and appends an entry to
+   `receipt_uploads` stamped with the amount that was due at that moment.
 4. Staff open the receipt viewer, which mints a **signed URL valid for 5
    minutes** — the image is never public.
+
+Add-ons ordered *after* a payment raise the total, so a guest can submit more
+than one receipt. Each is kept in `receipt_uploads` with its own amount — the
+second screenshot never overwrites the proof of the first — and the panel asks
+only for the difference. The viewer shows the latest image and says how many
+there are.
 
 Anonymous guests may upload but may **not** read, list, overwrite or delete.
 That is why the guest side cannot fetch back the image it just uploaded; it is

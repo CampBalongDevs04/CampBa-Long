@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import '../css/tab.css'
 
-// Mirrors the categories in foodList.jsx, which mirror the guest menu
-// sections in pages/foodmenu.jsx.
+// Every id here is a food_menu_items.category value — see FOOD_CATEGORIES in
+// data/menuDB.js. FoodList filters itself on whichever one is active, so a tab
+// whose id doesn't match a category shows an empty panel.
 const foodTabs = [
     { id: 'all', label: 'All' },
     { id: 'breakfast', label: 'Foods' },
     { id: 'combo', label: 'Combo Meal' },
     { id: 'pre-order', label: 'Pre-Order' },
-    { id: 'beverages', label: 'Beverages' },
+    { id: 'coffee', label: 'Beverages' },
 ]
 
 export default function FoodTab({ active, onChange }) {

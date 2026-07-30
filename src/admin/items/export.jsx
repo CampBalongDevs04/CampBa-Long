@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import '../css/export.css'
-import Calendar, { formatRangeLabel } from './calendar.jsx'
+import Calendar from './calendar.jsx'
+import { formatRangeLabel } from './calendarRange.js'
 
 const documentExport = [
     {
