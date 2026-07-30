@@ -71,8 +71,28 @@ import { getOwnerToken, isOwnerTokenPersistent, forgetOwnerToken } from './booki
 const MINUTE_MS = 60 * 1000
 const DAY_MS = 24 * 60 * MINUTE_MS
 
-// Share of the unit rate collected upfront; the balance is paid on-site.
+// Share of the WHOLE STAY collected upfront — unit rate, entrance fees and any
+// food/spa add-ons — with the balance paid on-site. The database computes the
+// figure itself (bookings.downpayment is a generated column), so this constant
+// is only for quoting an amount on the booking form, before a row exists.
 export const DOWNPAYMENT_RATE = 0.5
+
+// How long a booking holds its unit before any money has been sent. The unit is
+// reserved first now, which is right for the guest and would otherwise be free
+// for anyone to abuse — an unpaid hold that never lapses takes the last A-House
+// off the market indefinitely. Ten minutes is enough to open a banking app,
+// send the down payment and screenshot it.
+//
+// This copy is for the countdown only. The deadline itself comes from Postgres
+// (my_bookings().payment_due_at) and so does the enforcement, so a guest cannot
+// buy themselves more time by changing this number or their device clock — see
+// supabase/migrations/*_payment_window_expires.sql.
+export const PAYMENT_WINDOW_MINUTES = 10
+
+// Reason string Postgres stamps on a booking it cancelled for a lapsed window,
+// as opposed to one a guest or staff member cancelled deliberately. The two
+// look identical on the card otherwise, and they need to read very differently.
+export const PAYMENT_TIMEOUT_REASON = 'payment-timeout'
 
 // Receipt screenshots live in a PRIVATE storage bucket. Guests may upload but
 // never read, so an image only comes back as a short-lived signed URL minted
@@ -287,6 +307,20 @@ const nextFreeCache = new Map()
 let unitsByType = new Map()
 let staffSession = false
 
+// How far this device's clock is from the resort's, in milliseconds, measured
+// from the `server_now` my_bookings() sends back with every fetch. A ten-minute
+// window is short enough that a phone running four minutes fast would show a
+// guest four minutes they do not have — or, worse, four they already spent.
+// Every deadline is counted against serverNow() instead of Date.now() for that
+// reason. Zero until the first fetch lands, which is simply "assume correct".
+let clockSkewMs = 0
+
+// The resort's clock as best this browser can tell. Only meaningful for
+// comparing against timestamps that came from the database.
+export function serverNow() {
+    return Date.now() + clockSkewMs
+}
+
 const listeners = new Set()
 
 function notify() {
@@ -383,6 +417,10 @@ function fromRow(row) {
         },
 
         price: row.price != null ? Number(row.price) : null,
+        // 50% of the whole stay, computed by Postgres. Not a number this app
+        // works out — see the generated column in
+        // supabase/migrations/*_payment_after_booking.sql — so the amount a
+        // guest is asked for and the amount staff verify cannot drift apart.
         downpayment: row.downpayment != null ? Number(row.downpayment) : null,
         total: row.price != null ? Number(row.price) : null,
         payment: row.payment,
@@ -397,8 +435,62 @@ function fromRow(row) {
 
         foodOrders: row.food_orders ?? [],
         spaOrders: row.spa_orders ?? [],
+        addonsTotal: addonsTotal(row),
+        // Everything this stay costs. The down payment is half of it and the
+        // rest is settled on-site, so both figures come off this one number.
+        stayTotal:
+            Number(row.price ?? 0) +
+            Number(row.entrance_total ?? 0) +
+            addonsTotal(row),
+        // What the guest has already sent proof for, and when. Guests get the
+        // amounts only — the storage paths are staff-only, and my_bookings()
+        // strips them before the rows ever leave Postgres.
+        receipts: receiptList(row),
+        paidSubmitted: receiptList(row).reduce((sum, entry) => sum + entry.amount, 0),
         createdAt: row.created_at,
+
+        // Null when a booking was cancelled by hand, 'payment-timeout' when its
+        // payment window lapsed. What lets My Bookings tell the guest which of
+        // those happened instead of showing a bare "Cancelled".
+        cancelReason: row.cancel_reason ?? null,
+        // The moment the unit stops being held if nothing has been paid.
+        // my_bookings() sends it; book_accommodation() and pay_my_booking()
+        // return the raw row instead, so derive it from created_at there — the
+        // same arithmetic Postgres does, on the same timestamp.
+        paymentDueAt: paymentDueAt(row),
     }
+}
+
+// The deadline in epoch milliseconds, or null for a row with no created_at to
+// count from (which cannot happen, but the payment panel reads this on every
+// render and must not be the thing that throws).
+function paymentDueAt(row) {
+    if (row.payment_due_at) {
+        const due = new Date(row.payment_due_at).getTime()
+        if (!Number.isNaN(due)) return due
+    }
+    if (!row.created_at) return null
+    const created = new Date(row.created_at).getTime()
+    if (Number.isNaN(created)) return null
+    return created + PAYMENT_WINDOW_MINUTES * MINUTE_MS
+}
+
+function addonsTotal(row) {
+    const sum = (orders) =>
+        (orders ?? []).reduce((total, order) => total + Number(order.total ?? 0), 0)
+    return sum(row.food_orders) + sum(row.spa_orders)
+}
+
+// The staff path reads the table and gets the storage path with each entry; the
+// guest path comes through my_bookings() and gets amount + timestamp only. Both
+// are read the same way here, and neither is trusted to be an array.
+function receiptList(row) {
+    if (!Array.isArray(row.receipt_uploads)) return []
+    return row.receipt_uploads.map((entry) => ({
+        path: entry.path ?? null,
+        uploadedAt: entry.uploadedAt ?? null,
+        amount: Number(entry.amount ?? 0),
+    }))
 }
 
 // Guest-side writes (a new booking, an add-on) land in the guest's own list.
@@ -484,12 +576,24 @@ async function loadMyBookings() {
         return
     }
 
+    // Every row carries the same server_now, so the first is as good as any.
+    // Measured before mapping, so the deadlines below are compared against a
+    // clock that is already corrected.
+    const serverTime = data?.[0]?.server_now
+    if (serverTime) {
+        const stamped = new Date(serverTime).getTime()
+        if (!Number.isNaN(stamped)) clockSkewMs = stamped - Date.now()
+    }
+
     const next = (data ?? []).map(fromRow)
     if (!sameBookings(myBookings, next)) commitMine(next)
 }
 
 // Cheap equality over the fields a guest can see change: staff confirming a
-// booking, a cancellation, or an add-on landing.
+// booking, a cancellation, an add-on landing, or a payment being credited.
+// `downpayment` and `paidSubmitted` are in here because the payment panel is
+// built out of them — miss those and a guest who just paid keeps being shown
+// the bill until they reload.
 function sameBookings(a, b) {
     if (a.length !== b.length) return false
     return a.every((booking, index) => {
@@ -497,8 +601,11 @@ function sameBookings(a, b) {
         return (
             booking.id === other.id &&
             booking.status === other.status &&
+            booking.cancelReason === other.cancelReason &&
             booking.payment === other.payment &&
             booking.unitId === other.unitId &&
+            booking.downpayment === other.downpayment &&
+            booking.paidSubmitted === other.paidSubmitted &&
             booking.foodOrders.length === other.foodOrders.length &&
             booking.spaOrders.length === other.spaOrders.length
         )
@@ -513,6 +620,11 @@ async function loadBookings() {
     // Being signed in is not the same as being staff — a non-staff account is
     // just a guest with a login, and gets nothing extra.
     staffSession = Boolean(session?.session) && (await checkStaff())
+
+    // There is no cron on this project, so a page load is one of the moments a
+    // lapsed hold gets swept. Awaited, so the lists below are read after the
+    // sweep rather than one refresh behind it.
+    await sweepExpiredBookings()
 
     await loadMyBookings()
 
@@ -1116,6 +1228,112 @@ export async function deleteBooking(id) {
     return { ok: true }
 }
 
+// Settle a booking that already exists. This is "Proceed to Payment": the
+// reservation was made first, so the guest is paying against a real row whose
+// amount already includes whatever food and spa they have ordered.
+//
+// The upload happens before the RPC for the same reason it did on the old
+// booking form — a receipt that failed to upload must never be recorded as
+// received, or the guest is told they are waiting on a review of nothing.
+export async function payBooking(bookingId, file) {
+    if (!file) {
+        return { ok: false, message: 'Choose a screenshot of your payment first.' }
+    }
+
+    const upload = await uploadReceipt(file)
+    if (!upload.ok) return upload
+
+    const { data, error } = await supabase.rpc('pay_my_booking', {
+        p_booking_id: bookingId,
+        p_owner_token: getOwnerToken(),
+        p_receipt_path: upload.path,
+    })
+
+    if (error) {
+        console.error('Could not record your payment:', error.message)
+        // The window closed while the guest was uploading. The row is cancelled
+        // in Postgres already; re-read so their card catches up with the
+        // message they are about to be shown, instead of still offering to pay.
+        if (error.hint === PAYMENT_TIMEOUT_REASON) await loadMyBookings()
+        return {
+            ok: false,
+            reason: error.hint === PAYMENT_TIMEOUT_REASON ? 'expired' : 'error',
+            message: error.message,
+        }
+    }
+
+    const row = Array.isArray(data) ? data[0] : data
+    upsertLocal(fromRow(row))
+    return { ok: true }
+}
+
+// =========================================================== payment window
+//
+// A booking holds its unit for PAYMENT_WINDOW_MINUTES with nothing paid. After
+// that the database cancels it and the unit goes back on the market.
+//
+// Everything below is about SHOWING that rule. None of it enforces anything:
+// the deadline is Postgres's, the cancellation is Postgres's, and
+// available_units() stops counting a lapsed hold the moment it lapses whether
+// or not any browser noticed. A guest who edits these numbers in devtools gets
+// a wrong countdown and the same refusal from pay_my_booking().
+
+// True while the clock is running on this booking — held, and nothing sent yet.
+//
+// One receipt stops it for good, even an unverified one: staff review takes
+// hours and the guest has already done their part. It follows that a top-up for
+// food ordered after paying is never timed, which is deliberate — a second
+// countdown over a ₱200 add-on balance would cancel a paid reservation.
+export function isPaymentWindowTracked(booking) {
+    return (
+        booking?.status === 'pending' &&
+        !booking?.hasReceipt &&
+        booking?.paymentDueAt != null
+    )
+}
+
+// Milliseconds left to pay, floored at zero. Counted against the resort's clock
+// rather than this device's — see serverNow().
+export function paymentMsRemaining(booking, now = serverNow()) {
+    if (!isPaymentWindowTracked(booking)) return 0
+    return Math.max(0, booking.paymentDueAt - now)
+}
+
+// Cancelled because nobody paid in time, as opposed to cancelled on purpose.
+// The guest did not do this and should not be told they did.
+export function wasCancelledByPaymentTimeout(booking) {
+    return (
+        booking?.status === 'cancelled' &&
+        booking?.cancelReason === PAYMENT_TIMEOUT_REASON
+    )
+}
+
+// Ask Postgres to cancel every hold whose window has closed — its own, and
+// everyone else's. Idempotent, and it can only touch rows already lapsed by the
+// server's clock, so calling it early cancels nothing.
+async function sweepExpiredBookings() {
+    if (!isSupabaseConfigured) return 0
+    const { data, error } = await supabase.rpc('expire_stale_bookings')
+    if (error) {
+        console.error('Could not release expired bookings:', error.message)
+        return 0
+    }
+    const expired = Number(data ?? 0)
+    // Units came back on the market; every cached count is now wrong.
+    if (expired > 0) clearCaches()
+    return expired
+}
+
+// The sweep plus a re-read, for the caller who needs to SEE the result — the
+// guest whose own countdown just reached zero, whose card should say cancelled
+// without waiting for the next poll.
+export async function expireStaleBookings() {
+    const expired = await sweepExpiredBookings()
+    await loadMyBookings()
+    if (expired > 0 && staffSession) await loadStaffBookings()
+    return { ok: true, expired }
+}
+
 async function addAddon(bookingId, kind, order) {
     const { data, error } = await supabase.rpc('add_booking_addon', {
         p_booking_id: bookingId,
@@ -1206,13 +1424,117 @@ export function getBookingStats() {
     return { totalBooking, upcomming, active, revenue, pendingPayment }
 }
 
-// The most recent booking food/spa add-ons can attach to: it needs a receipt
-// on file and must not be over or cancelled.
+// ------------------------------------------------------ add-on order views
+// The food and spa orders a guest placed live as JSONB on their booking row
+// (bookings.food_orders / spa_orders), because they are only ever read with
+// their booking. The admin dashboard, though, wants them the other way round:
+// "what is the kitchen making" and "which treatments were availed". These two
+// selectors are that turn, so no screen has to dig through booking rows itself.
+//
+// Both read the ADMIN list, so they answer with nothing at all without a staff
+// session — the same reason the overview tabs come up empty rather than wrong.
+
+// A booking's add-on lines are ordered oldest-first on the row; the dashboard
+// wants the newest order at the top.
+function addonLines(booking, kind) {
+    const orders = kind === 'spa' ? booking.spaOrders : booking.foodOrders
+    return (orders ?? []).map((order, index) => ({
+        // Two guests can order the same dish in the same second, and one guest
+        // can order it twice — the booking and the line's own position are what
+        // make a stable key.
+        key: `${booking.id}-${kind}-${index}`,
+        kind,
+        bookingId: booking.id,
+        code: booking.code ?? booking.id,
+        guestName: booking.guest?.fullName || 'Guest',
+        guestMobile: booking.guest?.mobile ?? '',
+        accomodationName: booking.accomodationName,
+        unitId: booking.unitId,
+        checkIn: booking.checkIn,
+        stage: getBookingStage(booking),
+        // Null on orders placed before the catalog existed, and on a line whose
+        // menu row has since been deleted — the name is still the truth of what
+        // was ordered, so it is what the screens fall back to displaying.
+        itemId: order.itemId ?? null,
+        name: order.name,
+        quantity: Number(order.quantity ?? 0),
+        unitPrice: Number(order.unitPrice ?? 0),
+        total: Number(order.total ?? 0),
+        orderedAt: order.orderedAt ?? null,
+    }))
+}
+
+// Every add-on line across every booking, newest first.
+// `kind` is 'all' | 'food' | 'spa'.
+export function listAddonOrders(kind = 'all') {
+    const lines = []
+    for (const booking of bookings) {
+        if (getBookingStage(booking) === 'cancelled') continue
+        if (kind !== 'spa') lines.push(...addonLines(booking, 'food'))
+        if (kind !== 'food') lines.push(...addonLines(booking, 'spa'))
+    }
+    return lines.sort((a, b) => new Date(b.orderedAt ?? 0) - new Date(a.orderedAt ?? 0))
+}
+
+// The same lines grouped back under the booking that placed them — one card per
+// guest rather than one row per dish. Bookings with no add-ons of the requested
+// kind drop out entirely, which is what makes the dashboard's Food and Spa tabs
+// different lists rather than the same list with empty cards in it.
+export function listBookingsWithAddons(kind = 'all') {
+    return bookings
+        .filter((booking) => getBookingStage(booking) !== 'cancelled')
+        .map((booking) => {
+            const food = kind === 'spa' ? [] : addonLines(booking, 'food')
+            const spa = kind === 'food' ? [] : addonLines(booking, 'spa')
+            return {
+                booking,
+                food,
+                spa,
+                foodTotal: food.reduce((sum, line) => sum + line.total, 0),
+                spaTotal: spa.reduce((sum, line) => sum + line.total, 0),
+            }
+        })
+        .filter((entry) => entry.food.length > 0 || entry.spa.length > 0)
+}
+
+// Add-on lines rolled up per catalog item: how many were ordered, what they
+// came to, and which guests are waiting on them. Falls back to grouping by name
+// for the older orders that carry no itemId.
+export function summariseAddonOrders(kind) {
+    const summary = new Map()
+
+    for (const line of listAddonOrders(kind)) {
+        const key = line.itemId ?? `name:${line.name}`
+        if (!summary.has(key)) {
+            summary.set(key, {
+                key,
+                itemId: line.itemId,
+                name: line.name,
+                quantity: 0,
+                total: 0,
+                guests: [],
+            })
+        }
+        const entry = summary.get(key)
+        entry.quantity += line.quantity
+        entry.total += line.total
+        entry.guests.push(line)
+    }
+
+    return [...summary.values()].sort((a, b) => b.quantity - a.quantity)
+}
+
+// The most recent booking food/spa add-ons can attach to: any live one.
+//
+// It used to have to carry a receipt as well. That requirement made sense while
+// paying came first, but payment now happens after the booking and the down
+// payment includes the add-ons — so demanding a receipt up front would make it
+// impossible to order the very things the payment is supposed to cover.
 export function findOrderableBooking() {
     // This device's own bookings only. Reading the admin list here would let a
     // signed-in staff member's food order attach itself to whichever guest
     // happened to be at the top of the table.
-    return myBookings.find((booking) => booking.hasReceipt && isBookingActive(booking)) ?? null
+    return myBookings.find((booking) => isBookingActive(booking)) ?? null
 }
 
 // True once a staff session is reading the real booking rows. The admin

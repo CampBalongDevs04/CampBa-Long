@@ -251,6 +251,14 @@
     white-space: nowrap;
 }
 
+/* Which stay the kitchen is cooking for. */
+.foodlist-order-booking {
+    margin: 4px 0 0;
+    font-size: 0.72rem;
+    letter-spacing: 0.4px;
+    color: rgba(10, 22, 14, 0.45);
+}
+
 /* ---------- Orders empty state ---------- */
 .foodlist-orders-empty {
     display: flex;

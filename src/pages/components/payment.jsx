@@ -1,6 +1,12 @@
-import { useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import '../components/css/payment.css'
 import IreneQR from '../../assets/images/IreneGcash.jpg'
+
+// The QR codes and the receipt picker. This used to be step 4 of the booking
+// form; it now lives inside the My Bookings payment panel
+// (components/bookingPayment.jsx), because paying happens after the unit is
+// held rather than before it exists. The markup and payment.css are unchanged —
+// only who renders it moved.
 
 const paymentOptions = [
     {
@@ -34,33 +40,39 @@ function formatSize(bytes){
     return `${Math.max(1, Math.round(bytes / 1024))} KB`
 }
 
-export default function Payment({ receipt, onReceiptChange }){
-    const inputRef = useRef(null)
-    const [previewUrl, setPreviewUrl] = useState(null)
+export default function Payment({ receipt, onReceiptChange, note, disabled = false, inputId = 'receipt-upload' }){
     const [error, setError] = useState(null)
+
+    // Derived from the file rather than held alongside it, so the preview cannot
+    // outlive what it previews: the parent clears `receipt` once the payment is
+    // recorded, and the thumbnail of an already-sent receipt goes with it.
+    const previewUrl = useMemo(
+        () => (receipt ? URL.createObjectURL(receipt) : null),
+        [receipt],
+    )
+    useEffect(() => {
+        return () => { if (previewUrl) URL.revokeObjectURL(previewUrl) }
+    }, [previewUrl])
 
     const handleFile = (e) => {
         const file = e.target.files?.[0]
+        // Emptied either way, so picking the SAME file again still fires a
+        // change event. The chosen file lives in the parent's state from here.
+        e.target.value = ''
         if (!file) return
 
         if (!isAcceptedFile(file)){
             setError('Only JPG or PNG images are accepted.')
-            e.target.value = ''
             return
         }
 
         setError(null)
-        if (previewUrl) URL.revokeObjectURL(previewUrl)
-        setPreviewUrl(URL.createObjectURL(file))
         onReceiptChange?.(file)
     }
 
     const removeReceipt = () => {
-        if (previewUrl) URL.revokeObjectURL(previewUrl)
-        setPreviewUrl(null)
         setError(null)
         onReceiptChange?.(null)
-        if (inputRef.current) inputRef.current.value = ''
     }
 
     return(
@@ -93,9 +105,13 @@ export default function Payment({ receipt, onReceiptChange }){
             <div className="payment-note" role="note">
                 <span className="payment-note-dot"></span>
                 <p className="payment-note-body">
-                    <strong className="payment-note-heading">Down payment.</strong>{' '}
-                    Scan the QR of your preferred method to settle the down payment,
-                    then upload a screenshot of the receipt as proof of payment.
+                    {note ?? (
+                        <>
+                            <strong className="payment-note-heading">Down payment.</strong>{' '}
+                            Scan the QR of your preferred method to settle the down payment,
+                            then upload a screenshot of the receipt as proof of payment.
+                        </>
+                    )}
                 </p>
             </div>
 
@@ -103,11 +119,11 @@ export default function Payment({ receipt, onReceiptChange }){
                 {/* MIME-only accept: iOS auto-converts HEIC photos to JPEG,
                     and Android pickers can choke on extension entries. */}
                 <input
-                    ref={inputRef}
                     className="payment-upload-input"
                     type="file"
-                    id="receipt-upload"
+                    id={inputId}
                     accept="image/jpeg,image/png"
+                    disabled={disabled}
                     onChange={handleFile}
                 />
 
@@ -128,6 +144,7 @@ export default function Payment({ receipt, onReceiptChange }){
                             type="button"
                             className="payment-receipt-remove"
                             aria-label="Remove receipt"
+                            disabled={disabled}
                             onClick={removeReceipt}
                         >
                             &times;
@@ -136,7 +153,7 @@ export default function Payment({ receipt, onReceiptChange }){
                 ) : (
                     /* A real <label> opens the picker natively on every
                        mobile browser — no JS click() needed. */
-                    <label className="payment-upload-btn" htmlFor="receipt-upload">
+                    <label className="payment-upload-btn" htmlFor={inputId}>
                         Upload Receipt
                         <span className="payment-upload-hint">JPG or PNG</span>
                     </label>

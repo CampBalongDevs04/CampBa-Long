@@ -1,0 +1,424 @@
+/* ============================================================================
+   Payment panel inside a My Bookings card.
+
+   Collapsible, because a settled booking should not push the rest of the card
+   below the fold — but the header always carries the number that matters, so
+   what is owed is readable without opening anything.
+   ========================================================================== */
+
+.booking-pay {
+    margin-top: 18px;
+    border: 1px solid var(--gold-soft);
+    border-radius: 14px;
+    background-color: var(--cream);
+    overflow: hidden;
+}
+
+/* ---------------------------------------------------------------- header */
+
+.booking-pay-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px;
+    border: 0;
+    background: transparent;
+    font-family: 'Jost', sans-serif;
+    color: var(--forest-dark);
+    cursor: pointer;
+    text-align: left;
+}
+
+.booking-pay-header:hover {
+    background-color: var(--cream-2);
+}
+
+.booking-pay-header-text {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.booking-pay-title {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+/* Amber while money is owed, green once it is not. */
+.booking-pay-badge {
+    padding: 3px 11px;
+    border-radius: 999px;
+    background-color: rgba(198, 161, 91, 0.28);
+    color: #7a5c15;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.booking-pay-badge.is-settled {
+    background-color: rgba(91, 168, 108, 0.2);
+    color: #2c7a44;
+}
+
+/* The countdown, repeated in the header so a collapsed panel still shows how
+   long is left. Red rather than amber: this one is a deadline, not a balance. */
+.booking-pay-timer {
+    padding: 3px 11px;
+    border-radius: 999px;
+    background-color: rgba(178, 58, 58, 0.12);
+    border: 1px solid rgba(178, 58, 58, 0.3);
+    color: #9c2f2f;
+    font-size: 0.76rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+.booking-pay-chevron {
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    color: var(--leaf);
+}
+
+/* ---------------------------------------------------------------- body */
+
+.booking-pay-body {
+    padding: 4px 18px 18px;
+    border-top: 1px solid var(--cream-2);
+}
+
+.booking-pay-charges {
+    margin: 14px 0 18px;
+    font-family: 'Jost', sans-serif;
+}
+
+/* Booking, add-ons, and the sum of the two. The grouping is the explanation:
+   the guest can see their food carries its own 50% without being told. */
+.pay-group + .pay-group {
+    margin-top: 20px;
+}
+
+.pay-group-title {
+    margin: 0 0 2px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--leaf);
+}
+
+.pay-group-note {
+    margin: 8px 0 0;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: rgba(22, 41, 30, 0.6);
+}
+
+.pay-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 7px 0;
+    border-bottom: 1px dotted var(--gold-soft);
+    font-size: 0.88rem;
+    color: var(--forest-dark);
+}
+
+.pay-row-label {
+    display: flex;
+    flex-direction: column;
+}
+
+.pay-row-sub {
+    font-size: 0.74rem;
+    color: rgba(22, 41, 30, 0.55);
+}
+
+.pay-row-value {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.pay-row-subtotal {
+    border-bottom-style: solid;
+}
+
+/* Rows are the only divs in a group, so this catches the last one whether or
+   not a note follows it. */
+.pay-group .pay-row:last-of-type {
+    border-bottom: 0;
+}
+
+.pay-row-due .pay-row-value {
+    color: var(--forest);
+}
+
+/* Money already received reads as a credit, not another charge. */
+.pay-row-credit .pay-row-value {
+    color: #2c7a44;
+}
+
+.pay-row-total {
+    margin-top: 4px;
+    padding-top: 12px;
+    border-top: 2px solid var(--forest);
+    border-bottom: 0;
+    font-size: 1rem;
+}
+
+.pay-row-total .pay-row-label {
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.pay-row-total .pay-row-value {
+    font-size: 1.25rem;
+    color: var(--forest);
+}
+
+/* ----------------------------------------------------------- the clock */
+
+/* Sits directly above the QR codes, because the deadline is the reason the
+   guest is about to open their banking app. Gold while there is time, red once
+   there is not much — the colour change is the warning, so it does not depend
+   on anyone reading the number. */
+.pay-clock {
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    border: 1px solid var(--gold-soft);
+    border-radius: 12px;
+    background-color: rgba(198, 161, 91, 0.12);
+    font-family: 'Jost', sans-serif;
+}
+
+.pay-clock.is-urgent {
+    border-color: rgba(178, 58, 58, 0.45);
+    background-color: rgba(178, 58, 58, 0.1);
+}
+
+.pay-clock-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.pay-clock-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: #6d5312;
+}
+
+.pay-clock.is-urgent .pay-clock-label {
+    color: #9c2f2f;
+}
+
+/* Tabular figures so the digits do not shuffle sideways every second. */
+.pay-clock-time {
+    font-size: 1.5rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    color: var(--forest);
+}
+
+.pay-clock.is-urgent .pay-clock-time {
+    color: #9c2f2f;
+}
+
+.pay-clock-track {
+    margin-top: 9px;
+    height: 6px;
+    border-radius: 999px;
+    background-color: rgba(22, 41, 30, 0.1);
+    overflow: hidden;
+}
+
+.pay-clock-fill {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background-color: var(--forest);
+    /* Matches the tick, so the bar slides rather than stepping. Width is the
+       only thing animated — a transition on the colour would lag the switch to
+       the urgent state, which is the one change that should be instant. */
+    transition: width 1s linear;
+}
+
+.pay-clock.is-urgent .pay-clock-fill {
+    background-color: #b23a3a;
+}
+
+.pay-clock-note {
+    margin: 9px 0 0;
+    font-size: 0.76rem;
+    line-height: 1.5;
+    color: rgba(22, 41, 30, 0.68);
+}
+
+/* ------------------------------------------------------------- messages */
+
+.booking-pay-topup,
+.booking-pay-ok,
+.booking-pay-error,
+.booking-pay-settled {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.85rem;
+    border-radius: 10px;
+    padding: 11px 14px;
+}
+
+.booking-pay-topup {
+    margin: 0 0 14px;
+    background-color: rgba(198, 161, 91, 0.16);
+    border: 1px solid var(--gold-soft);
+    color: #6d5312;
+}
+
+.booking-pay-ok {
+    margin: 14px 0 0;
+    background-color: rgba(91, 168, 108, 0.16);
+    border: 1px solid rgba(91, 168, 108, 0.45);
+    color: #276b3c;
+}
+
+.booking-pay-error {
+    margin: 14px 0 0;
+    background-color: rgba(178, 58, 58, 0.1);
+    border: 1px solid rgba(178, 58, 58, 0.4);
+    color: #9c2f2f;
+}
+
+.booking-pay-settled {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background-color: rgba(91, 168, 108, 0.12);
+    border: 1px solid rgba(91, 168, 108, 0.4);
+    color: var(--forest-dark);
+}
+
+.booking-pay-settled-icon {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: #2c7a44;
+    color: #fff;
+    font-size: 0.85rem;
+}
+
+.booking-pay-settled-title {
+    margin: 0;
+    font-weight: 600;
+}
+
+.booking-pay-settled-text {
+    margin: 3px 0 0;
+    font-size: 0.82rem;
+    color: rgba(22, 41, 30, 0.7);
+}
+
+/* The window closed. Same shape as the settled block on purpose — this is the
+   other end of the same story, and it belongs in the same place on the card. */
+.booking-pay-closed {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 11px 14px;
+    border-radius: 10px;
+    background-color: rgba(178, 58, 58, 0.09);
+    border: 1px solid rgba(178, 58, 58, 0.4);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.85rem;
+    color: var(--forest-dark);
+}
+
+.booking-pay-closed-icon {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: #b23a3a;
+    color: #fff;
+    font-size: 0.85rem;
+}
+
+.booking-pay-closed-title {
+    margin: 0;
+    font-weight: 600;
+    color: #9c2f2f;
+}
+
+.booking-pay-closed-text {
+    margin: 5px 0 0;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: rgba(22, 41, 30, 0.75);
+}
+
+/* -------------------------------------------------------------- submit */
+
+.booking-pay-submit {
+    width: 100%;
+    margin-top: 16px;
+    padding: 13px 18px;
+    border: 0;
+    border-radius: 999px;
+    background-color: var(--forest);
+    color: var(--cream);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.92rem;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    cursor: pointer;
+    transition: background-color 0.18s ease, opacity 0.18s ease;
+}
+
+.booking-pay-submit:hover:not(:disabled) {
+    background-color: var(--forest-dark);
+}
+
+.booking-pay-submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------- responsive */
+
+@media (max-width: 600px) {
+    .booking-pay-header {
+        padding: 12px 14px;
+    }
+
+    .booking-pay-body {
+        padding: 4px 14px 16px;
+    }
+
+    .pay-row {
+        font-size: 0.84rem;
+    }
+
+    .pay-row-total .pay-row-value {
+        font-size: 1.1rem;
+    }
+
+    .pay-clock-time {
+        font-size: 1.3rem;
+    }
+}

@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import './components/css/spaService.css'
 import Footer from '../components/footer'
 import LotusDividerIcon from '../components/LotusDividerIcon'
-import { useBookings } from './mybooking.jsx'
+import { useBookings } from '../data/useBookings.js'
 import { SkeletonImage } from '../components/skeletons/Skeleton.jsx'
 import massage1 from '../assets/images/massage1.png'
 import massage2 from '../assets/images/massage2.png'
@@ -11,23 +11,18 @@ import massage3 from '../assets/images/massage3.png'
 import massage4 from '../assets/images/massage4.png'
 import massage5 from '../assets/images/massage5.png'
 import massage6 from '../assets/images/massage6.png'
-import massage11 from '../assets/images/massage11.png'
-import massage22 from '../assets/images/massage22.png'
-import massage33 from '../assets/images/massage33.png'
-import massage44 from '../assets/images/massage44.png'
-import massage55 from '../assets/images/massage55.png'
-import massage66 from '../assets/images/massage66.png'
-import massage77 from '../assets/images/massage77.png'
-import massage88 from '../assets/images/massage88.png'
+// The treatments and their prices live in Postgres (spa_services) — see
+// data/menuDB.js. Only the mood gallery above is decoration authored here.
+import { useSpaServices } from '../data/menuDB.js'
 
 const instructions = [
     {
         title: 'How to Order',
-        descriptions: ['Complete your booking first.', 
-            'Browse the Spa Service', 
-            'Input How Many Pax', 
-            'Review and Confirm your Service', 
-            'The total Spa Service will automatically be added to your booking receipt.' 
+        descriptions: ['Reserve your stay first — you can book a treatment before paying.',
+            'Browse the Spa Service',
+            'Input How Many Pax',
+            'Review and Confirm your Service',
+            'The treatment joins your down payment, which you settle from My Bookings.'
         ]
     }
 
@@ -51,17 +46,6 @@ const service =[
     {
         image: massage6,
     },
-]
-
-export const hilotServices = [
-    { image: massage11, name: 'Ventosa Cupping', desc: 'Suction cupping therapy that eases muscle tension and improves circulation.', duration: '1hr 30mins', price: 850 },
-    { image: massage22, name: 'Traditional Body Massage', desc: 'Full-body Hilot massage rooted in Filipino healing traditions.', duration: '1hr', price: 650 },
-    { image: massage33, name: 'Back Massage', desc: 'Targeted kneading to release tension across the back and shoulders.', duration: '30mins', price: 400 },
-    { image: massage44, name: 'Moisturizing Facial Detox', desc: 'Deep-cleansing facial that hydrates and refreshes tired skin.', duration: '1hr', price: 500 },
-    { image: massage55, name: 'Foot Spa with Reflexology', desc: 'Soothing foot soak paired with pressure-point reflexology.', duration: '1hr', price: 650 },
-    { image: massage66, name: 'Hand Massage with Manicure', desc: 'Relaxing hand massage finished with a neat manicure.', duration: '1hr', price: 450 },
-    { image: massage77, name: 'Foot Spa Reflexology with Pedi', desc: 'Reflexology foot spa complete with a polished pedicure.', duration: '1hr 30mins', price: 550 },
-    { image: massage88, name: 'Manicure and Pedicure', desc: 'Classic hand and foot grooming for a clean, polished finish.', duration: '1hr', price: 300 },
 ]
 
 const hilotInclusions = [
@@ -166,6 +150,9 @@ function SpaOrderModal({ item, onClose, onAddToCart }) {
 
     const handleConfirm = () => {
         onAddToCart({
+            // The spa_services row this line came from, so the dashboard can
+            // group avails by treatment rather than by display name.
+            itemId: item.id,
             image: item.image,
             name: item.name,
             unitPrice: item.price,
@@ -273,8 +260,10 @@ function SpaCheckoutPanel({ cart, status, onIncrease, onDecrease, onRemove, onPl
                         <div className="spa-checkout-blocked">
                             <span className="spa-checkout-blocked-icon" aria-hidden="true">!</span>
                             <p>
-                                You need a confirmed booking with an uploaded down-payment
-                                receipt before you can place this order.
+                                You need a booking before you can reserve a treatment.
+                                Book your stay first — spa services are added to your
+                                down payment, so booking one before you pay keeps it
+                                to a single payment.
                             </p>
                             <div className="spa-checkout-blocked-actions">
                                 <Link to="/my-booking" className="spa-checkout-blocked-link">
@@ -347,6 +336,8 @@ function SpaService() {
     const howToReserveRef = useRef(null)
     const [orderItem, setOrderItem] = useState(null)
     const { findOrderableBooking, addSpaOrderToBooking } = useBookings()
+    // The treatment list, straight from spa_services.
+    const hilotServices = useSpaServices()
     const { cart, addToCart: addLineToCart, adjustQuantity, removeLine, clearCart } = useSpaCart()
     const [checkoutStatus, setCheckoutStatus] = useState('idle') // idle | blocked | success
 
@@ -363,14 +354,13 @@ function SpaService() {
             setCheckoutStatus('blocked')
             return
         }
-        const orderedAt = new Date().toISOString()
         cart.forEach((line) => {
             addSpaOrderToBooking(targetBooking.id, {
+                itemId: line.itemId,
                 name: line.name,
                 unitPrice: line.unitPrice,
                 quantity: line.quantity,
                 total: line.total,
-                orderedAt,
             })
         })
         clearCart()
@@ -496,7 +486,7 @@ function SpaService() {
                     {hilotServices.map((item, index) => (
                         <article
                             className="hilot-card"
-                            key={item.name}
+                            key={item.id}
                             role="button"
                             tabIndex={0}
                             aria-haspopup="dialog"

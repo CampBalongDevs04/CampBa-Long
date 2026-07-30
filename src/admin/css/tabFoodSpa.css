@@ -43,6 +43,30 @@
     max-width: 340px;
 }
 
+/* ---------- Panel summary line ---------- */
+.orderService-summary {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(198, 161, 91, 0.3);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.82rem;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: rgba(10, 22, 14, 0.6);
+}
+
+.orderService-summary-total {
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    text-transform: none;
+    color: var(--forest-dark);
+}
+
 /* ---------- Booking card (used once data exists) ---------- */
 .orderService-card {
     background: #fff;
@@ -57,6 +81,232 @@
     margin-top: 12px;
 }
 
+.orderService-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.orderService-guest {
+    font-size: 0.98rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+/* Same pills as the booking tabs, restated here so this panel does not depend
+   on booking-tabs.css happening to be loaded by a neighbouring widget. */
+.orderService-stage {
+    flex-shrink: 0;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    background: rgba(120, 120, 120, 0.16);
+    color: #555;
+}
+
+.orderService-stage.stage-pending {
+    background: rgba(198, 161, 91, 0.24);
+    color: #8a6a1f;
+}
+
+.orderService-stage.stage-upcoming {
+    background: rgba(91, 141, 198, 0.15);
+    color: #2f5c94;
+}
+
+.orderService-stage.stage-active {
+    background: rgba(91, 168, 108, 0.18);
+    color: #2c7a44;
+}
+
+.orderService-meta {
+    margin: 6px 0 0;
+    font-size: 0.85rem;
+    color: rgba(10, 22, 14, 0.75);
+}
+
+/* ---------- Food / Spa groups inside a card ---------- */
+.orderService-group {
+    margin-top: 14px;
+}
+
+.orderService-group-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.orderService-group-title {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--gold, #8a6a1f);
+}
+
+.orderService-group-total {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: rgba(10, 22, 14, 0.7);
+}
+
+.orderService-lines {
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.orderService-line {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: baseline;
+    gap: 12px;
+    padding: 7px 0;
+    border-top: 1px dotted rgba(198, 161, 91, 0.4);
+    font-size: 0.87rem;
+}
+
+.orderService-line-name {
+    color: var(--forest-dark);
+}
+
+.orderService-line-qty {
+    margin-left: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: rgba(10, 22, 14, 0.55);
+}
+
+.orderService-line-when {
+    font-size: 0.74rem;
+    color: rgba(10, 22, 14, 0.45);
+    white-space: nowrap;
+}
+
+.orderService-line-total {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.orderService-card-total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 14px 0 0;
+    padding-top: 10px;
+    border-top: 1px solid rgba(198, 161, 91, 0.35);
+    font-size: 0.8rem;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: rgba(10, 22, 14, 0.55);
+}
+
+.orderService-card-total strong {
+    font-size: 1rem;
+    letter-spacing: 0.2px;
+    text-transform: none;
+    color: var(--forest-dark);
+}
+
+/* ---------- Spa avails (rolled up per treatment) ---------- */
+.spa-avail-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.25);
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-family: 'Jost', sans-serif;
+    color: var(--forest-dark);
+}
+
+.spa-avail-row + .spa-avail-row {
+    margin-top: 12px;
+}
+
+.spa-avail-image {
+    flex-shrink: 0;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(198, 161, 91, 0.12);
+    font-size: 1.4rem;
+}
+
+.spa-avail-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.spa-avail-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.spa-avail-name {
+    margin: 0;
+    font-size: 0.98rem;
+    font-weight: 600;
+}
+
+.spa-avail-sub {
+    margin: 2px 0 0;
+    font-size: 0.78rem;
+    color: rgba(10, 22, 14, 0.55);
+}
+
+.spa-avail-guests {
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.spa-avail-guests li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+    border-top: 1px dotted rgba(198, 161, 91, 0.4);
+    font-size: 0.85rem;
+}
+
+.spa-avail-guest-meta {
+    font-size: 0.74rem;
+    color: rgba(10, 22, 14, 0.45);
+    white-space: nowrap;
+}
+
+.spa-avail-figures {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+.spa-avail-count {
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+.spa-avail-total {
+    font-size: 0.8rem;
+    color: rgba(10, 22, 14, 0.55);
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 860px) {
     .orderService-panel {
@@ -65,5 +315,23 @@
 
     .orderService-empty {
         padding: 42px 14px;
+    }
+
+    /* The timestamp is the first thing to give up its column. */
+    .orderService-line {
+        grid-template-columns: 1fr auto;
+    }
+
+    .orderService-line-when {
+        display: none;
+    }
+
+    .spa-avail-row {
+        flex-wrap: wrap;
+    }
+
+    .spa-avail-guest-meta {
+        white-space: normal;
+        text-align: right;
     }
 }

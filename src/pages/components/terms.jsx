@@ -6,11 +6,17 @@ const policies = [
     'Cancellation is no longer allowed once the down payment has been made.',
 ]
 
-export default function Terms({ agreed, onAgreeChange, onConfirm, submitting = false }){
+export default function Terms({
+    agreed,
+    onAgreeChange,
+    onConfirm,
+    submitting = false,
+    confirmLabel = 'Confirm Booking',
+}){
     return(
         <div className="terms">
             <div className="terms-card">
-                <p className="terms-warning">Please read first before paying</p>
+                <p className="terms-warning">Please read first before reserving</p>
 
                 <ul className="terms-list">
                     {policies.map((policy) => (
@@ -40,7 +46,7 @@ export default function Terms({ agreed, onAgreeChange, onConfirm, submitting = f
                 disabled={!agreed || submitting}
                 onClick={onConfirm}
             >
-                {submitting ? 'Reserving your unit…' : 'Confirm Booking'}
+                {submitting ? 'Reserving your unit…' : confirmLabel}
             </button>
         </div>
     )

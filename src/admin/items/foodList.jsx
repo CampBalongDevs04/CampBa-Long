@@ -1,53 +1,29 @@
-import { useEffect, useState } from 'react'
 import '../css/foodlist.css'
 import {
-    breakfastItems,
-    beverageItems,
-    preOrderItems,
-    coffeeMenu,
+    useFoodMenu,
+    groupCoffeeMenu,
+    formatMenuPrice,
+    FOOD_CATEGORIES,
     FLAVORED_COFFEE_UPCHARGE,
-} from '../../pages/foodmenu.jsx'
+} from '../../data/menuDB.js'
+import {
+    useAccommodationDB,
+    listAddonOrders,
+    hasStaffSession,
+} from '../../data/accommodationDB.js'
 
-// Menu data is hardcoded in pages/foodmenu.jsx — this only regroups it
-// under the categories used by the FoodTab filter. Every category id here
-// needs a matching tab in foodTab.jsx to be filterable; the 'all' tab shows
-// them all regardless.
-const FOOD_SECTIONS = [
-    { category: 'breakfast', title: 'Foods', items: breakfastItems },
-    { category: 'combo', title: 'Combo Meal', items: beverageItems },
-    { category: 'pre-order', title: 'Pre-Order', items: preOrderItems },
-    // Bukal Cafe coffee has no per-flavor photos — it is priced per size, so
-    // it renders as tables instead of the image rows the food sections use.
-    {
-        category: 'beverages',
-        title: 'Beverages · Bukal Cafe Coffee',
-        coffeeGroups: coffeeMenu,
-    },
-]
-
-// Same key booking.jsx / foodmenu.jsx / mybooking.jsx persist bookings under —
-// guest food orders live inside each booking's foodOrders array.
-const BOOKINGS_STORAGE_KEY = 'cbl-my-bookings'
-
-function loadUserOrders() {
-    let bookings = []
-    try {
-        bookings = JSON.parse(localStorage.getItem(BOOKINGS_STORAGE_KEY) ?? '[]')
-    } catch {
-        return []
-    }
-    return bookings
-        .flatMap((booking) =>
-            (booking.foodOrders ?? []).map((order) => ({
-                ...order,
-                guestName: booking.guest?.fullName || 'Guest',
-                bookingId: booking.id,
-            }))
-        )
-        .sort((a, b) => new Date(b.orderedAt) - new Date(a.orderedAt))
-}
+// The Food Menu section of the dashboard: the menu on the left, what guests
+// have actually ordered on the right.
+//
+// Both halves now come from Postgres. The menu used to be imported out of
+// pages/foodmenu.jsx (so a price change meant a redeploy) and the orders were
+// read out of a `cbl-my-bookings` localStorage key that stopped existing when
+// bookings moved to the database — which is why this panel was permanently
+// empty. Orders are read from the booking rows the staff session can see, so
+// this shows every guest's order, not just whoever used this browser.
 
 function formatOrderedAt(orderedAt) {
+    if (!orderedAt) return ''
     const date = new Date(orderedAt)
     if (Number.isNaN(date.getTime())) return ''
     return date.toLocaleString('en-PH', {
@@ -59,16 +35,8 @@ function formatOrderedAt(orderedAt) {
 }
 
 function UserOrders() {
-    const [orders, setOrders] = useState(loadUserOrders)
-
-    // Refresh when another tab (the guest-facing food menu) saves an order.
-    useEffect(() => {
-        const handleStorage = (event) => {
-            if (event.key === BOOKINGS_STORAGE_KEY) setOrders(loadUserOrders())
-        }
-        window.addEventListener('storage', handleStorage)
-        return () => window.removeEventListener('storage', handleStorage)
-    }, [])
+    useAccommodationDB()
+    const orders = listAddonOrders('food')
 
     return (
         <aside className="foodlist-orders">
@@ -90,13 +58,15 @@ function UserOrders() {
                     </svg>
                     <p className="foodlist-orders-empty-title">No orders yet</p>
                     <p className="foodlist-orders-empty-text">
-                        Guest food orders will appear here once they order from the menu.
+                        {hasStaffSession()
+                            ? 'Guest food orders will appear here once they order from the menu.'
+                            : 'Sign in with a staff account to see guest food orders.'}
                     </p>
                 </div>
             ) : (
                 <div className="foodlist-orders-rows">
-                    {orders.map((order, index) => (
-                        <article key={`${order.bookingId}-${order.orderedAt}-${index}`} className="foodlist-order-card">
+                    {orders.map((order) => (
+                        <article key={order.key} className="foodlist-order-card">
                             <div className="foodlist-order-top">
                                 <span className="foodlist-order-guest">{order.guestName}</span>
                                 <span className="foodlist-order-date">{formatOrderedAt(order.orderedAt)}</span>
@@ -105,8 +75,13 @@ function UserOrders() {
                                 <span className="foodlist-order-item">
                                     {order.name} <span className="foodlist-order-qty">×{order.quantity}</span>
                                 </span>
-                                <span className="foodlist-order-total">PHP {Number(order.total ?? 0).toFixed(2)}</span>
+                                <span className="foodlist-order-total">{formatMenuPrice(order.total)}</span>
                             </div>
+                            {/* Which stay the kitchen is cooking for. */}
+                            <p className="foodlist-order-booking">
+                                {order.code}
+                                {order.unitId ? ` · ${order.unitId}` : ''}
+                            </p>
                         </article>
                     ))}
                 </div>
@@ -118,10 +93,8 @@ function UserOrders() {
 function ItemRows({ items }) {
     return (
         <div className="foodlist-rows">
-            {/* Pre-Order repeats the same dish name at different sizes, so the
-                index is part of the key. */}
-            {items.map((item, index) => (
-                <article key={`${item.name}-${index}`} className="foodlist-row">
+            {items.map((item) => (
+                <article key={item.id} className="foodlist-row">
                     <div className="foodlist-image">
                         <img src={item.image} alt={item.name} />
                     </div>
@@ -135,7 +108,7 @@ function ItemRows({ items }) {
                             </p>
                         )}
                     </div>
-                    <span className="foodlist-price">{item.price}</span>
+                    <span className="foodlist-price">{formatMenuPrice(item.price)}</span>
                 </article>
             ))}
         </div>
@@ -163,8 +136,15 @@ function CoffeeTables({ groups }) {
                                 {group.flavors.map((flavor) => (
                                     <tr key={flavor.name}>
                                         <td className="foodlist-coffee-flavor">{flavor.name}</td>
-                                        {flavor.prices.map((price, i) => (
-                                            <td key={group.sizeLabels[i]}>{price.toFixed(2)}</td>
+                                        {/* Per size column, so a flavor not sold
+                                            in every cup size leaves a gap
+                                            instead of shifting the row. */}
+                                        {group.sizeLabels.map((size, i) => (
+                                            <td key={size}>
+                                                {flavor.items[i]
+                                                    ? flavor.items[i].price.toFixed(2)
+                                                    : '—'}
+                                            </td>
                                         ))}
                                     </tr>
                                 ))}
@@ -178,19 +158,28 @@ function CoffeeTables({ groups }) {
 }
 
 export default function FoodList({ category = 'all' }) {
-    const sections =
-        category === 'all'
-            ? FOOD_SECTIONS
-            : FOOD_SECTIONS.filter((section) => section.category === category)
+    const menu = useFoodMenu()
+
+    // Categories come from the catalog, so a new one needs a tab in
+    // foodTab.jsx to be filterable but no change here; the 'all' tab shows
+    // everything regardless. Bukal Cafe coffee has no per-flavor photos — it is
+    // priced per cup size, so it renders as tables rather than image rows.
+    const sections = FOOD_CATEGORIES
+        .filter((section) => category === 'all' || section.id === category)
+        .map((section) => ({
+            ...section,
+            items: menu.filter((item) => item.category === section.id),
+        }))
+        .filter((section) => section.items.length > 0)
 
     return (
         <div className="foodlist-layout">
             <div className="foodlist-panel">
                 {sections.map((section) => (
-                    <section key={section.title} className="foodlist-section">
+                    <section key={section.id} className="foodlist-section">
                         <h3 className="foodlist-section-title">{section.title}</h3>
-                        {section.coffeeGroups ? (
-                            <CoffeeTables groups={section.coffeeGroups} />
+                        {section.id === 'coffee' ? (
+                            <CoffeeTables groups={groupCoffeeMenu(section.items)} />
                         ) : (
                             <ItemRows items={section.items} />
                         )}

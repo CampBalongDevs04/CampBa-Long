@@ -7,152 +7,26 @@ import { SkeletonImage } from '../components/skeletons/Skeleton.jsx'
 import food1 from '../assets/images/food1.png'
 import food2 from '../assets/images/food2.png'
 import food3 from '../assets/images/food3.png'
-import menu1 from '../assets/images/menu1.png'
-import menu2 from '../assets/images/menu2.png'
-import menu3 from '../assets/images/menu3.png'
-import menu4 from '../assets/images/menu4.png'
-import menu5 from '../assets/images/menu5.png'
-import menu6 from '../assets/images/menu6.png'
-import menu7 from '../assets/images/menu7.png'
-import combo1 from '../assets/images/combo1.png'
-import combo2 from '../assets/images/combo2.png'
-import combo3 from '../assets/images/combo3.png'
-import combo4 from '../assets/images/combo4.png'
-import combo5 from '../assets/images/combo5.png'
-import combo6 from '../assets/images/combo6.png'
-import combo7 from '../assets/images/combo7.png'
-import pre1 from '../assets/images/pre1.png'
-import pre2 from '../assets/images/pre2.png'
-import pre3 from '../assets/images/pre3.png'
-import pre4 from '../assets/images/pre4.png'
-import { useBookings } from './mybooking.jsx'
+import { useBookings } from '../data/useBookings.js'
+// The menu itself lives in Postgres (food_menu_items) — see data/menuDB.js.
+// This page renders whatever the catalog says, so a price edited there needs
+// no code change here.
+import {
+  useFoodMenu,
+  groupCoffeeMenu,
+  formatMenuPrice,
+  CLASSIC_COFFEE_OPTIONS,
+  FLAVORED_COFFEE_OPTIONS,
+  FLAVORED_COFFEE_UPCHARGE,
+} from '../data/menuDB.js'
 
 const orderSteps = [
-  'Complete your booking first.',
+  'Reserve your stay first — you can order before paying.',
   'Browse the food menu and select your preferred items.',
   'Choose the quantity for each item.',
   'Review and confirm your order.',
-  'The total food cost will automatically be added to your booking receipt.',
+  'The food cost joins your down payment, which you settle from My Bookings.',
 ]
-
-// The item arrays below are exported so the admin dashboard's food list
-// (src/admin/items/foodList.jsx) can reuse the same hardcoded menu data.
-export const breakfastItems = [
-  { image: menu1, name: 'Sinigang na Liempo', desc: 'Good for 4-5 pax', price: 'PHP 700.00' },
-  { image: menu2, name: 'Fried Chicken', desc: 'Good for 3-4 pax', price: 'PHP 350.00' },
-  { image: menu3, name: 'Tinola', desc: 'Good for 4-6 pax', price: 'PHP 600.00' },
-  { image: menu4, name: 'Inihaw na Liempo', desc: 'Good for 3-4 pax', price: 'PHP 500.00' },
-  { image: menu5, name: 'Inihaw na Tilapia', desc: 'Good for 3-4 pax', price: 'PHP 400.00' },
-  { image: menu6, name: 'Pork Sisig', desc: 'Good for 3-4 pax', price: 'PHP 400.00' },
-  { image: menu7, name: 'Pork Adobo', desc: 'Good for 3-4 pax', price: 'PHP 500.00' },
-]
-
-const classicCoffeeOptions = ['Americano', 'Cafe Latte', 'Cappucino', 'Cafe Mocha', 'Caramel Machiatto']
-const flavoredCoffeeOptions = ['Vanilla Latte', 'Hazelnut Latte', 'Choco Hazelnut Latte', 'Salted Caramel Latte', 'Matcha Latte', 'White Mocha']
-export const FLAVORED_COFFEE_UPCHARGE = 10
-
-export const beverageItems = [
-  { image: combo1, name: 'Longsilog', desc: 'Longganisa, Sinangag at Itlog with Classic Hot Coffee', price: 'PHP 230.00', hasCoffeeOption: true },
-  { image: combo2, name: 'Hotsilog', desc: 'Hotdog, Sinangag at Itlog with Classic Hot Coffee', price: 'PHP 230.00', hasCoffeeOption: true },
-  { image: combo3, name: 'Tapsilog', desc: 'Tapa, Sinangag at Itlog with Classic Hot Coffee', price: 'PHP 260.00', hasCoffeeOption: true },
-  { image: combo4, name: 'Tocilog', desc: 'Tocino, Sinangag at Itlog with Classic Hot Coffee', price: 'PHP 260.00', hasCoffeeOption: true },
-  { image: combo5, name: 'Chicksilog', desc: 'Chicken, Sinangag at Itlog with Classic Hot Coffee', price: 'PHP 310.00', hasCoffeeOption: true },
-  { image: combo6, name: 'Shanghaisilog', desc: 'Shanghai, Sinangag at Itlog with Classic Hot Coffee', price: 'PHP 230.00', hasCoffeeOption: true },
-  { image: combo7, name: 'Liemposilog', desc: 'Liempo, Sinangag at Itlog with Classic Hot Coffee', price: 'PHP 310.00', hasCoffeeOption: true },
-]
-
-export const preOrderItems = [
-  { image: pre1, name: 'Pancit Bihon / Canton', desc: 'Good for 6-7 pax', price: 'PHP 400.00' },
-  { image: pre2, name: 'Pancit Bihon / Canton', desc: 'Large Bilao', price: 'PHP 1,500.00' },
-  { image: pre3, name: 'Pancit Bihon / Canton', desc: 'Medium Bilao', price: 'PHP 800.00' },
-  { image: pre4, name: 'Tofu Sisig', desc: 'Good for 3-4 pax', price: 'PHP 250.00' },
-]
-
-// Bukal Cafe by Camp Ba-Long Nature Farm — coffee price list. There are no
-// per-flavor photos for these, so the menu renders as price tables instead
-// of the photo-card carousel the other categories use.
-export const coffeeMenu = [
-  {
-    key: 'classic-hot',
-    title: 'Classic Hot Coffee',
-    sizeLabels: ['8oz.', '12oz.', '16oz.'],
-    flavors: [
-      { name: 'Americano', prices: [110, 125, 130] },
-      { name: 'Cafe Latte', prices: [120, 125, 140] },
-      { name: 'Cappuccino', prices: [125, 140, 145] },
-      { name: 'Cafe Mocha', prices: [125, 140, 145] },
-      { name: 'White Mocha', prices: [125, 140, 145] },
-      { name: 'Caramel Machiatto', prices: [125, 140, 145] },
-      { name: 'Spanish Latte', prices: [125, 140, 145] },
-    ],
-  },
-  {
-    key: 'classic-iced',
-    title: 'Classic Iced Coffee',
-    sizeLabels: ['Tall 12oz.', 'Grande 16oz.'],
-    flavors: [
-      { name: 'Americano', prices: [125, 130] },
-      { name: 'Cafe Latte', prices: [125, 130] },
-      { name: 'Cappuccino', prices: [140, 145] },
-      { name: 'Cafe Mocha', prices: [140, 145] },
-      { name: 'Caramel Machiatto', prices: [140, 145] },
-      { name: 'Spanish Latte', prices: [140, 145] },
-    ],
-  },
-  {
-    key: 'flavored-hot',
-    title: 'Flavored Hot Special',
-    sizeLabels: ['8oz.', '12oz.', '16oz.'],
-    flavors: [
-      { name: 'Vanilla Latte', prices: [130, 145, 155] },
-      { name: 'Hazelnut Latte', prices: [130, 145, 155] },
-      { name: 'Choco Hazelnut Latte', prices: [130, 145, 155] },
-      { name: 'Salted Caramel Latte', prices: [130, 145, 155] },
-      { name: 'Matcha Latte', prices: [130, 145, 155] },
-      { name: 'Strawberry Matcha Latte', prices: [135, 160, 160] },
-    ],
-  },
-  {
-    key: 'flavored-iced',
-    title: 'Flavored Iced Special',
-    sizeLabels: ['Tall 12oz.', 'Grande 16oz.'],
-    flavors: [
-      { name: 'Vanilla Latte', prices: [145, 155] },
-      { name: 'Hazelnut Latte', prices: [145, 155] },
-      { name: 'Choco Hazelnut Latte', prices: [145, 155] },
-      { name: 'Salted Caramel Latte', prices: [145, 155] },
-      { name: 'Matcha Latte', prices: [145, 155] },
-      { name: 'Brown Sugar Latte', prices: [145, 155] },
-      { name: 'Cinnamon Latte', prices: [145, 155] },
-      { name: 'White Chocolate Mocha', prices: [150, 160] },
-      { name: 'Cookie Dough Latte', prices: [150, 160] },
-      { name: 'Strawberry Matcha Latte', prices: [150, 160] },
-    ],
-  },
-  {
-    key: 'iced-fruit',
-    title: "Iced Fruit Soda and Latte",
-    sizeLabels: ['Tall 12oz.', 'Grande 16oz.'],
-    flavors: [
-      { name: 'Strawberry Soda/Latte', prices: [100, 105] },
-      { name: 'Blueberry Soda/Latte', prices: [100, 105] },
-      { name: 'Peach Soda/Latte', prices: [100, 105] },
-    ],
-  },
-]
-
-// Flattened per-size list, reused by the admin dashboard's food list and by
-// the "add to order" flow (each size is its own orderable line item).
-export const coffeeItems = coffeeMenu.flatMap((category) =>
-  category.flavors.flatMap((flavor) =>
-    flavor.prices.map((price, i) => ({
-      image: null,
-      name: `${flavor.name} (${category.sizeLabels[i]})`,
-      desc: category.title,
-      price: `PHP ${price.toFixed(2)}`,
-    }))
-  )
-)
 
 // Kiosk-style order tray. Module-level (same pattern as bookingsStore in
 // mybooking.jsx) so it survives client-side navigation away from /menu and
@@ -251,7 +125,7 @@ function FoodOrderModal({ item, onClose, onAddToCart }) {
   const [quantity, setQuantity] = useState(1)
   const [confirmed, setConfirmed] = useState(false)
   const [coffeeChoice, setCoffeeChoice] = useState(
-    item.hasCoffeeOption ? classicCoffeeOptions[0] : null
+    item.hasCoffeeOption ? CLASSIC_COFFEE_OPTIONS[0] : null
   )
   const [step, setStep] = useState('details')
   const showingCoffeeStep = item.hasCoffeeOption && step === 'coffee'
@@ -277,14 +151,17 @@ function FoodOrderModal({ item, onClose, onAddToCart }) {
   const decrease = () => setQuantity((current) => Math.max(1, current - 1))
   const increase = () => setQuantity((current) => current + 1)
 
-  const isFlavoredCoffee = coffeeChoice && flavoredCoffeeOptions.includes(coffeeChoice)
+  const isFlavoredCoffee = coffeeChoice && FLAVORED_COFFEE_OPTIONS.includes(coffeeChoice)
   const coffeeUpcharge = isFlavoredCoffee ? FLAVORED_COFFEE_UPCHARGE : 0
-  const unitPrice = (Number(item.price.replace(/[^0-9.]/g, '')) || 0) + coffeeUpcharge
+  const unitPrice = Number(item.price) + coffeeUpcharge
   const total = unitPrice * quantity
 
   const handleConfirm = () => {
-    const orderName = item.hasCoffeeOption && coffeeChoice ? `${item.name} (${coffeeChoice})` : item.name
+    const orderName = item.hasCoffeeOption && coffeeChoice ? `${item.label} (${coffeeChoice})` : item.label
     onAddToCart({
+      // The catalog row this line came from, so the admin dashboard can group
+      // orders by menu item instead of by whatever the name read at the time.
+      itemId: item.id,
       image: item.image,
       name: orderName,
       unitPrice,
@@ -300,7 +177,7 @@ function FoodOrderModal({ item, onClose, onAddToCart }) {
         className="food-order-modal"
         role="dialog"
         aria-modal="true"
-        aria-label={`Order ${item.name}`}
+        aria-label={`Order ${item.label}`}
         onClick={(event) => event.stopPropagation()}
       >
         <button type="button" className="food-order-close" onClick={onClose} aria-label="Close">
@@ -316,20 +193,20 @@ function FoodOrderModal({ item, onClose, onAddToCart }) {
           <div className={`food-order-body${item.image ? '' : ' no-image'}`}>
             {item.image && (
               <div className="food-order-image">
-                <SkeletonImage src={item.image} alt={item.name} />
+                <SkeletonImage src={item.image} alt={item.label} />
               </div>
             )}
             <div className="food-order-details">
               {showingCoffeeStep ? (
                 <>
-                  <h3 className="food-order-name">{item.name}</h3>
+                  <h3 className="food-order-name">{item.label}</h3>
 
                   <div className="food-order-coffee">
                     <p className="food-order-coffee-label">Pick Your Coffee</p>
 
                     <span className="food-order-coffee-group-title">Classic Hot Coffee</span>
                     <div className="food-order-coffee-options">
-                      {classicCoffeeOptions.map((option) => (
+                      {CLASSIC_COFFEE_OPTIONS.map((option) => (
                         <button
                           key={option}
                           type="button"
@@ -346,7 +223,7 @@ function FoodOrderModal({ item, onClose, onAddToCart }) {
                       Flavored Hot Special <span className="food-order-coffee-upcharge">+ PHP {FLAVORED_COFFEE_UPCHARGE.toFixed(2)}</span>
                     </span>
                     <div className="food-order-coffee-options">
-                      {flavoredCoffeeOptions.map((option) => (
+                      {FLAVORED_COFFEE_OPTIONS.map((option) => (
                         <button
                           key={option}
                           type="button"
@@ -378,9 +255,9 @@ function FoodOrderModal({ item, onClose, onAddToCart }) {
                 </>
               ) : (
                 <>
-                  <h3 className="food-order-name">{item.name}</h3>
+                  <h3 className="food-order-name">{item.label}</h3>
                   <p className="food-order-desc">{item.desc}</p>
-                  <p className="food-order-price">{item.price}</p>
+                  <p className="food-order-price">{formatMenuPrice(item.price)}</p>
 
                   <div className="food-order-quantity">
                     <button
@@ -468,6 +345,11 @@ function MenuFoodRow({ items, onAddToOrder }) {
   const showPrev = () => setPosition((current) => current - 1)
   const showNext = () => setPosition((current) => current + 1)
 
+  // A category with every item deactivated in the catalog has nothing to
+  // slide through, and the track's arithmetic is all relative to `total`.
+  // Checked after the hooks so the order they run in never changes.
+  if (total === 0) return null
+
   return (
     <div className="menu-row-wrap">
       <button type="button" className="menu-arrow" onClick={showPrev} aria-label="Show previous item">
@@ -476,13 +358,13 @@ function MenuFoodRow({ items, onAddToOrder }) {
       <div className="menu-row">
         <div className="menu-row-track" ref={trackRef} onTransitionEnd={handleTransitionEnd}>
           {combined.map((item, i) => (
-            <article className="menu-food-card" key={`${item.name}-${i}`}>
+            <article className="menu-food-card" key={`${item.id}-${i}`}>
               <div className="menu-food-image">
                 <SkeletonImage src={item.image} alt={item.name} />
               </div>
               <h3 className="menu-food-name">{item.name}</h3>
               <p className="menu-food-desc">{item.desc}</p>
-              <p className="menu-food-price">{item.price}</p>
+              <p className="menu-food-price">{formatMenuPrice(item.price)}</p>
               <button
                 type="button"
                 className="menu-food-add"
@@ -518,24 +400,27 @@ function CoffeeMenuCategory({ category, onAddToOrder }) {
           {category.flavors.map((flavor) => (
             <tr key={flavor.name}>
               <td className="coffee-table-flavor">{flavor.name}</td>
-              {flavor.prices.map((price, i) => (
-                <td key={category.sizeLabels[i]}>
-                  <button
-                    type="button"
-                    className="coffee-price-btn"
-                    onClick={() =>
-                      onAddToOrder({
-                        image: null,
-                        name: `${flavor.name} (${category.sizeLabels[i]})`,
-                        desc: category.title,
-                        price: `PHP ${price.toFixed(2)}`,
-                      })
-                    }
-                  >
-                    {price}
-                  </button>
-                </td>
-              ))}
+              {/* Walked per SIZE COLUMN rather than per price, so a flavor the
+                  catalog doesn't sell in every size leaves a blank cell
+                  instead of sliding its neighbours one column left. */}
+              {category.sizeLabels.map((size, i) => {
+                const item = flavor.items[i]
+                return (
+                  <td key={size}>
+                    {item ? (
+                      <button
+                        type="button"
+                        className="coffee-price-btn"
+                        onClick={() => onAddToOrder(item)}
+                      >
+                        {item.price}
+                      </button>
+                    ) : (
+                      <span className="coffee-price-none" aria-hidden="true">—</span>
+                    )}
+                  </td>
+                )
+              })}
             </tr>
           ))}
         </tbody>
@@ -544,13 +429,13 @@ function CoffeeMenuCategory({ category, onAddToOrder }) {
   )
 }
 
-function CoffeeMenuSection({ onAddToOrder }) {
+function CoffeeMenuSection({ groups, onAddToOrder }) {
   // Two independently-stacking columns (instead of a strict grid) so a
   // shorter card's column keeps flowing upward instead of leaving a gap
   // underneath it — the left column ends up: Classic Hot, Flavored Hot,
   // Iced Fruit Soda and Latte; the right column: Classic Iced, Flavored Iced.
-  const leftColumn = coffeeMenu.filter((_, i) => i % 2 === 0)
-  const rightColumn = coffeeMenu.filter((_, i) => i % 2 === 1)
+  const leftColumn = groups.filter((_, i) => i % 2 === 0)
+  const rightColumn = groups.filter((_, i) => i % 2 === 1)
 
   return (
     <div className="coffee-menu-wrap">
@@ -606,8 +491,9 @@ function CheckoutPanel({ cart, status, onIncrease, onDecrease, onRemove, onPlace
             <div className="kiosk-checkout-blocked">
               <span className="kiosk-checkout-blocked-icon" aria-hidden="true">!</span>
               <p>
-                You need a confirmed booking with an uploaded down-payment
-                receipt before you can place this order.
+                You need a booking before you can order. Reserve your stay
+                first — food is added to your down payment, so ordering
+                before you pay keeps it to one payment.
               </p>
               <div className="kiosk-checkout-blocked-actions">
                 <Link to="/my-booking" className="kiosk-checkout-blocked-link">
@@ -679,6 +565,14 @@ function FoodMenuPage() {
   const howToOrderRef = useRef(null)
   const { findOrderableBooking, addFoodOrderToBooking } = useBookings()
 
+  // The menu, straight from food_menu_items. Re-renders on its own once the
+  // rows land, so nothing here has to wait for them.
+  const menu = useFoodMenu()
+  const breakfastItems = menu.filter((item) => item.category === 'breakfast')
+  const beverageItems = menu.filter((item) => item.category === 'combo')
+  const preOrderItems = menu.filter((item) => item.category === 'pre-order')
+  const coffeeGroups = groupCoffeeMenu(menu)
+
   const [expanded, setExpanded] = useState({
     breakfast: true,
     beverages: true,
@@ -714,14 +608,14 @@ function FoodMenuPage() {
       setCheckoutStatus('blocked')
       return
     }
-    const orderedAt = new Date().toISOString()
     cart.forEach((line) => {
       addFoodOrderToBooking(targetBooking.id, {
+        // The catalog row, so staff can group the kitchen's work by dish.
+        itemId: line.itemId,
         name: line.name,
         unitPrice: line.unitPrice,
         quantity: line.quantity,
         total: line.total,
-        orderedAt,
       })
     })
     clearCart()
@@ -839,7 +733,7 @@ function FoodMenuPage() {
             onToggle={() => toggleSection('coffee')}
           />
         </div>
-        {expanded.coffee && <CoffeeMenuSection onAddToOrder={setOrderItem} />}
+        {expanded.coffee && <CoffeeMenuSection groups={coffeeGroups} onAddToOrder={setOrderItem} />}
       </section>
 
     </main>

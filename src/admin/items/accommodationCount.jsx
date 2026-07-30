@@ -4,8 +4,6 @@ import {
     ACCOMMODATION_TYPES,
     listUnitIds,
     getUnitDayDetail,
-    getUnitStatus,
-    assignRandomAvailableUnit,
     useAccommodationDB,
     toISODate,
     formatShortDate,
@@ -16,9 +14,6 @@ const UNIT_STATUS = {
     pending: { label: 'Waiting for Payment', className: 'is-pending' },
     booked: { label: 'Booked', className: 'is-booked' },
 }
-
-// Re-exported so existing imports from this file keep working.
-export { ACCOMMODATION_TYPES, getUnitStatus, assignRandomAvailableUnit }
 
 export default function AccommodationCount() {
     // Live view of the same database the booking page writes to: a guest

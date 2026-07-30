@@ -2,45 +2,16 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import './components/css/mybooking.css'
 import Footer from '../components/footer'
+import BookingPayment from './components/bookingPayment.jsx'
 import { saveReceiptImage } from './components/receiptImage.js'
+import { useBookings } from '../data/useBookings.js'
 import {
-    useMyBookings,
-    cancelBooking as dbCancelBooking,
-    deleteBooking as dbDeleteBooking,
-    addFoodOrder,
-    addSpaOrder,
-    findOrderableBooking,
     getBookingStage,
     bookingsPersistOnThisDevice,
     forgetMyBookings,
+    wasCancelledByPaymentTimeout,
+    PAYMENT_WINDOW_MINUTES,
 } from '../data/accommodationDB.js'
-
-// Guest-facing view over the accommodation database. Everything lives in
-// data/accommodationDB.js so a cancellation here immediately frees the unit's
-// dates for the next guest and updates the admin Units board — there is only
-// one copy of the data.
-//
-// This list is scoped to the browser that made the bookings. The database
-// answers with the rows matching this device's owner token and nothing else,
-// so a guest on another phone sees their own reservations here, never these.
-export function useBookings(){
-    // Deliberately NOT the admin store. Signing in as staff must not change
-    // what this page shows — that is how a staff phone ended up displaying
-    // every guest's reservation on the guest-facing page.
-    const bookings = useMyBookings()
-
-    return {
-        bookings,
-        cancelBooking: dbCancelBooking,
-        deleteBooking: dbDeleteBooking,
-        // Food/spa can only be added to a booking that has an uploaded
-        // down-payment receipt on file. The most recent eligible booking
-        // (bookings are stored newest-first) is the one an order attaches to.
-        findOrderableBooking,
-        addFoodOrderToBooking: addFoodOrder,
-        addSpaOrderToBooking: addSpaOrder,
-    }
-}
 
 function formatDate(iso){
     if (!iso) return '—'
@@ -105,10 +76,19 @@ function stayLabel(booking){
     return `${nights} night${nights > 1 ? 's' : ''} stay`
 }
 
-function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt }){
+function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, payNow }){
     const status = getBookingStage(booking)
     const { start, end } = splitTimes(booking.schedule)
     const paymentKnown = booking.downpayment != null
+    const outstanding = Math.max(
+        0,
+        Math.round(((booking.downpayment ?? 0) - (booking.paidSubmitted ?? 0)) * 100) / 100,
+    )
+    // Cancelled by the clock, not by anyone. Worth distinguishing on the card:
+    // a guest looking at "Cancelled" on a stay they still want needs to be told
+    // that nothing went wrong with their booking and they can simply make it
+    // again — not left to guess whether the resort turned them away.
+    const timedOut = wasCancelledByPaymentTimeout(booking)
 
     return (
         <article className="booking-card">
@@ -195,11 +175,17 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt }
                         </svg>
                     </span>
                     <div>
-                        <p className="field-label">Payment</p>
+                        <p className="field-label">Down payment (50%)</p>
                         <p className="field-value">
                             {paymentKnown ? formatPeso(booking.downpayment) : 'Price TBA'}
                         </p>
-                        <p className="field-sub">{booking.hasReceipt ? 'paid' : 'pending'}</p>
+                        <p className="field-sub">
+                            {outstanding > 0
+                                ? `${formatPeso(outstanding)} still due`
+                                : booking.hasReceipt
+                                    ? 'receipt submitted'
+                                    : 'pending'}
+                        </p>
                     </div>
                 </div>
 
@@ -216,9 +202,9 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt }
                             <p className="field-label">Entrance Fee</p>
                             <p className="field-value">{formatPeso(booking.entrance.total)}</p>
                             <p className="field-sub">
-                                {formatPeso(booking.entrance.perHead)}/head, paid on-site
+                                {formatPeso(booking.entrance.perHead)}/head, half prepaid
                                 {booking.entrance.freeApplied > 0
-                                    ? ` • free entrance (${booking.entrance.freeApplied} pax) −${formatPeso(booking.entrance.freeSavings)}`
+                                    ? ` • free entrance (${booking.entrance.freeApplied} pax, kids 7 & below) −${formatPeso(booking.entrance.freeSavings)}`
                                     : ''}
                                 {booking.entrance.seniorDiscount > 0
                                     ? ` • senior discount −${formatPeso(booking.entrance.seniorDiscount)}`
@@ -242,7 +228,7 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt }
                     <p className="field-label">Booking Summary</p>
                     <p className="field-value">
                         {stayLabel(booking)}
-                        {paymentKnown ? ` • ${formatPeso(booking.downpayment)} total` : ''}
+                        {booking.stayTotal ? ` • ${formatPeso(booking.stayTotal)} total` : ''}
                     </p>
                     <p className="field-sub">Payment: Down Payment</p>
                     <p className="field-sub">
@@ -256,6 +242,36 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt }
                     )}
                 </div>
             </div>
+
+            {/* The payment panel renders nothing on a cancelled booking, so the
+                explanation for THIS cancellation goes in its place. */}
+            {timedOut && (
+                <div className="booking-card-timeout" role="status">
+                    <span className="booking-card-timeout-icon" aria-hidden="true">⏱</span>
+                    <div>
+                        <p className="booking-card-timeout-title">
+                            Payment window closed — please try to book again
+                        </p>
+                        <p className="booking-card-timeout-text">
+                            A unit is held for {PAYMENT_WINDOW_MINUTES} minutes while you
+                            send the down payment. No receipt arrived in that time, so this
+                            booking was cancelled automatically and{' '}
+                            {booking.unitId ? `unit ${booking.unitId}` : 'the unit'} went
+                            back to other guests. You were not charged anything.
+                        </p>
+                        <p className="booking-card-timeout-text">
+                            Use <strong>Book Again</strong> below to start over — have your
+                            GCash or bank app ready first, and upload the screenshot as soon
+                            as the unit is reserved.
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* The QR codes, the amount due and the receipt upload — moved here
+                from the booking form, so paying happens against a unit that is
+                already held rather than one that might be gone. */}
+            <BookingPayment booking={booking} autoOpen={payNow} />
 
             <div className="booking-card-actions">
                 {status === 'cancelled' ? (
@@ -309,6 +325,10 @@ function MyBooking() {
     const justBooked = location.state?.justBooked
         ? bookings.find((booking) => booking.code === location.state.justBooked)
         : null
+    // The booking form sends the guest here TO PAY, so that one card's payment
+    // panel opens itself. Only that card: opening every panel on a list of past
+    // stays would bury the one reservation this visit is about.
+    const payNowId = location.state?.payNow ? justBooked?.id : null
 
     useEffect(() => {
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
@@ -380,11 +400,27 @@ function MyBooking() {
                 {justBooked && (
                     <section className="my-booking-confirmed" role="status">
                         <p className="my-booking-confirmed-title">
-                            Booking {justBooked.code} received
+                            {payNowId
+                                ? `Unit held for booking ${justBooked.code}`
+                                : `Booking ${justBooked.code} received`}
                         </p>
                         <p className="my-booking-confirmed-text">
-                            Save a copy for check-in — it downloads as an image you
-                            can keep in your photos.
+                            {payNowId ? (
+                                <>
+                                    Your unit is reserved for the next{' '}
+                                    {PAYMENT_WINDOW_MINUTES} minutes. Send the{' '}
+                                    {formatPeso(justBooked.downpayment)} down payment and
+                                    upload the receipt below before the timer runs out, or
+                                    the booking is cancelled and the unit released.
+                                    Ordering food or a spa treatment first adds them to
+                                    that amount.
+                                </>
+                            ) : (
+                                <>
+                                    Save a copy for check-in — it downloads as an image you
+                                    can keep in your photos.
+                                </>
+                            )}
                         </p>
                         <button
                             type="button"
@@ -426,6 +462,7 @@ function MyBooking() {
                                     onBookAgain={handleBookAgain}
                                     onDelete={handleDelete}
                                     onSaveReceipt={handleSaveReceipt}
+                                    payNow={booking.id === payNowId}
                                 />
                             ))}
                         </div>

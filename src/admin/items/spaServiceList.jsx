@@ -1,9 +1,12 @@
 import '../css/spaServiceList.css'
-import { hilotServices } from '../../pages/spaService.jsx'
+import { useSpaServices } from '../../data/menuDB.js'
 
-// Service data is hardcoded in pages/spaService.jsx — this reads it directly
-// so the admin always sees the same offerings (and prices) guests do.
+// The spa price list, read from the spa_services table — the same rows the
+// guest page renders, so staff can never be looking at a stale price. It used
+// to import a hardcoded array out of pages/spaService.jsx.
 export default function SpaServiceList() {
+    const hilotServices = useSpaServices()
+
     return (
         <div className="spa-list-panel">
             <div className="spa-list-header">
@@ -13,7 +16,7 @@ export default function SpaServiceList() {
 
             <div className="spa-list-rows">
                 {hilotServices.map((service) => (
-                    <article key={service.name} className="spa-list-row">
+                    <article key={service.id} className="spa-list-row">
                         <div className="spa-list-image">
                             <img src={service.image} alt={service.name} />
                         </div>
