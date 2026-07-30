@@ -175,9 +175,63 @@
    overflows its scroll container has its top edge cut off and unreachable,
    which for a tall phone screenshot hides the top of the receipt. Auto margins
    only absorb spare space, so an overflowing image still scrolls from the top. */
-.receipt-image,
+.receipt-sheets,
 .receipt-note {
     margin: auto;
+}
+
+/* Every screenshot on the booking, oldest first. A guest who orders food after
+   paying sends a second one, so this stacks rather than showing only the last:
+   staff scroll the column and see each payment that makes up the total. */
+.receipt-sheets {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.receipt-sheet {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Where one receipt ends and the next begins. Two screenshots from the same
+   bank look near enough alike to be read as one tall image without it. */
+.receipt-sheet + .receipt-sheet {
+    padding-top: 18px;
+    border-top: 1px dashed rgba(198, 161, 91, 0.5);
+}
+
+.receipt-sheet-caption {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    width: 100%;
+}
+
+.receipt-sheet-index {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: rgba(10, 22, 14, 0.55);
+}
+
+/* The amount this one was sent against, and when — how staff tell a part
+   payment apart from the top-up that followed an add-on order. */
+.receipt-sheet-meta {
+    font-size: 0.8rem;
+    color: rgba(10, 22, 14, 0.6);
+}
+
+.receipt-sheet-link {
+    font-size: 0.78rem;
+    color: #4c6b4f;
 }
 
 .receipt-image {
@@ -193,7 +247,9 @@
     cursor: zoom-in;
 }
 
-.receipt-stage.is-zoomed .receipt-image {
+/* Zoom is per screenshot: blowing up the one being read must not push the
+   others off the panel, so the class sits on the sheet, not the stage. */
+.receipt-sheet.is-zoomed .receipt-image {
     max-height: none;
     width: 100%;
     cursor: zoom-out;
@@ -229,6 +285,12 @@
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
+}
+
+.receipt-foot-hint {
+    margin: 0;
+    font-size: 0.76rem;
+    color: rgba(10, 22, 14, 0.55);
 }
 
 .receipt-btn {

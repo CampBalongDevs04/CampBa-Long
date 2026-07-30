@@ -200,7 +200,7 @@ export default function ReceiptViewer({ booking, onClose, onApprove, onCancel })
                             <dt>Submitted so far</dt>
                             <dd>
                                 {formatPeso(submitted)}
-                                {receiptCount > 1 ? ` · ${receiptCount} receipts` : ''}
+                                {receipts.length > 1 ? ` · ${receipts.length} receipts` : ''}
                                 {shortfall > 0 ? ` · ${formatPeso(shortfall)} short` : ''}
                             </dd>
                         </div>

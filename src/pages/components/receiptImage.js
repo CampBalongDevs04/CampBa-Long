@@ -119,8 +119,10 @@ function buildReceipt(booking, statusLabel, savedAt){
             label: 'Entrance fee',
             sub: [
                 `${formatPeso(booking.entrance.perHead)}/head`,
+                // The heads that get in free are the kids — see entranceFee.js.
                 booking.entrance.freeApplied > 0
-                    ? `free entrance ${booking.entrance.freeApplied} pax − ${formatPeso(booking.entrance.freeSavings)}`
+                    ? `free entrance ${booking.entrance.freeApplied} pax (kids 7 & below)`
+                        + ` − ${formatPeso(booking.entrance.freeSavings)}`
                     : null,
                 booking.entrance.seniorDiscount > 0
                     ? `senior discount − ${formatPeso(booking.entrance.seniorDiscount)}`

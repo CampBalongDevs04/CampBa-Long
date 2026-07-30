@@ -12,9 +12,6 @@ import tentLargeImage from '../assets/images/acc5.png'
 import tentPitchingImage from '../assets/images/acc6.png'
 
 // Info that doesn't change with the stay schedule.
-// `freeEntranceExempt` marks units left out of the "free entrance for 2 pax"
-// perk (see INCLUSIONS below) — cottage/pavilion on the Day rate and tent
-// pitching on the overnight rate charge entrance for every head.
 const ACCOMMODATION_INFO = [
     { id: 'teepee', name: 'Teepee', image: teepeeImage },
     { id: 'small', name: 'A-House Small', image: houseSmall },
@@ -22,20 +19,22 @@ const ACCOMMODATION_INFO = [
     { id: 'family', name: 'A-House Family', image: houseFamily },
     { id: 'tent-small', name: 'Small Tent', image: tentSmallImage },
     { id: 'tent-large', name: 'Big Tent', image: tentLargeImage },
-    { id: 'cottage', name: 'Cottage', image: cottageImage, freeEntranceExempt: true },
-    { id: 'pavilion', name: 'Pavillion', image: pavilionImage, freeEntranceExempt: true },
+    { id: 'cottage', name: 'Cottage', image: cottageImage },
+    { id: 'pavilion', name: 'Pavillion', image: pavilionImage },
     // Guests pitching their own tent: flat per-tent fee, no capacity limit,
     // so it has no minPax/maxPax and isn't tracked in accommodationInventory.js.
-    { id: 'tent-pitching', name: 'Tent Pitching', image: tentPitchingImage, unlimited: true, freeEntranceExempt: true },
+    { id: 'tent-pitching', name: 'Tent Pitching', image: tentPitchingImage, unlimited: true },
 ]
 
-// Free-entrance headcount granted per booking under the perk above.
-export const FREE_ENTRANCE_PAX = 2
+// There is no "free entrance for 2 pax" perk. Entrance is charged for every
+// guest in the party; kids 7 & below are the only free heads and seniors get
+// 10% off — see computeEntranceFee() in data/entranceFee.js. The perk used to be
+// advertised here AND subtracted there, which stacked with the kids' exemption
+// and undercharged every group that had a child in it.
 
 // What each stay schedule's rate includes, shown alongside the schedule note.
 export const INCLUSIONS = {
     day: [
-        'Free entrance for 2 pax (not applicable for cottage & pavilion)',
         'Free parking',
         '3 hours free use of jacuzzi',
         'Free use of charcoal griller',
@@ -43,7 +42,6 @@ export const INCLUSIONS = {
         'Access to bathrooms and showers',
     ],
     overnight: [
-        'Free entrance for 2 pax (not applicable for tent pitching)',
         'Free parking',
         '3 hours free use of jacuzzi',
         'Free use of charcoal griller',
@@ -111,7 +109,6 @@ export function getAccomodationOptions(rateGroup){
                 pax: rate?.pax ?? null,
                 minPax: rate?.minPax ?? null,
                 maxPax: rate?.maxPax ?? null,
-                freeEntranceExempt: item.freeEntranceExempt === true,
             }
         })
 }

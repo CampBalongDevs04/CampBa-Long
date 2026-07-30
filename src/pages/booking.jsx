@@ -5,7 +5,7 @@ import BookingCalendar from './components/BookingCalendar'
 import TimeSelector from './components/timeSelector'
 import ScheduleNote from './components/scheduleNote'
 import AccomodationList from './components/accomodationList'
-import { getAccomodationOptions, getPaxFit, FREE_ENTRANCE_PAX } from '../data/accomodationOptions.js'
+import { getAccomodationOptions, getPaxFit } from '../data/accomodationOptions.js'
 import PaxInput from './components/paxInput'
 import KidsCount from './components/kidscount'
 import SeniorCount from './components/seniorCount'
@@ -36,7 +36,8 @@ const steps = [
     {
         id: 'step-confirm',
         title: 'Review & Reserve',
-        sub: 'Read our resort policy, then reserve your unit and continue to payment.',
+        sub: 'Read our resort policy, then reserve your unit. You will have 10 minutes'
+            + ' to upload your down-payment receipt before the hold is released.',
     },
 ]
 
@@ -180,7 +181,6 @@ export default function Booking(){
             pax: pax ?? 0,
             seniors,
             kids,
-            freeEntrance: unit && !unit.freeEntranceExempt ? FREE_ENTRANCE_PAX : 0,
         })
 
         // No payment happens here any more, and that is the point: the unit is
@@ -247,8 +247,8 @@ export default function Booking(){
                     <h1 className="book-title">Complete Your Booking</h1>
                     <p className="booking-tagline">
                         Reserve your stay in four simple steps — your unit is held
-                        first, then you settle the down payment from My Bookings.
-                        We confirm once the receipt is verified.
+                        first, then you settle the down payment from My Bookings
+                        within 10 minutes. We confirm once the receipt is verified.
                     </p>
 
                     <ul className="booking-trust" aria-label="Booking assurances">
@@ -257,7 +257,7 @@ export default function Booking(){
                                 <rect x="4" y="10" width="16" height="10" rx="2.5" />
                                 <path d="M8 10V7a4 4 0 0 1 8 0v3" />
                             </svg>
-                            Your unit is reserved before you pay a peso
+                            Your unit is reserved before you pay a peso — for 10 minutes
                         </li>
                         <li className="booking-trust-item">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

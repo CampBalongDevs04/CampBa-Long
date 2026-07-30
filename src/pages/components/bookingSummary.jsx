@@ -1,9 +1,11 @@
 import '../components/css/bookingSummary.css'
-import { getAccomodationOptions, FREE_ENTRANCE_PAX } from '../../data/accomodationOptions.js'
+import { getAccomodationOptions } from '../../data/accomodationOptions.js'
 import { computeEntranceFee } from '../../data/entranceFee.js'
 // Same rate the database applies to the booking row, so the figure quoted here
 // is the one My Bookings will ask for on the next screen.
 import { DOWNPAYMENT_RATE } from '../../data/accommodationDB.js'
+
+const RATE_LABEL = `${DOWNPAYMENT_RATE * 100}%`
 
 function formatDate(date){
     if (!date) return null
@@ -40,7 +42,6 @@ export default function BookingSummary({ checkIn, checkOut, schedule, selectedAc
         pax: pax ?? 0,
         seniors: seniors ?? 0,
         kids: kids ?? 0,
-        freeEntrance: unit && !unit.freeEntranceExempt ? FREE_ENTRANCE_PAX : 0,
     })
 
     // The down payment is half of the WHOLE stay, entrance fees included — not
@@ -110,41 +111,32 @@ export default function BookingSummary({ checkIn, checkOut, schedule, selectedAc
                     value={schedule ? `${formatPeso(entrance.perHead)} (${schedule.description})` : null}
                     placeholder="Select a schedule"
                 />
-                {unit && (
-                    <SummaryRow
-                        label={`Free entrance (${entrance.freeApplied || FREE_ENTRANCE_PAX} pax)`}
-                        value={
-                            unit.freeEntranceExempt
-                                ? 'Not applicable for this unit'
-                                : schedule
-                                    ? `− ${formatPeso(entrance.freeSavings)}`
-                                    : null
-                        }
-                        placeholder="Select a schedule"
-                    />
-                )}
+                {/* Every head at the full rate first, then what comes off it —
+                    the column reads top-to-bottom as the subtotal's arithmetic. */}
                 <SummaryRow
-                    label={`Regular guests${entrance.regularCount ? ` (${entrance.regularCount})` : ''}`}
-                    value={schedule && entrance.regularCount > 0 ? formatPeso(entrance.regularTotal) : null}
+                    label={`Guests${entrance.paxCount ? ` (${entrance.paxCount})` : ''}`}
+                    value={schedule && entrance.paxCount > 0 ? formatPeso(entrance.paxTotal) : null}
                     placeholder={schedule ? '—' : 'Set guests'}
                 />
-                {entrance.seniorCount > 0 && (
-                    <>
-                        <SummaryRow
-                            label={`Seniors (${entrance.seniorCount})`}
-                            value={schedule ? formatPeso(entrance.seniorGross) : null}
-                            placeholder="—"
-                        />
-                        <div className="summary-row summary-row-discount">
-                            <span className="summary-row-label">Senior discount (10%)</span>
-                            <span className="summary-row-value">
-                                {schedule ? `− ${formatPeso(entrance.seniorDiscount)}` : '—'}
-                            </span>
-                        </div>
-                    </>
+                {entrance.kidsCount > 0 && (
+                    <div className="summary-row summary-row-discount">
+                        <span className="summary-row-label">
+                            Free entrance ({entrance.kidsCount} pax) — kids 7 &amp; below
+                        </span>
+                        <span className="summary-row-value">
+                            {schedule ? `− ${formatPeso(entrance.freeSavings)}` : '—'}
+                        </span>
+                    </div>
                 )}
-                {kids > 0 && (
-                    <SummaryRow label={`Kids (${kids})`} value="Free" placeholder="—" />
+                {entrance.seniorCount > 0 && (
+                    <div className="summary-row summary-row-discount">
+                        <span className="summary-row-label">
+                            Senior discount (10% × {entrance.seniorCount})
+                        </span>
+                        <span className="summary-row-value">
+                            {schedule ? `− ${formatPeso(entrance.seniorDiscount)}` : '—'}
+                        </span>
+                    </div>
                 )}
                 <SummaryRow
                     label="Entrance subtotal"
@@ -152,9 +144,11 @@ export default function BookingSummary({ checkIn, checkOut, schedule, selectedAc
                     placeholder="Select a schedule"
                 />
                 <p className="summary-note-inline">
-                    Half of your entrance fees is included in the down payment; the
-                    rest is settled on-site at check-in. Seniors must present a
-                    Senior Citizen ID or other valid ID for the discount.
+                    Entrance is charged for every guest in your group. Kids 7 &amp;
+                    below are the exception — they get in free. Half of your entrance
+                    fees is included in the down payment; the rest is settled on-site
+                    at check-in. Seniors must present a Senior Citizen ID or other
+                    valid ID for the discount.
                 </p>
             </div>
 
@@ -181,12 +175,29 @@ export default function BookingSummary({ checkIn, checkOut, schedule, selectedAc
                 <p className="summary-section-label">Payment</p>
                 <SummaryRow
                     label="Stay subtotal"
-                    value={stayTotal != null ? formatPeso(stayTotal) : null}
+                    value={
+                        stayTotal != null
+                            ? `${formatPeso(unit.price)} + ${formatPeso(entrance.total)} = ${formatPeso(stayTotal)}`
+                            : null
+                    }
                     placeholder="Select a unit and schedule"
                 />
                 <SummaryRow
+                    label={`Down payment (${RATE_LABEL})`}
+                    value={
+                        downpayment != null
+                            ? `${formatPeso(stayTotal)} × ${RATE_LABEL} = ${formatPeso(downpayment)}`
+                            : null
+                    }
+                    placeholder="—"
+                />
+                <SummaryRow
                     label="Balance on-site"
-                    value={onSiteBalance != null ? formatPeso(onSiteBalance) : null}
+                    value={
+                        onSiteBalance != null
+                            ? `${formatPeso(stayTotal)} − ${formatPeso(downpayment)} = ${formatPeso(onSiteBalance)}`
+                            : null
+                    }
                     placeholder="—"
                 />
                 <p className="summary-note-inline">
@@ -196,7 +207,7 @@ export default function BookingSummary({ checkIn, checkOut, schedule, selectedAc
             </div>
 
             <div className="summary-total">
-                <span className="summary-total-label">Down Payment (50%)</span>
+                <span className="summary-total-label">Down Payment ({RATE_LABEL})</span>
                 <span className="summary-total-value">
                     {downpayment != null
                         ? formatPeso(downpayment)
@@ -204,9 +215,10 @@ export default function BookingSummary({ checkIn, checkOut, schedule, selectedAc
                 </span>
             </div>
             <p className="summary-total-hint">
-                50% of the whole stay — unit rate and entrance fees — payable after
-                you reserve. Order food or spa treatments before you pay and they
-                are added to this figure.
+                {RATE_LABEL} of the whole stay — unit rate and entrance fees — payable
+                after you reserve. Order food or spa treatments before you pay and
+                their {RATE_LABEL} joins this figure; order them after and it is asked
+                for separately, at the same {RATE_LABEL}.
             </p>
 
             <div className="summary-secure">

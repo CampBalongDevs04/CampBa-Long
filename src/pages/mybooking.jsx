@@ -9,6 +9,8 @@ import {
     getBookingStage,
     bookingsPersistOnThisDevice,
     forgetMyBookings,
+    wasCancelledByPaymentTimeout,
+    PAYMENT_WINDOW_MINUTES,
 } from '../data/accommodationDB.js'
 
 function formatDate(iso){
@@ -82,6 +84,11 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, 
         0,
         Math.round(((booking.downpayment ?? 0) - (booking.paidSubmitted ?? 0)) * 100) / 100,
     )
+    // Cancelled by the clock, not by anyone. Worth distinguishing on the card:
+    // a guest looking at "Cancelled" on a stay they still want needs to be told
+    // that nothing went wrong with their booking and they can simply make it
+    // again — not left to guess whether the resort turned them away.
+    const timedOut = wasCancelledByPaymentTimeout(booking)
 
     return (
         <article className="booking-card">
@@ -197,7 +204,7 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, 
                             <p className="field-sub">
                                 {formatPeso(booking.entrance.perHead)}/head, half prepaid
                                 {booking.entrance.freeApplied > 0
-                                    ? ` • free entrance (${booking.entrance.freeApplied} pax) −${formatPeso(booking.entrance.freeSavings)}`
+                                    ? ` • free entrance (${booking.entrance.freeApplied} pax, kids 7 & below) −${formatPeso(booking.entrance.freeSavings)}`
                                     : ''}
                                 {booking.entrance.seniorDiscount > 0
                                     ? ` • senior discount −${formatPeso(booking.entrance.seniorDiscount)}`
@@ -235,6 +242,31 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, 
                     )}
                 </div>
             </div>
+
+            {/* The payment panel renders nothing on a cancelled booking, so the
+                explanation for THIS cancellation goes in its place. */}
+            {timedOut && (
+                <div className="booking-card-timeout" role="status">
+                    <span className="booking-card-timeout-icon" aria-hidden="true">⏱</span>
+                    <div>
+                        <p className="booking-card-timeout-title">
+                            Payment window closed — please try to book again
+                        </p>
+                        <p className="booking-card-timeout-text">
+                            A unit is held for {PAYMENT_WINDOW_MINUTES} minutes while you
+                            send the down payment. No receipt arrived in that time, so this
+                            booking was cancelled automatically and{' '}
+                            {booking.unitId ? `unit ${booking.unitId}` : 'the unit'} went
+                            back to other guests. You were not charged anything.
+                        </p>
+                        <p className="booking-card-timeout-text">
+                            Use <strong>Book Again</strong> below to start over — have your
+                            GCash or bank app ready first, and upload the screenshot as soon
+                            as the unit is reserved.
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* The QR codes, the amount due and the receipt upload — moved here
                 from the booking form, so paying happens against a unit that is
@@ -375,11 +407,13 @@ function MyBooking() {
                         <p className="my-booking-confirmed-text">
                             {payNowId ? (
                                 <>
-                                    Your unit is reserved. Settle the{' '}
-                                    {formatPeso(justBooked.downpayment)} down payment below
-                                    to confirm it — the payment panel is open on your
-                                    booking. Ordering food or a spa treatment first adds
-                                    them to that amount.
+                                    Your unit is reserved for the next{' '}
+                                    {PAYMENT_WINDOW_MINUTES} minutes. Send the{' '}
+                                    {formatPeso(justBooked.downpayment)} down payment and
+                                    upload the receipt below before the timer runs out, or
+                                    the booking is cancelled and the unit released.
+                                    Ordering food or a spa treatment first adds them to
+                                    that amount.
                                 </>
                             ) : (
                                 <>
