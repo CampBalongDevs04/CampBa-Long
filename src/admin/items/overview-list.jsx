@@ -36,6 +36,10 @@ function stayLabel(booking) {
     return booking.schedule ? `${dates} · ${booking.schedule.time}` : dates
 }
 
+function orderTotal(orders) {
+    return (orders ?? []).reduce((sum, order) => sum + order.total, 0)
+}
+
 export default function OverviewList({ filter = 'all', emptyTitle, emptyText }) {
     useAccommodationDB()
     const bookings = listBookings(filter)
@@ -74,6 +78,14 @@ export default function OverviewList({ filter = 'all', emptyTitle, emptyText }) 
         <div className="booking-panel">
             {bookings.map((booking) => {
                 const stage = getBookingStage(booking)
+                const foodTotal = orderTotal(booking.foodOrders)
+                const spaTotal = orderTotal(booking.spaOrders)
+                // The amount shown must match the label beside it — a
+                // "Down Payment" row showing the full price is misleading.
+                const displayAmount =
+                    booking.payment === 'down-payment' && booking.downpayment != null
+                        ? booking.downpayment
+                        : booking.total
                 return (
                     <div key={booking.id} className="booking-card">
                         <div className="booking-row-top">
@@ -90,7 +102,9 @@ export default function OverviewList({ filter = 'all', emptyTitle, emptyText }) 
                         </p>
                         <p className="booking-row-meta booking-row-sub">
                             {booking.code ?? booking.id} · {PAYMENT_LABEL[booking.payment] ?? booking.payment}
-                            {booking.total != null ? ` · ₱${Number(booking.total).toLocaleString()}` : ''}
+                            {displayAmount != null ? ` · ₱${Number(displayAmount).toLocaleString()}` : ''}
+                            {foodTotal > 0 ? ` · Food: ₱${foodTotal.toLocaleString()}` : ''}
+                            {spaTotal > 0 ? ` · Spa: ₱${spaTotal.toLocaleString()}` : ''}
                         </p>
 
                         {/* The uploaded proof of payment, opened right where the

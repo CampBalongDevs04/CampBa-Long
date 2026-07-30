@@ -30,12 +30,28 @@
 
 /* ---------- Header ---------- */
 .receipt-head {
+    flex-shrink: 0;
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
     padding: 18px 20px 14px;
     border-bottom: 1px solid rgba(198, 161, 91, 0.3);
+}
+
+/* ---------- Scrollable middle (facts + add-ons + image) ----------
+   Everything that can grow lives in here, so no matter how long the
+   food/spa breakdown gets, the header above and the Approve/Reject
+   footer below stay pinned and visible. */
+.receipt-body {
+    flex: 1;
+    /* Without this a flex item's default min-height:auto keeps it at its
+       content size, which defeats overflow — it would never shrink enough
+       to scroll and would just push the footer out past max-height instead. */
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
 }
 
 .receipt-title {
@@ -74,6 +90,7 @@
 
 /* ---------- What the receipt is being checked against ---------- */
 .receipt-facts {
+    flex-shrink: 0;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px 18px;
@@ -104,6 +121,43 @@
     font-weight: 700;
 }
 
+/* ---------- Food / spa add-ons ---------- */
+.receipt-orders {
+    flex-shrink: 0;
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(198, 161, 91, 0.3);
+}
+
+.receipt-orders-group + .receipt-orders-group {
+    margin-top: 10px;
+}
+
+.receipt-orders-title {
+    margin: 0 0 4px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: rgba(10, 22, 14, 0.55);
+}
+
+.receipt-order-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 3px 0;
+    font-size: 0.86rem;
+    color: var(--forest-dark, #0a160e);
+}
+
+.receipt-order-total {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(198, 161, 91, 0.45);
+    font-weight: 700;
+}
+
 /* ---------- Image stage ---------- */
 .receipt-stage {
     flex: 1;
@@ -111,7 +165,10 @@
     display: flex;
     padding: 16px;
     background: rgba(10, 22, 14, 0.06);
-    overflow: auto;
+    /* .receipt-body (the ancestor) owns the scrollbar now — a second
+       overflow:auto here would create a nested scroll region and the
+       auto-margin centering below would no longer track the real scroll
+       position. */
 }
 
 /* Centred with auto margins, NOT align-items:center — a centred flex item that
@@ -156,6 +213,7 @@
 
 /* ---------- Footer actions ---------- */
 .receipt-foot {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
