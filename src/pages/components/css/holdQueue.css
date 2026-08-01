@@ -1,0 +1,169 @@
+/* ---------------------------------------------------------------------------
+   The waiting panel on the booking form — "someone is holding it, you're next".
+
+   Gold rather than the red of .booking-confirm-alert, and that is the whole
+   point of giving it its own file: a refusal the guest can do nothing about
+   looks like an error, and this one is closer to good news. They are in line,
+   the unit is probably coming back in minutes, and the page is going to take it
+   for them. Red would tell them to give up.
+--------------------------------------------------------------------------- */
+
+.hold-queue {
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0;
+    padding: 16px 18px;
+    border: 1px solid var(--gold-soft);
+    border-radius: 12px;
+    background-color: rgba(198, 161, 91, 0.12);
+    font-family: 'Jost', sans-serif;
+}
+
+/* Their turn came up and the reservation is going through. Green, because
+   this is the moment it worked. */
+.hold-queue.is-ready {
+    border-color: rgba(76, 107, 79, 0.5);
+    background-color: rgba(76, 107, 79, 0.12);
+}
+
+/* Lost the place. The one state here that really is a setback. */
+.hold-queue.is-expired {
+    border-color: rgba(178, 58, 58, 0.35);
+    background-color: #FBEAE5;
+}
+
+.hold-queue.is-checking {
+    opacity: 0.85;
+}
+
+.hold-queue-title {
+    margin: 0;
+    font-size: 0.98rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--forest);
+}
+
+.hold-queue.is-expired .hold-queue-title {
+    color: #8A3B2A;
+}
+
+/* ------------------------------------------------------------- the clock */
+
+.hold-queue-clock {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background-color: rgba(255, 255, 255, 0.55);
+}
+
+.hold-queue-clock-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: #6d5312;
+}
+
+/* Tabular figures so the digits do not shuffle sideways every second — same
+   reason .pay-clock-time uses them. */
+.hold-queue-clock-time {
+    font-size: 1.5rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    color: var(--forest);
+}
+
+/* -------------------------------------------------------------- the copy */
+
+.hold-queue-note {
+    margin: 10px 0 0;
+    font-size: 0.82rem;
+    line-height: 1.55;
+    color: rgba(22, 41, 30, 0.72);
+}
+
+.hold-queue-place {
+    margin: 10px 0 0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--forest);
+}
+
+.hold-queue-place strong {
+    font-weight: 700;
+}
+
+.hold-queue-hiccup {
+    margin: 10px 0 0;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: #8A3B2A;
+}
+
+/* ------------------------------------------------------------ the buttons */
+
+.hold-queue-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.hold-queue-again,
+.hold-queue-leave {
+    padding: 9px 16px;
+    border-radius: 999px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.hold-queue-again {
+    border: 1px solid var(--forest);
+    background-color: var(--forest);
+    color: var(--cream);
+}
+
+.hold-queue-again:hover {
+    background-color: var(--forest-dark);
+    border-color: var(--forest-dark);
+}
+
+/* Deliberately the quieter of the two. Leaving the queue is always available
+   and never the recommendation — the guest who waits usually gets the unit. */
+.hold-queue-leave {
+    border: 1px solid rgba(22, 41, 30, 0.28);
+    background-color: transparent;
+    color: rgba(22, 41, 30, 0.75);
+}
+
+.hold-queue-leave:hover {
+    border-color: var(--forest);
+    color: var(--forest);
+}
+
+.hold-queue-again:focus-visible,
+.hold-queue-leave:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+    .hold-queue-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .hold-queue-again,
+    .hold-queue-leave {
+        text-align: center;
+    }
+}

@@ -92,14 +92,70 @@ message rather than a double booking.
 
 `active` and `completed` are derived by `getBookingStage()`, not stored.
 
+## When someone else is holding it
+
+A `pending` booking with no receipt holds its unit for **10 minutes** while the
+guest pays (`payment_window_minutes()`). During those minutes the unit is
+neither available nor really booked, and the guest who arrives second used to be
+told *"fully booked — next free date: Tuesday"*. Both halves were wrong: nobody
+has paid for it, and it is usually free again in minutes.
+
+`hold_conflict()` draws the distinction, per type and stay window:
+
+| | Meaning | Worth waiting for? |
+|---|---|---|
+| `free_units` | nothing blocks it | — |
+| `held_units` | every blocker is a live unpaid hold; `releases_at` says when it lapses | **yes** |
+| `booked_units` | a receipt is in, or staff confirmed it, or the stay happened | no |
+
+`book_stay()` uses it to classify refusals, and the `hint` it raises with is
+what the front end branches on:
+
+| `hint` | `createBooking()` reason | What the form does |
+|---|---|---|
+| `held` | `held` | offers a place in line, counts down to `releases_at` |
+| `queued` | `queued` | same — a guest ahead has the claim |
+| `unavailable` | `unavailable` | clears the selection; waiting achieves nothing |
+
+### The queue
+
+Waiting is a row in `booking_queue`, ordered by `created_at`, so the unit goes
+to whoever asked first rather than to whoever happens to be clicking when it
+frees. When a unit comes free the front of the line is marked `ready` and gets
+an exclusive claim for `queue_claim_minutes()` (2) — and
+**`book_accommodation()` refuses that window to everyone else while the claim is
+live**, including a walk-up guest who never queued. That refusal is the whole
+mechanism; without it the table would be decoration.
+
+Two limits stop a ghost entry blocking the line, both server-side:
+
+* `last_seen_at` — stamped on every `booking_queue_status()` poll. Nothing for
+  `queue_heartbeat_seconds()` (90) means a closed tab, and the entry expires.
+* `claim_until` — a `ready` entry that does not book in time expires and the
+  next guest is promoted. Being first in line is a chance, not a reservation.
+
+There is **no cron on this project**, so `promote_booking_queue()` runs from the
+two places that need it to have run: `booking_queue_status()`, which every
+waiting browser polls every 5s, and `book_accommodation()` itself. This is the
+same design as `expire_stale_bookings()` — the guests watching are the clock.
+
+Guest 2 is never told *who* guest 1 is. Guests have no read access to `bookings`
+by design, and the queue does not carve a hole in that to make a nicer sentence:
+the hold is "another guest", and what guest 2 needs — when it frees, and their
+place in line — is not personal data about anybody.
+
 ## Function map
 
 | JS (`accommodationDB.js`) | Postgres |
 |---|---|
 | `getAvailability()` | `accommodation_availability(check_in, check_out, schedule_key)` |
 | `getNextAvailableDate()` | `next_available_date(type_id, from, schedule_key, max_days)` |
-| `createBooking()` | `book_accommodation(...)` |
+| `createBooking()` | `book_stay(...)` — the queue-aware wrapper around `book_accommodation(...)` |
 | `addFoodOrder()` / `addSpaOrder()` | `add_booking_addon(booking_id, kind, order)` |
+| `readHoldConflict()` (`bookingQueue.js`) | `hold_conflict(type_id, check_in, check_out, schedule_key)` |
+| `joinQueue()` (`bookingQueue.js`) | `join_booking_queue(...)` |
+| `pollQueue()` (`bookingQueue.js`) | `booking_queue_status(entry_id, owner_token)` |
+| `leaveQueue()` (`bookingQueue.js`) | `leave_booking_queue(entry_id, owner_token)` |
 | `confirmBooking()` / `cancelBooking()` | `update bookings set …` (staff only) |
 | `getUnitDayDetail()` | computed locally from staff rows; `unit_day_detail(date)` is the SQL equivalent |
 
