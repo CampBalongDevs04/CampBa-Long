@@ -26,15 +26,24 @@ const ACCOMMODATION_INFO = [
     { id: 'tent-pitching', name: 'Tent Pitching', image: tentPitchingImage, unlimited: true },
 ]
 
-// There is no "free entrance for 2 pax" perk. Entrance is charged for every
-// guest in the party; kids 7 & below are the only free heads and seniors get
-// 10% off — see computeEntranceFee() in data/entranceFee.js. The perk used to be
-// advertised here AND subtracted there, which stacked with the kids' exemption
-// and undercharged every group that had a child in it.
+// "Free entrance for 2 pax" IS a real perk (it's on the printed rate card),
+// separate from the kids-7-and-below exemption. It used to be advertised here
+// but not implemented correctly in computeEntranceFee() — it stacked on top
+// of the kids' exemption instead of using the kids as part of its 2-head
+// quota, which undercharged every group that had a child in it. See the
+// comment on computeEntranceFee() in data/entranceFee.js for how it's applied
+// now. Units in FREE_ENTRANCE_EXCLUDED_UNITS don't get the perk at all, per
+// the rate card's "not applicable for ..." notes.
+export const FREE_ENTRANCE_EXCLUDED_UNITS = new Set(['tent-pitching', 'cottage', 'pavilion'])
+
+export function isFreeEntranceEligible(unitId){
+    return unitId != null && !FREE_ENTRANCE_EXCLUDED_UNITS.has(unitId)
+}
 
 // What each stay schedule's rate includes, shown alongside the schedule note.
 export const INCLUSIONS = {
     day: [
+        'Free entrance for 2 pax (not applicable for Cottage & Pavilion)',
         'Free parking',
         '3 hours free use of jacuzzi',
         'Free use of charcoal griller',
@@ -42,6 +51,7 @@ export const INCLUSIONS = {
         'Access to bathrooms and showers',
     ],
     overnight: [
+        'Free entrance for 2 pax (not applicable for Tent Pitching)',
         'Free parking',
         '3 hours free use of jacuzzi',
         'Free use of charcoal griller',

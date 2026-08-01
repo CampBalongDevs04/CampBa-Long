@@ -8,6 +8,8 @@
 // to tell and no way to recover, so the drawing is done by hand instead: it is
 // the same on every browser and needs nothing that isn't already here.
 
+import { splitFreeEntrance } from '../../data/entranceFee.js'
+
 // Layout is authored at this width and drawn at SCALE, so the file stays crisp
 // when it is opened full-screen on a phone or zoomed into at the gate.
 const WIDTH = 900
@@ -115,14 +117,25 @@ function buildReceipt(booking, statusLabel, savedAt){
         },
     ]
     if (entrance > 0){
+        // Free entrance is kids 7 & below plus the rate card's 2-pax perk —
+        // see entranceFee.js for how the combined bucket splits back out.
+        const { kidsApplied, kidsFree, perkApplied, perkSavings } = splitFreeEntrance({
+            freeApplied: booking.entrance.freeApplied,
+            freeSavings: booking.entrance.freeSavings,
+            kids: booking.kids,
+            perHead: booking.entrance.perHead,
+        })
         charges.push({
             label: 'Entrance fee',
             sub: [
                 `${formatPeso(booking.entrance.perHead)}/head`,
-                // The heads that get in free are the kids — see entranceFee.js.
-                booking.entrance.freeApplied > 0
-                    ? `free entrance ${booking.entrance.freeApplied} pax (kids 7 & below)`
-                        + ` − ${formatPeso(booking.entrance.freeSavings)}`
+                kidsApplied > 0
+                    ? `free entrance ${kidsApplied} pax (kids 7 & below)`
+                        + ` − ${formatPeso(kidsFree)}`
+                    : null,
+                perkApplied > 0
+                    ? `free entrance ${perkApplied} pax (resort inclusion)`
+                        + ` − ${formatPeso(perkSavings)}`
                     : null,
                 booking.entrance.seniorDiscount > 0
                     ? `senior discount − ${formatPeso(booking.entrance.seniorDiscount)}`

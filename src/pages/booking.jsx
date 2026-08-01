@@ -5,7 +5,7 @@ import BookingCalendar from './components/BookingCalendar'
 import TimeSelector from './components/timeSelector'
 import ScheduleNote from './components/scheduleNote'
 import AccomodationList from './components/accomodationList'
-import { getAccomodationOptions, getPaxFit } from '../data/accomodationOptions.js'
+import { getAccomodationOptions, getPaxFit, isFreeEntranceEligible } from '../data/accomodationOptions.js'
 import PaxInput from './components/paxInput'
 import KidsCount from './components/kidscount'
 import SeniorCount from './components/seniorCount'
@@ -181,6 +181,7 @@ export default function Booking(){
             pax: pax ?? 0,
             seniors,
             kids,
+            freeEntranceEligible: isFreeEntranceEligible(unit?.id),
         })
 
         // No payment happens here any more, and that is the point: the unit is
