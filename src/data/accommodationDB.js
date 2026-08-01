@@ -321,6 +321,16 @@ export function serverNow() {
     return Date.now() + clockSkewMs
 }
 
+// Fold a `server_now` from any RPC into the offset above. my_bookings() is not
+// the only call that sends one — a guest waiting in the booking queue is
+// watching a countdown without a booking of their own yet, and it has to be
+// corrected against the same clock as everyone else's.
+export function syncServerClock(serverTime) {
+    if (!serverTime) return
+    const stamped = new Date(serverTime).getTime()
+    if (!Number.isNaN(stamped)) clockSkewMs = stamped - Date.now()
+}
+
 const listeners = new Set()
 
 function notify() {
@@ -370,6 +380,15 @@ function touch() {
 function clearCaches() {
     availabilityCache.clear()
     nextFreeCache.clear()
+}
+
+// Every cached count is now wrong — a hold lapsed, or a queued guest took a
+// unit. Exported for the booking queue, which learns that a unit came back
+// before any screen would have re-checked on its own. The `touch()` is what
+// makes the carousel actually re-render rather than sit on an empty cache.
+export function invalidateAvailability() {
+    clearCaches()
+    touch()
 }
 
 // ---------------------------------------------------------------- row mapping
@@ -579,11 +598,7 @@ async function loadMyBookings() {
     // Every row carries the same server_now, so the first is as good as any.
     // Measured before mapping, so the deadlines below are compared against a
     // clock that is already corrected.
-    const serverTime = data?.[0]?.server_now
-    if (serverTime) {
-        const stamped = new Date(serverTime).getTime()
-        if (!Number.isNaN(stamped)) clockSkewMs = stamped - Date.now()
-    }
+    syncServerClock(data?.[0]?.server_now)
 
     const next = (data ?? []).map(fromRow)
     if (!sameBookings(myBookings, next)) commitMine(next)
@@ -1082,7 +1097,10 @@ export async function createBooking(draft) {
     const schedule = getSchedule(scheduleKey)
     const effectiveCheckOut = schedule?.sameDay ? checkIn : (checkOut ?? checkIn)
 
-    const { data, error } = await supabase.rpc('book_accommodation', {
+    // book_stay(), not book_accommodation(): the queue gate and the held-vs-
+    // booked distinction live in a wrapper around the original, which is left
+    // untouched. See the header of *_booking_hold_queue.sql for why.
+    const { data, error } = await supabase.rpc('book_stay', {
         p_type_id: typeId,
         p_schedule_key: scheduleKey,
         p_check_in: toISODate(checkIn),
@@ -1111,16 +1129,38 @@ export async function createBooking(draft) {
     })
 
     if (error) {
-        // book_accommodation() raises with hint 'unavailable' when the type is
-        // full for that schedule; anything else is a genuine failure.
-        const unavailable = error.hint === 'unavailable'
-            || /fully booked|just taken/i.test(error.message ?? '')
+        // book_accommodation() classifies its own refusals, and the three it
+        // can give are answered very differently by the form:
+        //
+        //   'held'        — the last unit is under a live 10-minute hold. It is
+        //                   coming back, probably within minutes, so the guest
+        //                   is offered a place in line rather than a shrug.
+        //   'queued'      — a unit IS free, but a guest ahead in the queue has
+        //                   the claim on it. Also a wait, and a short one.
+        //   'unavailable' — genuinely booked out. Waiting achieves nothing;
+        //                   this is the only one that should send the guest
+        //                   back to pick a different unit or date.
+        //
+        // The regexes are a fallback for a database that has not had the queue
+        // migration applied yet, where these arrive with no hint at all.
+        const text = error.message ?? ''
+        const hint = error.hint
+            ?? (/being held|taken a moment before/i.test(text) ? 'held' : null)
+            ?? (/fully booked|just taken/i.test(text) ? 'unavailable' : null)
+
+        const waiting = hint === 'held' || hint === 'queued'
+        const refused = waiting || hint === 'unavailable'
+
         return {
             ok: false,
-            reason: unavailable ? 'unavailable' : 'error',
-            message: unavailable
+            reason: refused ? hint : 'error',
+            message: refused
                 ? [error.message, error.details].filter(Boolean).join(' ')
                 : `Could not save your booking: ${describeSupabaseError(error)}`,
+            // True when the answer is "wait", not "pick something else". The
+            // form keys the queue panel off this rather than re-testing the
+            // reason string in three places.
+            canWait: waiting,
         }
     }
 

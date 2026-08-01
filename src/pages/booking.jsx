@@ -12,6 +12,8 @@ import SeniorCount from './components/seniorCount'
 import { computeEntranceFee } from '../data/entranceFee.js'
 import Terms from './components/terms'
 import BookingSummary from './components/bookingSummary'
+import HoldQueueNotice from './components/holdQueueNotice'
+import { useBookingQueue } from './components/useBookingQueue.js'
 import Footer from '../components/footer'
 import { createBooking, STAY_SCHEDULES as timeOptions } from '../data/accommodationDB.js'
 
@@ -74,6 +76,10 @@ export default function Booking(){
     const [bookingError, setBookingError] = useState(null)
     // Blocks a second Confirm while the reservation round-trip is in flight.
     const [submitting, setSubmitting] = useState(false)
+    // Non-null while this guest is waiting in line for a unit somebody else is
+    // holding. The object identity is the hook's dependency — replacing it
+    // rejoins the queue at the BACK, so it is only ever set from null.
+    const [queueRequest, setQueueRequest] = useState(null)
 
     const sameDayCheckout = selectedTime !== null && timeOptions[selectedTime].sameDay === true
     const rateGroup = selectedTime !== null ? timeOptions[selectedTime].rateGroup : null
@@ -166,9 +172,18 @@ export default function Booking(){
             + ` Lower your guest count or pick a bigger accommodation for your group of ${pax}.`
         : null
 
-    async function handleConfirm(){
-        setAttemptedConfirm(true)
-        if (missingSteps.length > 0 || capacityIssue || submitting) return
+    // One reservation attempt. Split out of handleConfirm because it is made
+    // twice in the queue case: once when the guest presses Reserve and is told
+    // the unit is held, and again — by itself, with nobody watching — the
+    // moment that hold lapses and the queue says the unit is theirs.
+    //
+    // Returns false when it declined to run because one is already in flight.
+    // The queue needs that answer: it treats a turn as spent once it hands it
+    // over, and a guest who happened to press Reserve in the same second would
+    // otherwise burn their claim on an attempt that never happened.
+    async function reserve(){
+        if (submitting) return false
+
         setSubmitting(true)
 
         const schedule = selectedTime !== null ? timeOptions[selectedTime] : null
@@ -222,8 +237,25 @@ export default function Booking(){
 
         if (!result.ok) {
             setBookingError(result.message)
-            // Only an "unavailable" answer means the unit is gone; a network or
-            // server error should leave the guest's selection intact to retry.
+
+            // "Someone is holding it" and "someone ahead of you in line is
+            // taking it" are both answered by waiting, not by sending the guest
+            // back to the carousel. The selection stays exactly as it is — the
+            // queue is going to replay this same booking for them.
+            if (result.canWait) {
+                setQueueRequest((current) => current ?? {
+                    typeId: unit?.id ?? null,
+                    scheduleKey,
+                    checkIn: dates.checkIn,
+                    checkOut,
+                    guestName: guest.fullName || null,
+                })
+                return
+            }
+
+            setQueueRequest(null)
+            // Only an "unavailable" answer means the unit is gone for good; a
+            // network or server error should leave the selection intact.
             if (result.reason === 'unavailable') {
                 setSelectedAccomodation(null)
                 document.getElementById('step-accommodation')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -232,12 +264,44 @@ export default function Booking(){
         }
 
         setBookingError(null)
+        // Unmounts the queue panel, which releases the place in line on its way
+        // out — the unit is booked, so holding it would only delay whoever is
+        // behind. Cleared before navigating, while this component still exists.
+        setQueueRequest(null)
         // The code travels with the navigation so My Bookings can single this
         // reservation out and open its payment panel, rather than dropping the
         // guest into an undifferentiated list with a bill somewhere in it.
         navigate('/my-booking', {
             state: { justBooked: result.booking.code, payNow: true },
         })
+    }
+
+    function handleConfirm(){
+        setAttemptedConfirm(true)
+        if (missingSteps.length > 0 || capacityIssue || submitting) return
+        return reserve()
+    }
+
+    // Their turn came up: book it, without the guest having to be at the desk.
+    // The hook holds this in a ref, so the stale-closure risk of passing a
+    // freshly-created function every render does not apply.
+    const queue = useBookingQueue(queueRequest, { onReady: reserve })
+
+    // Give up on the queue and go back to choosing. The place in line is
+    // released by the hook's cleanup when queueRequest goes null.
+    function handleLeaveQueue(){
+        setQueueRequest(null)
+        setBookingError(null)
+        setSelectedAccomodation(null)
+        document.getElementById('step-accommodation')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+
+    // Lost the place to the heartbeat (a slept phone, a backgrounded tab).
+    // Dropping the request first means the retry below joins fresh rather than
+    // polling an entry the server has already written off.
+    function handleRejoinQueue(){
+        setQueueRequest(null)
+        reserve()
     }
 
     return(
@@ -355,10 +419,27 @@ export default function Booking(){
                                         {capacityIssue}
                                     </p>
                                 )}
-                                {bookingError && (
+                                {/* While the guest is in line the queue panel
+                                    IS the message — the red alert underneath
+                                    would be the same refusal said twice, and
+                                    said as a dead end rather than a wait. */}
+                                {bookingError && !queueRequest && (
                                     <p className="booking-confirm-alert" role="alert">
                                         {bookingError}
                                     </p>
+                                )}
+                                {queueRequest && (
+                                    <HoldQueueNotice
+                                        typeName={selectedUnit?.name ?? 'That unit'}
+                                        entry={queue.entry}
+                                        msLeft={queue.msLeft}
+                                        ready={queue.ready}
+                                        expired={queue.expired}
+                                        error={queue.error}
+                                        retrying={submitting}
+                                        onLeave={handleLeaveQueue}
+                                        onRejoin={handleRejoinQueue}
+                                    />
                                 )}
                                 <Terms
                                     agreed={agreed}
