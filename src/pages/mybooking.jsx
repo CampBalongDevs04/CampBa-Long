@@ -12,6 +12,7 @@ import {
     wasCancelledByPaymentTimeout,
     PAYMENT_WINDOW_MINUTES,
 } from '../data/accommodationDB.js'
+import { splitFreeEntrance } from '../data/entranceFee.js'
 
 function formatDate(iso){
     if (!iso) return '—'
@@ -189,30 +190,41 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, 
                     </div>
                 </div>
 
-                {booking.entrance?.total > 0 && (
-                    <div className="booking-card-field">
-                        <span className="field-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4" />
-                                <path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
-                                <path d="M9 12h6" />
-                            </svg>
-                        </span>
-                        <div>
-                            <p className="field-label">Entrance Fee</p>
-                            <p className="field-value">{formatPeso(booking.entrance.total)}</p>
-                            <p className="field-sub">
-                                {formatPeso(booking.entrance.perHead)}/head, half prepaid
-                                {booking.entrance.freeApplied > 0
-                                    ? ` • free entrance (${booking.entrance.freeApplied} pax, kids 7 & below) −${formatPeso(booking.entrance.freeSavings)}`
-                                    : ''}
-                                {booking.entrance.seniorDiscount > 0
-                                    ? ` • senior discount −${formatPeso(booking.entrance.seniorDiscount)}`
-                                    : ''}
-                            </p>
+                {booking.entrance?.total > 0 && (() => {
+                    const { kidsApplied, kidsFree, perkApplied, perkSavings } = splitFreeEntrance({
+                        freeApplied: booking.entrance.freeApplied,
+                        freeSavings: booking.entrance.freeSavings,
+                        kids: booking.kids,
+                        perHead: booking.entrance.perHead,
+                    })
+                    return (
+                        <div className="booking-card-field">
+                            <span className="field-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4" />
+                                    <path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
+                                    <path d="M9 12h6" />
+                                </svg>
+                            </span>
+                            <div>
+                                <p className="field-label">Entrance Fee</p>
+                                <p className="field-value">{formatPeso(booking.entrance.total)}</p>
+                                <p className="field-sub">
+                                    {formatPeso(booking.entrance.perHead)}/head, half prepaid
+                                    {kidsApplied > 0
+                                        ? ` • free entrance (${kidsApplied} pax, kids 7 & below) −${formatPeso(kidsFree)}`
+                                        : ''}
+                                    {perkApplied > 0
+                                        ? ` • free entrance (${perkApplied} pax, resort inclusion) −${formatPeso(perkSavings)}`
+                                        : ''}
+                                    {booking.entrance.seniorDiscount > 0
+                                        ? ` • senior discount −${formatPeso(booking.entrance.seniorDiscount)}`
+                                        : ''}
+                                </p>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )
+                })()}
             </div>
 
             <div className="booking-card-divider" />

@@ -1,5 +1,5 @@
 import '../components/css/bookingSummary.css'
-import { getAccomodationOptions } from '../../data/accomodationOptions.js'
+import { getAccomodationOptions, isFreeEntranceEligible } from '../../data/accomodationOptions.js'
 import { computeEntranceFee } from '../../data/entranceFee.js'
 // Same rate the database applies to the booking row, so the figure quoted here
 // is the one My Bookings will ask for on the next screen.
@@ -42,6 +42,7 @@ export default function BookingSummary({ checkIn, checkOut, schedule, selectedAc
         pax: pax ?? 0,
         seniors: seniors ?? 0,
         kids: kids ?? 0,
+        freeEntranceEligible: isFreeEntranceEligible(unit?.id),
     })
 
     // The down payment is half of the WHOLE stay, entrance fees included — not
@@ -124,7 +125,17 @@ export default function BookingSummary({ checkIn, checkOut, schedule, selectedAc
                             Free entrance ({entrance.kidsCount} pax) — kids 7 &amp; below
                         </span>
                         <span className="summary-row-value">
-                            {schedule ? `− ${formatPeso(entrance.freeSavings)}` : '—'}
+                            {schedule ? `− ${formatPeso(entrance.kidsFree)}` : '—'}
+                        </span>
+                    </div>
+                )}
+                {entrance.perkApplied > 0 && (
+                    <div className="summary-row summary-row-discount">
+                        <span className="summary-row-label">
+                            Free entrance ({entrance.perkApplied} pax) — resort inclusion
+                        </span>
+                        <span className="summary-row-value">
+                            {schedule ? `− ${formatPeso(entrance.perkSavings)}` : '—'}
                         </span>
                     </div>
                 )}
@@ -145,9 +156,11 @@ export default function BookingSummary({ checkIn, checkOut, schedule, selectedAc
                 />
                 <p className="summary-note-inline">
                     Entrance is charged for every guest in your group. Kids 7 &amp;
-                    below are the exception — they get in free. Half of your entrance
-                    fees is included in the down payment; the rest is settled on-site
-                    at check-in. Seniors must present a Senior Citizen ID or other
+                    below get in free, and your stay includes free entrance for up
+                    to 2 more pax (not applicable for Tent Pitching, Cottage or
+                    Pavilion). Half of your entrance fees is included in the down
+                    payment; the rest is settled on-site at check-in. Seniors must
+                    present a Senior Citizen ID or other
                     valid ID for the discount.
                 </p>
             </div>
