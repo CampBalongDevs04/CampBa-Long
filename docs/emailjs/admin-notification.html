@@ -1,0 +1,107 @@
+<!--
+  Template 1 of 2 — THE ENQUIRY, sent to the Camp Ba-long admin inbox.
+  Its ID goes in email_settings.template_admin (Supabase Table editor).
+
+  Paste the markup below into the EmailJS template editor's "Code" view, then
+  set these fields in the Settings tab beside it:
+
+    To email      {{to_email}}
+    From name     Camp Ba-long Website
+    Reply To      {{reply_to}}        <- makes Reply go to the guest
+    Subject       New enquiry from {{from_name}} — Camp Ba-long
+
+  Layout notes: tables and inline styles, not flexbox and a stylesheet. Gmail
+  and Outlook strip <style> blocks and ignore modern layout, so anything that
+  must survive delivery has to be expressed the 2005 way.
+-->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0;padding:0;background-color:#f5f1e4;font-family:'Jost',Helvetica,Arial,sans-serif;">
+  <tr>
+    <td align="center" style="padding:28px 12px;">
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#ffffff;border-radius:12px;border-top:4px solid #c6a15b;overflow:hidden;box-shadow:0 10px 24px -14px rgba(10,22,14,0.45);">
+
+        <!-- Header -->
+        <tr>
+          <td style="background-color:#1d3025;padding:26px 32px;">
+            <p style="margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:#c6a15b;">
+              Camp Ba-long
+            </p>
+            <h1 style="margin:0;font-family:'Cormorant Garamond',Georgia,serif;font-size:24px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#efe9d6;">
+              New Website Enquiry
+            </h1>
+          </td>
+        </tr>
+
+        <!-- Details -->
+        <tr>
+          <td style="padding:28px 32px 8px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+
+              <tr>
+                <td style="padding-bottom:16px;">
+                  <p style="margin:0 0 4px;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#4c6b4f;">Name</p>
+                  <p style="margin:0;font-size:15px;color:#2a2a22;">{{from_name}}</p>
+                </td>
+              </tr>
+
+              <tr>
+                <td style="padding-bottom:16px;">
+                  <p style="margin:0 0 4px;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#4c6b4f;">Email</p>
+                  <p style="margin:0;font-size:15px;color:#2a2a22;">
+                    <a href="mailto:{{from_email}}" style="color:#1d3025;text-decoration:underline;">{{from_email}}</a>
+                  </p>
+                </td>
+              </tr>
+
+              <tr>
+                <td style="padding-bottom:16px;">
+                  <p style="margin:0 0 4px;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#4c6b4f;">Phone</p>
+                  <p style="margin:0;font-size:15px;color:#2a2a22;">{{from_phone}}</p>
+                </td>
+              </tr>
+
+              <tr>
+                <td style="padding-bottom:16px;">
+                  <p style="margin:0 0 4px;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#4c6b4f;">Received</p>
+                  <p style="margin:0;font-size:15px;color:#2a2a22;">{{submitted_at}} (PH time)</p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+
+        <!-- Message body -->
+        <tr>
+          <td style="padding:0 32px 24px;">
+            <p style="margin:0 0 8px;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#4c6b4f;">Message</p>
+            <!-- white-space:pre-wrap keeps the guest's own line breaks; without
+                 it a carefully paragraphed enquiry arrives as one block. -->
+            <div style="background-color:#f5f1e4;border:1px solid rgba(198,161,91,0.45);border-radius:8px;padding:16px 18px;font-size:15px;line-height:1.65;color:#2a2a22;white-space:pre-wrap;">{{message}}</div>
+          </td>
+        </tr>
+
+        <!-- Reply button -->
+        <tr>
+          <td align="center" style="padding:0 32px 30px;">
+            <a href="mailto:{{from_email}}" style="display:inline-block;background-color:#16291e;color:#f5f1e4;font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;text-decoration:none;padding:13px 32px;border-radius:999px;">
+              Reply to {{from_name}}
+            </a>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background-color:#efe9d6;padding:16px 32px;">
+            <p style="margin:0;font-size:12px;line-height:1.6;color:#4c6b4f;">
+              Sent automatically from the Camp Ba-long website contact form.
+              Replying to this email goes straight back to the guest.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+
+    </td>
+  </tr>
+</table>

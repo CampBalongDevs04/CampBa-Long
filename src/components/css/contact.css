@@ -205,6 +205,22 @@
     border-color: var(--gold);
     color: var(--forest-dark);
 }
+/* While the message is in flight. The button keeps its size and only fades, so
+   the card does not reflow between "Send Message" and "Sending…". */
+.contact-submit-btn:disabled{
+    opacity: 0.6;
+    cursor: progress;
+}
+.contact-submit-btn:disabled:hover{
+    background: var(--forest-dark);
+    border-color: var(--forest-dark);
+    color: var(--cream);
+}
+.contact-field input:disabled,
+.contact-field textarea:disabled{
+    background: rgba(239, 233, 214, 0.6);
+    cursor: not-allowed;
+}
 .Admin-Hours{
     background-color: var(--cream-2);
     border-radius: 15px;
