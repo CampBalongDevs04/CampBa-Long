@@ -3,6 +3,7 @@ import { Routes, Route, useLocation } from 'react-router'
 import './App.css'
 import Header from './components/Header.jsx'
 import SetupNotice from './components/SetupNotice.jsx'
+import CrispChat from './components/CrispChat.jsx'
 import {
   HomeSkeleton,
   FoodMenuSkeleton,
@@ -26,12 +27,19 @@ function App() {
   const location = useLocation()
   const isAdminPage = location.pathname.startsWith('/admindash2345')
 
+  // The two pages with a kiosk order tray in the bottom-right corner, which
+  // is also where the chat launcher lands. See CrispChat.jsx.
+  const hasKioskTray = ['/menu', '/spa'].includes(location.pathname)
+
   return (
     <>
       {/* Renders nothing when the keys are present, so this costs a fully
           configured site exactly one boolean check. */}
       <SetupNotice />
       {!isAdminPage && <Header />}
+      {/* Guest-facing only. Staff on the dashboard have no use for a support
+          bubble aimed at guests, and it would sit over the sidebar. */}
+      {!isAdminPage && <CrispChat reversed={hasKioskTray} />}
       <Routes>
         <Route path="/" element={
           <Suspense fallback={<HomeSkeleton />}><Home /></Suspense>
