@@ -41,7 +41,7 @@ function Home() {
                     </h1>
                     <p className="hero-subtitle">Escape the everyday with comfortable accommodations, relaxing amenities, delicious dining, and unforgettable experiences—all in one destination. Reserve your stay in just a few clicks.</p>
                     <div className="hero-buttons">
-                        <Link className="hero-button" to="/my-booking">
+                        <Link className="hero-button" to="/booking">
                             <svg viewBox="0 0 24 24" strokeWidth="1.8" aria-hidden="true">
                                 <rect x="3" y="5" width="18" height="16" rx="2"/>
                                 <path d="M3 10h18M8 3v4M16 3v4"/>
