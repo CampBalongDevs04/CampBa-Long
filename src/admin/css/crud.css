@@ -282,6 +282,65 @@
     min-width: 0;
 }
 
+/* ---------- Photo upload field ---------- */
+.crud-image-control {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+/* Bigger than the inline preview above: this is the photo staff are deciding
+   about, not a thumbnail confirming which row they are on. */
+.crud-image-preview.is-large {
+    width: 104px;
+    height: 104px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-style: dashed;
+    background: rgba(255, 255, 255, 0.7);
+}
+
+.crud-image-none {
+    font-size: 0.7rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: rgba(10, 22, 14, 0.4);
+}
+
+.crud-image-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+/* The real input is driven by the button next to it — a bare file input has no
+   styling worth keeping and reads as "no file chosen" even when there is one. */
+.crud-image-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.crud-image-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.crud-image-field .crud-message {
+    margin: 10px 0 0;
+}
+
+@media (max-width: 480px) {
+    .crud-image-control {
+        flex-direction: column;
+    }
+}
+
 /* ---------- Modal footer ---------- */
 .crud-modal-actions {
     display: flex;

@@ -11,6 +11,7 @@ import {
     saveAccommodationRate,
     deleteAccommodationRate,
 } from '../../data/accommodationDB.js'
+import { resolveAccommodationImage } from '../../data/accomodationOptions.js'
 
 // Units → Manage Accommodations. What the resort sells, and what it costs.
 //
@@ -67,12 +68,16 @@ function typeFields(values) {
                 ? 'Unit ids are built from it: AHS → AHS-01, AHS-02.'
                 : 'Fixed once units exist — bookings point at ids built from it.',
         },
+        // The units that shipped with the site have a bundled photo, which is
+        // what fills the frame until staff upload their own. An upload wins
+        // over it everywhere the unit is shown — see resolveAccommodationImage.
         {
             name: 'imageUrl',
-            label: 'Photo link',
-            type: 'url',
-            placeholder: 'https://…',
-            help: 'For an accommodation added here. The ones shipped with the site keep their built-in photo.',
+            label: 'Photo',
+            type: 'image',
+            folder: 'accommodations',
+            preview: resolveAccommodationImage(values.id, values.imageUrl),
+            help: 'Shown on the booking page and the home page card. JPG, PNG or WebP, up to 5 MB.',
         },
         // The home page card is built from these two. Without them a new
         // accommodation still gets a card — it just has nothing to say on it.
@@ -210,8 +215,11 @@ export default function AccommodationManage() {
                         >
                             <div className="acc-manage-card-head">
                                 <div className="acc-manage-thumb">
-                                    {type.imageUrl ? (
-                                        <img src={type.imageUrl} alt="" />
+                                    {/* The same photo a guest is shown, bundled
+                                        or uploaded, so staff can see at a glance
+                                        which units still need one. */}
+                                    {resolveAccommodationImage(type.id, type.imageUrl) ? (
+                                        <img src={resolveAccommodationImage(type.id, type.imageUrl)} alt="" />
                                     ) : (
                                         <span>{type.prefix}</span>
                                     )}

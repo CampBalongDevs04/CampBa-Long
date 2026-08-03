@@ -11,7 +11,6 @@ import {
     groupCoffeeMenu,
     formatMenuPrice,
     FOOD_CATEGORIES,
-    FOOD_IMAGE_KEYS,
     FLAVORED_COFFEE_UPCHARGE,
 } from '../../data/menuDB.js'
 import {
@@ -251,26 +250,20 @@ function foodFields(values) {
             help: 'Rows sharing this id share a table. Copy it from a cup already in the table you want.',
         })
     } else {
-        fields.push([
-            {
-                name: 'imageKey',
-                label: 'Photo',
-                type: 'select',
-                options: [
-                    { value: '', label: 'No bundled photo' },
-                    ...FOOD_IMAGE_KEYS.map((key) => ({ value: key, label: key })),
-                ],
-                help: 'Photos shipped with the site.',
-            },
-            { name: 'sortOrder', label: 'Position', type: 'number', help: 'Lower shows first.' },
-        ])
+        // The photo is uploaded, not named. A dish that shipped with the site
+        // still has its bundled asset behind `imageKey`, which is what fills the
+        // frame until staff replace it — and the upload clears the key so the
+        // new photo is the one the guest menu shows.
         fields.push({
             name: 'imageUrl',
-            label: 'Photo link',
-            type: 'url',
-            placeholder: 'https://…',
-            help: 'Used when no bundled photo is picked — for a dish added after the site was built.',
+            label: 'Photo',
+            type: 'image',
+            folder: 'food',
+            preview: resolveMenuImage(values.imageKey, values.imageUrl),
+            clears: ['imageKey'],
+            help: 'Shown on the guest menu card. JPG, PNG or WebP, up to 5 MB.',
         })
+        fields.push({ name: 'sortOrder', label: 'Position', type: 'number', help: 'Lower shows first.' })
     }
 
     if (values.category === 'combo') {
@@ -405,15 +398,6 @@ export default function FoodList({ category = 'all' }) {
                     onDelete={editing.id ? () => deleteFoodItem(editing.id) : null}
                     deleteLabel="Delete item"
                     onClose={() => setEditing(null)}
-                    renderPreview={(values) => {
-                        const image = resolveMenuImage(values.imageKey, values.imageUrl)
-                        if (!image) return null
-                        return (
-                            <div className="crud-image-preview">
-                                <img src={image} alt="" />
-                            </div>
-                        )
-                    }}
                 />
             )}
         </div>

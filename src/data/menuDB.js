@@ -34,16 +34,22 @@
 //  staff emptied the menu — and it empties the store. Falling back there would
 //  keep selling guests dishes the kitchen has just removed.
 //
-//  WHY IMAGES ARE KEYS, NOT URLS
-//  -----------------------------
-//  The photos are bundled assets — Vite hashes them at build time, so the final
-//  URL is not knowable from SQL. A row carries the asset's key ('menu1',
-//  'massage44') and the maps below turn it into the imported module. An unknown
-//  or null key just means no photo; nothing breaks.
+//  TWO WAYS A ROW CARRIES A PHOTO
+//  ------------------------------
+//  `image_url` is the normal one: staff upload a file in the dashboard, it goes
+//  into the `catalog-images` bucket, and the row keeps the URL — see
+//  data/catalogImages.js.
 //
-//  A dish added from the dashboard has no bundled asset to name, so it carries
-//  an `image_url` instead — see resolveImage(). The key wins when a row has
-//  both, because a bundled photo is the one that survives a redeploy.
+//  `image_key` is what the rows that SHIPPED with the site use. Their photos
+//  are bundled assets, and Vite hashes those at build time, so the final URL is
+//  not knowable from SQL — the row names the asset ('menu1', 'massage44') and
+//  the map below turns it into the imported module. An unknown or null key just
+//  means no photo; nothing breaks.
+//
+//  The key wins when a row has both, because a bundled photo cannot 404 and is
+//  versioned with the build. That is also why uploading in the dashboard CLEARS
+//  the key: otherwise the photo staff just picked would lose to the one it was
+//  meant to replace.
 //
 //  WRITING, NOT JUST READING
 //  -------------------------
@@ -100,20 +106,9 @@ const IMAGES = {
     massage55, massage66, massage77, massage88,
 }
 
-// What the dashboard's photo picker can offer. A key that isn't in here isn't
-// a photo the build ships, so the form falls back to asking for a URL.
-export const FOOD_IMAGE_KEYS = [
-    'menu1', 'menu2', 'menu3', 'menu4', 'menu5', 'menu6', 'menu7',
-    'combo1', 'combo2', 'combo3', 'combo4', 'combo5', 'combo6', 'combo7',
-    'pre1', 'pre2', 'pre3', 'pre4',
-]
-export const SPA_IMAGE_KEYS = [
-    'massage11', 'massage22', 'massage33', 'massage44',
-    'massage55', 'massage66', 'massage77', 'massage88',
-]
-
 // The photo for a row, from whichever of the two it has. A bundled asset beats
-// a URL: it is versioned with the build and cannot 404 later.
+// a URL: it is versioned with the build and cannot 404 later. An upload in the
+// dashboard clears the key rather than racing this rule.
 export function resolveMenuImage(imageKey, imageUrl = null) {
     if (imageKey && IMAGES[imageKey]) return IMAGES[imageKey]
     return imageUrl || null
