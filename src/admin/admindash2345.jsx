@@ -34,6 +34,8 @@ const FoodSpa = lazy(() => import('./items/FoodSpa.jsx'))
 const FoodTab = lazy(() => import('./items/foodTab.jsx'))
 const FoodList = lazy(() => import('./items/foodList.jsx'))
 const AccommodationCount = lazy(() => import('./items/accommodationCount.jsx'))
+const AccommodationTab = lazy(() => import('./items/accommodationTab.jsx'))
+const AccommodationManage = lazy(() => import('./items/accommodationManage.jsx'))
 const SpaService = lazy(() => import('./items/spaService-Tab.jsx'))
 const SpaServiceList = lazy(() => import('./items/spaServiceList.jsx'))
 const SpaServiceAvails = lazy(() => import('./items/SpaServiceAvails.jsx'))
@@ -73,6 +75,9 @@ function AdminDash() {
   const [activeServiceTab, setActiveServiceTab] = useState('all')
   const [activeFoodTab, setActiveFoodTab] = useState('all')
   const [activeSpaTab, setActiveSpaTab] = useState('services')
+  // Units opens on the day board — the question staff ask most is "who is in
+  // which unit today", not "what does a Teepee cost".
+  const [activeUnitTab, setActiveUnitTab] = useState('availability')
 
 
   // A session survives a page refresh, so staff aren't kicked out every time
@@ -262,8 +267,12 @@ function AdminDash() {
                         <h1 className="admin-dash-title">Units</h1>
                         <ClockDate />
                     </div>
+                    <Suspense fallback={<TabsSkeleton count={2} />}>
+                        <AccommodationTab active={activeUnitTab} onChange={setActiveUnitTab} />
+                    </Suspense>
                     <Suspense fallback={<StatCardsSkeleton count={6} />}>
-                        <AccommodationCount />
+                        {activeUnitTab === 'availability' && <AccommodationCount />}
+                        {activeUnitTab === 'manage' && <AccommodationManage />}
                     </Suspense>
                 </div>
             ) : activeSection === 'menu' ? (

@@ -1,0 +1,317 @@
+/* ============================================================================
+   Shared styling for the dashboard's catalog editing: the toolbar above a
+   list, the small buttons on each row, and the modal the form opens in.
+   Used by the Food Menu, Spa and Units sections so an edit looks and behaves
+   the same wherever staff happen to be standing.
+   ========================================================================== */
+
+/* ---------- Toolbar above a list ---------- */
+.crud-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.crud-bar-title {
+    margin: 0;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--forest-dark, #16291E);
+}
+
+.crud-bar-note {
+    margin: 0;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.78rem;
+    color: rgba(10, 22, 14, 0.55);
+}
+
+/* ---------- Buttons ---------- */
+.crud-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    border: 1px solid rgba(198, 161, 91, 0.55);
+    background: #fff;
+    color: var(--forest-dark, #16291E);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.crud-btn:hover:not(:disabled) {
+    background: rgba(198, 161, 91, 0.16);
+}
+
+.crud-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.crud-btn.is-primary {
+    background: var(--forest, #1E3A2B);
+    border-color: var(--forest, #1E3A2B);
+    color: #F5F1E4;
+}
+
+.crud-btn.is-primary:hover:not(:disabled) {
+    background: var(--forest-dark, #16291E);
+}
+
+.crud-btn.is-danger {
+    border-color: rgba(158, 58, 46, 0.45);
+    color: #9E3A2E;
+}
+
+.crud-btn.is-danger:hover:not(:disabled) {
+    background: rgba(158, 58, 46, 0.1);
+}
+
+.crud-btn.is-small {
+    padding: 5px 11px;
+    font-size: 0.72rem;
+}
+
+/* Row actions sit at the end of a list row and stay put when it wraps. */
+.crud-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+
+/* ---------- Hidden-from-guests marker ---------- */
+.crud-hidden-tag {
+    display: inline-block;
+    border-radius: 999px;
+    background: rgba(10, 22, 14, 0.08);
+    color: rgba(10, 22, 14, 0.6);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.68rem;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    padding: 2px 9px;
+}
+
+/* A row staff have taken off the menu reads as switched off, so nobody has to
+   check the tag to know what a guest is being shown. */
+.crud-is-hidden {
+    opacity: 0.6;
+}
+
+/* ---------- Messages ---------- */
+.crud-message {
+    margin: 0 0 12px;
+    border-radius: 10px;
+    padding: 9px 13px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.8rem;
+    line-height: 1.45;
+}
+
+.crud-message.is-error {
+    background: rgba(158, 58, 46, 0.1);
+    border: 1px solid rgba(158, 58, 46, 0.3);
+    color: #7d2c22;
+}
+
+.crud-message.is-success {
+    background: rgba(76, 107, 79, 0.12);
+    border: 1px solid rgba(76, 107, 79, 0.32);
+    color: #2f4a34;
+}
+
+/* ---------- Modal ---------- */
+.crud-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(10, 22, 14, 0.55);
+    backdrop-filter: blur(2px);
+}
+
+.crud-modal {
+    width: min(560px, 100%);
+    max-height: min(86vh, 900px);
+    overflow-y: auto;
+    background: var(--cream, #F5F1E4);
+    border: 1px solid rgba(198, 161, 91, 0.5);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 24px 50px -20px rgba(10, 22, 14, 0.7);
+    font-family: 'Jost', sans-serif;
+    color: var(--forest-dark, #16291E);
+}
+
+.crud-modal-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.crud-modal-subtitle {
+    margin: 6px 0 18px;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: rgba(10, 22, 14, 0.62);
+}
+
+.crud-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* Two short fields (price + sort order, min + max pax) share a line. */
+.crud-form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+}
+
+.crud-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.crud-field label {
+    font-size: 0.76rem;
+    font-weight: 500;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: rgba(10, 22, 14, 0.7);
+}
+
+.crud-field input[type='text'],
+.crud-field input[type='number'],
+.crud-field input[type='url'],
+.crud-field select,
+.crud-field textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid rgba(198, 161, 91, 0.45);
+    border-radius: 10px;
+    background: #fff;
+    padding: 9px 12px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.88rem;
+    color: var(--forest-dark, #16291E);
+}
+
+.crud-field input:focus,
+.crud-field select:focus,
+.crud-field textarea:focus {
+    outline: 2px solid rgba(198, 161, 91, 0.55);
+    outline-offset: 1px;
+}
+
+.crud-field input:disabled {
+    background: rgba(10, 22, 14, 0.05);
+    color: rgba(10, 22, 14, 0.55);
+}
+
+.crud-field textarea {
+    resize: vertical;
+    min-height: 68px;
+}
+
+.crud-field-help {
+    margin: 0;
+    font-size: 0.72rem;
+    line-height: 1.45;
+    color: rgba(10, 22, 14, 0.55);
+}
+
+.crud-field-check {
+    flex-direction: row;
+    align-items: center;
+    gap: 9px;
+}
+
+.crud-field-check label {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.85rem;
+}
+
+/* ---------- Photo preview inside the form ---------- */
+.crud-image-preview {
+    width: 72px;
+    height: 72px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(198, 161, 91, 0.4);
+    background: #fff;
+    flex: 0 0 auto;
+}
+
+.crud-image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.crud-image-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.crud-image-row .crud-field {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* ---------- Modal footer ---------- */
+.crud-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.crud-modal-actions .crud-btn.is-delete {
+    margin-right: auto;
+}
+
+/* ---------- Empty state ---------- */
+.crud-empty {
+    border: 1px dashed rgba(198, 161, 91, 0.55);
+    border-radius: 12px;
+    padding: 22px;
+    text-align: center;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.84rem;
+    color: rgba(10, 22, 14, 0.6);
+}
+
+@media (max-width: 640px) {
+    .crud-modal {
+        padding: 18px;
+    }
+
+    .crud-row-actions {
+        margin-left: 0;
+        width: 100%;
+    }
+}

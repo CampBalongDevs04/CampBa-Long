@@ -295,6 +295,31 @@ export function findTypeForUnit(unitId) {
     return findAccommodationType(String(unitId).split('-')[0])
 }
 
+// ---------------------------------------------------------------- rate table
+// One rate is (type, rate group): the same A-House costs 1450 for Day Time and
+// 2250 overnight, and a type with no row for a group simply is not offered
+// under it — that is how Cottage stays day-only and the tents overnight-only,
+// without a second list saying so.
+
+function rateKey(typeId, rateGroup) {
+    return `${typeId}|${rateGroup}`
+}
+
+// True once Postgres has answered. False means "no rates known yet", which the
+// booking page answers with its built-in card, not with an empty carousel.
+export function hasAccommodationRates() {
+    return ratesLoaded && ratesByKey.size > 0
+}
+
+export function findAccommodationRate(typeId, rateGroup) {
+    return ratesByKey.get(rateKey(typeId, rateGroup)) ?? null
+}
+
+export function listAccommodationRates(rateGroup = null) {
+    const all = [...ratesByKey.values()]
+    return rateGroup ? all.filter((rate) => rate.rateGroup === rateGroup) : all
+}
+
 // ===================================================================== store
 
 // TWO different sets of rows, deliberately kept apart.
@@ -317,6 +342,12 @@ const availabilityCache = new Map()
 const inFlight = new Set()
 const nextFreeCache = new Map()
 let unitsByType = new Map()
+// Rates from accommodation_rates, keyed 'typeId|rateGroup'. Empty until the
+// catalog lands, which is what data/accomodationOptions.js reads `ratesLoaded`
+// for: with no answer yet it shows its built-in rate card rather than "Price
+// TBA" on every unit.
+let ratesByKey = new Map()
+let ratesLoaded = false
 let staffSession = false
 
 // How far this device's clock is from the resort's, in milliseconds, measured
@@ -536,10 +567,34 @@ function upsertLocal(booking) {
 
 // The catalog is public (RLS allows anon select), so this always succeeds.
 async function loadCatalog() {
-    const [types, units] = await Promise.all([
+    const [types, units, rates] = await Promise.all([
         supabase.from('accommodation_types').select('*').eq('is_active', true).order('sort_order'),
         supabase.from('accommodation_units').select('id, type_id, unit_no').eq('is_active', true).order('unit_no'),
+        supabase.from('accommodation_rates').select('*'),
     ])
+
+    // Prices and pax ceilings, keyed by the pair that identifies one: a unit
+    // costs a different amount under Day Time than overnight. Loaded here with
+    // the types because data/accomodationOptions.js merges the two into the
+    // cards the booking page renders — before this, its rate table was written
+    // out in the front end and a price change meant a redeploy.
+    if (rates.error) {
+        console.error('Could not load accommodation rates:', rates.error.message)
+    } else {
+        const map = new Map()
+        for (const row of rates.data) {
+            map.set(rateKey(row.type_id, row.rate_group), {
+                typeId: row.type_id,
+                rateGroup: row.rate_group,
+                price: Number(row.price),
+                paxLabel: row.pax_label ?? null,
+                minPax: row.min_pax ?? null,
+                maxPax: row.max_pax ?? null,
+            })
+        }
+        ratesByKey = map
+        ratesLoaded = true
+    }
 
     if (types.error) {
         console.error('Could not load accommodation types:', types.error.message)
@@ -556,6 +611,11 @@ async function loadCatalog() {
             total: row.total,
             image: row.image_url ?? null,
             poolId: row.pool_id ?? null,
+            // What the home page card and its "view more" modal say. Null on a
+            // database that predates *_accommodation_card_content.sql, which
+            // the cards answer with their built-in copy.
+            description: row.description ?? null,
+            features: Array.isArray(row.features) ? row.features : null,
         })),
     )
 
@@ -759,11 +819,49 @@ function startRevalidating() {
 // Without credentials every call would fail on a loop and bury the one useful
 // message from supabaseClient.js. The catalog above still renders from its
 // built-in defaults, so the pages look right — they just can't take bookings.
+// The CATALOG channel, as opposed to the bookings one above. What travels here
+// is what the resort sells — public by design, and readable by an anonymous
+// visitor — so a rate edited on the dashboard reaches a guest already looking
+// at the booking page. Bookings stay on their own staff-only channel.
+//
+// Declared above the boot block, not next to its function: `const` is not
+// hoisted, and the call below runs while this module is still evaluating.
+const CATALOG_CHANNEL = 'accommodation-catalog-changes'
+
 if (isSupabaseConfigured) {
     loadCatalog()
+    watchCatalogRealtime()
     // Realtime is attached only once we know whether this is a staff session.
     loadBookings().then(watchRealtime)
     startRevalidating()
+}
+
+// Re-read the catalog. Exported for the dashboard's accommodation CRUD, which
+// calls it after a save so the booking page's prices and unit counts follow
+// the edit rather than waiting for the next page load.
+export function refreshAccommodationCatalog() {
+    if (!isSupabaseConfigured) return Promise.resolve()
+    return loadCatalog()
+}
+
+function watchCatalogRealtime() {
+    for (const channel of supabase.getChannels()) {
+        if (channel.topic === `realtime:${CATALOG_CHANNEL}`) {
+            supabase.removeChannel(channel)
+        }
+    }
+
+    const reload = () => {
+        loadCatalog()
+        if (adminAccommodations.loaded) loadAdminAccommodations()
+    }
+
+    supabase
+        .channel(CATALOG_CHANNEL)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'accommodation_types' }, reload)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'accommodation_rates' }, reload)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'accommodation_units' }, reload)
+        .subscribe()
 }
 
 // Keep the session flag in step with Supabase Auth. Signing out of the admin
@@ -1600,4 +1698,273 @@ export function findOrderableBooking() {
 // dashboard uses this to explain an empty board rather than look broken.
 export function hasStaffSession() {
     return staffSession
+}
+
+// ======================================================= accommodation CRUD
+//
+//  The dashboard's Units → Manage tab writes through here: add an
+//  accommodation, change what it costs under each schedule, change how many of
+//  it exist, or take it off the market.
+//
+//  WHAT THIS MODULE DOES NOT DO
+//  ----------------------------
+//  It does not create or delete accommodation_units. `total` is the number
+//  staff edit, and a trigger in Postgres makes the unit rows match it — see
+//  supabase/migrations/20260803140000_catalog_crud.sql. Doing it here instead
+//  would mean a browser that closed mid-save could leave a type claiming four
+//  units with three rows behind it, and availability is counted from the rows.
+//
+//  Nor is it the permission check: only the staff roster may write these
+//  tables, and that is a policy in Postgres. A guest calling these gets
+//  refused by the database, not by this file.
+
+// The editable catalog: every type including the ones taken off the market,
+// with their rates. Separate from ACCOMMODATION_TYPES for the same reason the
+// menu keeps two lists — the guest-facing one must never show a hidden unit.
+let adminAccommodations = { types: [], rates: [], loaded: false, error: null }
+
+function getAdminAccommodations() {
+    return adminAccommodations
+}
+
+export function useAdminAccommodations() {
+    return useSyncExternalStore(subscribeBookings, getAdminAccommodations)
+}
+
+export async function loadAdminAccommodations() {
+    if (!isSupabaseConfigured) {
+        adminAccommodations = { ...adminAccommodations, loaded: true, error: SUPABASE_SETUP_MESSAGE }
+        notify()
+        return
+    }
+
+    const [types, rates, units] = await Promise.all([
+        supabase.from('accommodation_types').select('*').order('sort_order'),
+        supabase.from('accommodation_rates').select('*'),
+        supabase.from('accommodation_units').select('id, type_id, unit_no, is_active').order('unit_no'),
+    ])
+
+    const error = types.error ?? rates.error ?? units.error
+    if (error) {
+        console.error('Could not load the accommodation catalog for editing:', error.message)
+        adminAccommodations = { ...adminAccommodations, loaded: true, error: describeSupabaseError(error) }
+        notify()
+        return
+    }
+
+    // Units are counted per type here rather than listed: the Manage tab is
+    // about what the resort sells, and the per-unit board next to it is the
+    // place that shows TPE-01 by name.
+    const unitCount = new Map()
+    for (const unit of units.data) {
+        if (!unit.is_active) continue
+        unitCount.set(unit.type_id, (unitCount.get(unit.type_id) ?? 0) + 1)
+    }
+
+    adminAccommodations = {
+        types: types.data.map((row) => ({
+            id: row.id,
+            name: row.name,
+            prefix: row.prefix,
+            total: row.total,
+            imageUrl: row.image_url ?? null,
+            poolId: row.pool_id ?? null,
+            description: row.description ?? '',
+            features: Array.isArray(row.features) ? row.features : [],
+            sortOrder: row.sort_order ?? 0,
+            isActive: row.is_active !== false,
+            // What actually exists behind `total`. A type sharing another's
+            // pool owns none of its own, and that is worth showing rather than
+            // reading as a bug.
+            unitCount: unitCount.get(row.id) ?? 0,
+        })),
+        rates: rates.data.map((row) => ({
+            typeId: row.type_id,
+            rateGroup: row.rate_group,
+            price: Number(row.price),
+            paxLabel: row.pax_label ?? null,
+            minPax: row.min_pax ?? null,
+            maxPax: row.max_pax ?? null,
+        })),
+        loaded: true,
+        error: null,
+    }
+    notify()
+}
+
+function slugifyId(text) {
+    return String(text ?? '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+}
+
+// Create or edit an accommodation. `prefix` is only read when creating: unit
+// ids are built from it and bookings point at those ids, so renaming one after
+// the fact would orphan every unit the type already has.
+export async function saveAccommodationType(draft) {
+    if (!isSupabaseConfigured) return { ok: false, message: SUPABASE_SETUP_MESSAGE }
+
+    const name = String(draft.name ?? '').trim()
+    if (!name) return { ok: false, message: 'Give the accommodation a name.' }
+
+    const total = Math.floor(Number(draft.total))
+    if (!Number.isFinite(total) || total < 1) {
+        return { ok: false, message: 'How many of this unit exist? Enter 1 or more.' }
+    }
+
+    const isNew = !draft.id
+    const id = draft.id || slugifyId(name)
+    if (!id) return { ok: false, message: 'That name has no letters or numbers in it.' }
+
+    const row = {
+        id,
+        name,
+        total,
+        image_url: String(draft.imageUrl ?? '').trim() || null,
+        description: String(draft.description ?? '').trim() || null,
+        // The "What's Included" list, typed one per line. Blank lines are
+        // dropped rather than stored as empty bullets.
+        features: String(draft.features ?? '')
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean),
+        sort_order: Number(draft.sortOrder) || 0,
+        is_active: draft.isActive !== false,
+    }
+
+    // INSERT and UPDATE, not upsert. An upsert always builds a whole row and
+    // resolves the conflict afterwards, so a partial payload is a partial
+    // INSERT first — and this table's `prefix` is NOT NULL and deliberately
+    // absent from an edit, which made every edit fail on the constraint before
+    // Postgres ever reached the "on conflict, update" half. An UPDATE touches
+    // only the columns given, which is what editing an accommodation means.
+    let error
+    let updated = null
+    if (isNew) {
+        if (adminAccommodations.types.some((type) => type.id === id)) {
+            return { ok: false, message: `There is already an accommodation called “${name}”.` }
+        }
+        const prefix = String(draft.prefix ?? '').trim().toUpperCase()
+        if (!prefix) return { ok: false, message: 'Enter a unit prefix, e.g. TPE for TPE-01.' }
+        if (adminAccommodations.types.some((type) => type.prefix === prefix)) {
+            return { ok: false, message: `The prefix ${prefix} is already used by another accommodation.` }
+        }
+        row.prefix = prefix
+        // Null unless the new type is meant to share an existing pool of
+        // physical slots, the way Tent Pitching shares the tents'.
+        row.pool_id = String(draft.poolId ?? '').trim() || null
+        ;({ error } = await supabase.from('accommodation_types').insert(row))
+    } else {
+        // `prefix` and `pool_id` are not in `row`, so an edit cannot rename the
+        // units bookings point at or move a type off its shared pool.
+        //
+        // `.select()` is what turns "nothing happened" into an answer: an
+        // UPDATE that matches no row is not an error in Postgres, so without
+        // reading back what changed, a save that quietly did nothing would
+        // report success and the edit would appear to vanish.
+        ;({ error, data: updated } = await supabase
+            .from('accommodation_types')
+            .update(row)
+            .eq('id', id)
+            .select('id'))
+    }
+
+    if (error) {
+        console.error('Could not save the accommodation:', error.message)
+        return { ok: false, message: describeSupabaseError(error) }
+    }
+
+    if (!isNew && (updated?.length ?? 0) === 0) {
+        return {
+            ok: false,
+            message: 'Nothing was saved — that accommodation no longer exists, or this account '
+                + 'is not on the staff roster.',
+        }
+    }
+
+    await Promise.all([loadCatalog(), loadAdminAccommodations()])
+    return { ok: true, id }
+}
+
+// Removing a type takes its rates and its unused units with it (both cascade).
+// A unit that a booking points at does not cascade — Postgres refuses, and it
+// should: the reservation is a promise the resort made. Hiding it is the answer
+// there, which is what the message says.
+export async function deleteAccommodationType(id) {
+    if (!isSupabaseConfigured) return { ok: false, message: SUPABASE_SETUP_MESSAGE }
+
+    const { error } = await supabase.from('accommodation_types').delete().eq('id', id)
+    if (error) {
+        console.error('Could not delete the accommodation:', error.message)
+        const blocked = error.code === '23503' || /foreign key|violates/i.test(error.message ?? '')
+        return {
+            ok: false,
+            message: blocked
+                ? 'This accommodation has bookings on it, so it cannot be deleted. '
+                  + 'Switch it to Hidden instead — it stops being offered and the existing stays keep their unit.'
+                : describeSupabaseError(error),
+        }
+    }
+
+    await Promise.all([loadCatalog(), loadAdminAccommodations()])
+    return { ok: true }
+}
+
+// The price and pax range for one (accommodation, schedule group). Saving one
+// is also what puts a unit on sale under that group in the first place.
+export async function saveAccommodationRate(draft) {
+    if (!isSupabaseConfigured) return { ok: false, message: SUPABASE_SETUP_MESSAGE }
+
+    const typeId = String(draft.typeId ?? '').trim()
+    const rateGroup = String(draft.rateGroup ?? '').trim()
+    if (!typeId || !rateGroup) return { ok: false, message: 'Pick an accommodation and a schedule group.' }
+
+    const price = Number(draft.price)
+    if (!Number.isFinite(price) || price < 0) return { ok: false, message: 'Enter a price of 0 or more.' }
+
+    const minPax = draft.minPax === '' || draft.minPax == null ? null : Math.floor(Number(draft.minPax))
+    const maxPax = draft.maxPax === '' || draft.maxPax == null ? null : Math.floor(Number(draft.maxPax))
+    if (minPax != null && maxPax != null && minPax > maxPax) {
+        return { ok: false, message: 'The smallest group size cannot be larger than the largest.' }
+    }
+
+    const { error } = await supabase.from('accommodation_rates').upsert({
+        type_id: typeId,
+        rate_group: rateGroup,
+        price: Math.round(price * 100) / 100,
+        // What the card shows. Written for staff rather than derived, because
+        // 'Any group size' is a real answer and '2-3 Pax' is how the printed
+        // rate card words the same thing.
+        pax_label: String(draft.paxLabel ?? '').trim() || null,
+        min_pax: Number.isFinite(minPax) ? minPax : null,
+        max_pax: Number.isFinite(maxPax) ? maxPax : null,
+    })
+
+    if (error) {
+        console.error('Could not save the rate:', error.message)
+        return { ok: false, message: describeSupabaseError(error) }
+    }
+
+    await Promise.all([loadCatalog(), loadAdminAccommodations()])
+    return { ok: true }
+}
+
+// Stop offering a unit under one schedule group without touching the other.
+export async function deleteAccommodationRate(typeId, rateGroup) {
+    if (!isSupabaseConfigured) return { ok: false, message: SUPABASE_SETUP_MESSAGE }
+
+    const { error } = await supabase
+        .from('accommodation_rates')
+        .delete()
+        .eq('type_id', typeId)
+        .eq('rate_group', rateGroup)
+
+    if (error) {
+        console.error('Could not remove the rate:', error.message)
+        return { ok: false, message: describeSupabaseError(error) }
+    }
+
+    await Promise.all([loadCatalog(), loadAdminAccommodations()])
+    return { ok: true }
 }

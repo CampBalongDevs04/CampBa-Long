@@ -778,6 +778,90 @@
 }
 
 /* ---------- Responsive ---------- */
+
+/* Large desktop — a 1920x1080 screen at 100% OS scaling reports a ~1920px
+   viewport, so this only fires there. The same monitor at 125% / 150% scaling
+   reports 1536px / 1280px and keeps the default sizes below. */
+@media (min-width: 1800px){
+    .acc-recommend-bar{ max-width: 1500px; }
+
+    .acc-carousel{
+        max-width: 1500px;
+        padding: 44px 26px 38px;
+        border-radius: 26px;
+    }
+    .acc-carousel::before{ inset: 13px; border-radius: 18px; }
+
+    .acc-scroll-hint{
+        font-size: 0.78rem;
+        margin-bottom: 26px;
+    }
+    .acc-scroll-hint::before, .acc-scroll-hint::after{ width: 72px; }
+
+    .acc-nav-btn{ width: 52px; height: 52px; font-size: 26px; }
+
+    .acc-viewport{ padding: 14px 0 24px; }
+    .acc-track{ gap: 28px; }
+
+    /* card rules stay scoped to .acc-card / .acc-carousel so the view-more
+       modal, which reuses these same class names, is left at its own size */
+    .acc-card{ width: 300px; border-radius: 18px; }
+    .acc-card-photo{ height: 180px; }
+    .acc-card-photo svg{ width: 54px; height: 54px; }
+    .acc-card .acc-photo-label{ font-size: 0.62rem; }
+    .acc-card .acc-badge{ font-size: 0.6rem; padding: 5px 12px; }
+
+    .acc-card-info{ padding: 15px 18px 16px; }
+    .acc-card-info h3{ font-size: 1.35rem; }
+    .acc-card-info .acc-pax{ font-size: 0.8rem; }
+    .acc-card-info .acc-availability{ font-size: 0.68rem; }
+    .acc-card-info .acc-schedule-limit{ font-size: 0.66rem; }
+
+    .acc-details{ padding: 14px 18px 16px; }
+    .acc-details h4{ font-size: 1rem; margin-bottom: 11px; }
+    .acc-card .acc-feature-list{ gap: 8px 12px; }
+    .acc-card .acc-feature-list li{ font-size: 0.76rem; }
+    .acc-card .acc-feature-list li svg{ width: 13px; height: 13px; }
+
+    .acc-view-more{ font-size: 0.68rem; margin-bottom: 10px; }
+    .acc-view-more svg{ width: 14px; height: 14px; }
+
+    .acc-card .acc-book-btn{
+        width: calc(100% - 34px);
+        font-size: 0.78rem;
+        padding: 11px 0;
+        margin-bottom: 16px;
+    }
+
+    .acc-carousel .acc-dots{ gap: 10px; margin-top: 22px; }
+    .acc-carousel .acc-dot{ width: 9px; height: 9px; }
+    .acc-carousel .acc-dot.on{ width: 28px; }
+
+    /* view-more modal — grows with the carousel. max-height stays in vh so a
+       shorter 1080p window still fits the whole dialog on screen. */
+    .acc-modal{
+        width: min(1060px, 100%);
+        max-height: min(720px, 90vh);
+        border-radius: 22px;
+    }
+    .acc-modal-carousel{ min-height: 400px; }
+    .acc-modal-slide svg{ width: 88px; height: 88px; }
+    .acc-modal-slide .acc-photo-label{ font-size: 0.72rem; }
+    .acc-modal-arrow{ width: 44px; height: 44px; font-size: 23px; }
+    .acc-modal-close{ width: 38px; height: 38px; font-size: 22px; }
+
+    .acc-modal-info{ padding: 36px 34px 30px; }
+    .acc-modal-info h3{ font-size: 1.9rem; }
+    .acc-modal-meta{ font-size: 0.82rem; }
+    .acc-modal-info .acc-availability,
+    .acc-modal-info .acc-schedule-limit{ font-size: 0.68rem; }
+    .acc-modal-desc{ font-size: 0.9rem; margin: 16px 0 20px; }
+    .acc-modal-info h4{ font-size: 1.02rem; }
+    .acc-modal-info .acc-feature-list li{ font-size: 0.82rem; }
+    .acc-modal-info .acc-feature-list li svg{ width: 13px; height: 13px; }
+    .acc-modal-info .acc-book-btn{ font-size: 0.78rem; padding: 12px 0; }
+}
+
 @media (max-width: 760px){
     .acc-section{ padding: 44px 20px 48px; }
     .acc-section .leaf-deco{ width: 100px; height: 100px; }
