@@ -129,15 +129,20 @@ const AVAILABILITY_TTL_MS = 30 * 1000
 // Seeded from the database on boot. The initial values match the seed rows so
 // the first paint is correct; changing `total` in Postgres flows through here
 // without a code change. Mutated IN PLACE so the const binding stays valid.
+// `poolId` marks a type that books against ANOTHER type's physical units
+// instead of its own — Small Tent, Big Tent and Tent Pitching are three
+// products sold over the same 4 camping slots, not three separate
+// inventories. Null means "its own units", which is every type but these.
 export const ACCOMMODATION_TYPES = [
-    { id: 'teepee', name: 'Teepee', prefix: 'TPE', total: 2, image: null },
-    { id: 'small', name: 'A-House Small', prefix: 'AHS', total: 3, image: null },
-    { id: 'medium', name: 'A-House Medium', prefix: 'AHM', total: 2, image: null },
-    { id: 'family', name: 'A-House Family', prefix: 'AHF', total: 1, image: null },
-    { id: 'tent-small', name: 'Small Tent', prefix: 'TENTS', total: 3, image: null },
-    { id: 'tent-large', name: 'Big Tent', prefix: 'TENTL', total: 1, image: null },
-    { id: 'cottage', name: 'Cottage', prefix: 'COT', total: 2, image: null },
-    { id: 'pavilion', name: 'Pavillion', prefix: 'PAV', total: 1, image: null },
+    { id: 'teepee', name: 'Teepee', prefix: 'TPE', total: 2, image: null, poolId: null },
+    { id: 'small', name: 'A-House Small', prefix: 'AHS', total: 3, image: null, poolId: null },
+    { id: 'medium', name: 'A-House Medium', prefix: 'AHM', total: 2, image: null, poolId: null },
+    { id: 'family', name: 'A-House Family', prefix: 'AHF', total: 1, image: null, poolId: null },
+    { id: 'tent-small', name: 'Small Tent', prefix: 'TENTS', total: 4, image: null, poolId: 'tent-small' },
+    { id: 'tent-large', name: 'Big Tent', prefix: 'TENTL', total: 4, image: null, poolId: 'tent-small' },
+    { id: 'tent-pitching', name: 'Tent Pitching', prefix: 'PITCH', total: 4, image: null, poolId: 'tent-small' },
+    { id: 'cottage', name: 'Cottage', prefix: 'COT', total: 2, image: null, poolId: null },
+    { id: 'pavilion', name: 'Pavillion', prefix: 'PAV', total: 1, image: null, poolId: null },
 ]
 
 // ------------------------------------------------------------ stay_schedules
@@ -153,7 +158,7 @@ export const STAY_SCHEDULES = [
         checkIn: 'Day Time: ',
         time: '10:00 AM - 5:00 PM',
         description: '7 Hours',
-        note: 'Check-in/out is fixed by schedule: 10:00 AM to 5:00 PM. Late arrivals are not allowed.',
+        note: 'Check-in and check-out are set to 10:00 AM - 5:00 PM. To make the most of your stay, we recommend arriving on time.',
         entranceFee: 150,
         rateGroup: 'day',
         sameDay: true,
@@ -165,7 +170,7 @@ export const STAY_SCHEDULES = [
         checkIn: 'Day and night Time: ',
         time: '10:00 AM - 8:00 AM',
         description: '22 Hours',
-        note: 'Please arrive or depart early to avoid a late check-in. By schedule: 10:00 AM - 8:00 AM. Late arrivals are not allowed.',
+        note: 'Check-in and check-out are set to 10:00 AM - 8:00 AM. To make the most of your stay, we recommend arriving early.',
         entranceFee: 350,
         rateGroup: 'overnight',
         sameDay: false,
@@ -177,7 +182,7 @@ export const STAY_SCHEDULES = [
         checkIn: 'Night and Day Time: ',
         time: '7:00 PM - 5:00 PM',
         description: '22 Hours',
-        note: 'Please arrive or depart early to avoid a late check-in. By schedule: 7:00 PM - 5:00 PM. Late arrivals are not allowed.',
+        note: 'Check-in and check-out are set to 7:00 PM - 5:00 PM. To make the most of your stay, we recommend arriving early.',
         entranceFee: 350,
         rateGroup: 'overnight',
         sameDay: false,
@@ -267,12 +272,19 @@ export function findAccommodationType(idOrPrefix) {
     ) ?? null
 }
 
+// A type sharing another's pool (Tent Pitching, sharing Small Tent's) owns no
+// units of its own — the units returned here are whichever pool member the
+// database actually assigned them to, unioned across every type in the pool.
 export function listUnitIds(idOrPrefix) {
     const type = findAccommodationType(idOrPrefix)
     if (!type) return []
-    const fromDb = unitsByType.get(type.id)
-    if (fromDb?.length) return fromDb
-    // Before the catalog lands, derive the ids the same way the seed does.
+    const pool = type.poolId ?? type.id
+    const members = ACCOMMODATION_TYPES.filter((t) => (t.poolId ?? t.id) === pool)
+    const fromDb = members.flatMap((member) => unitsByType.get(member.id) ?? [])
+    if (fromDb.length) return fromDb
+    // Before the catalog lands: a type sharing another's pool owns nothing of
+    // its own to derive, so it has nothing to show yet either.
+    if (type.poolId && type.poolId !== type.id) return []
     return Array.from(
         { length: type.total },
         (_, index) => `${type.prefix}-${String(index + 1).padStart(2, '0')}`,
@@ -543,6 +555,7 @@ async function loadCatalog() {
             prefix: row.prefix,
             total: row.total,
             image: row.image_url ?? null,
+            poolId: row.pool_id ?? null,
         })),
     )
 
@@ -916,11 +929,17 @@ export function getUnitDayDetail(unitId, date) {
 }
 
 // Occupancy across the whole resort for a day — the admin stat cards.
+// A physical unit can now be listed under more than one type (the shared
+// tent pool), so it's only ever counted once here even though it shows up
+// once per type it's shared with when browsing the units board.
 export function getDayOccupancy(date = new Date()) {
     let total = 0
     let taken = 0
+    const seen = new Set()
     for (const type of ACCOMMODATION_TYPES) {
         for (const unitId of listUnitIds(type.id)) {
+            if (seen.has(unitId)) continue
+            seen.add(unitId)
             total += 1
             if (getUnitDayDetail(unitId, date).status !== 'available') taken += 1
         }
