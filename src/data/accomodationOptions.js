@@ -1,6 +1,28 @@
 // Booking-page accommodation options (name, pax range, price, photo).
 // Kept in its own module (not in accomodationList.jsx) so that component
 // file only exports a component — mixed exports break Vite Fast Refresh.
+//
+// WHERE THE PRICES COME FROM
+// --------------------------
+// accommodation_rates in Postgres, read through data/accommodationDB.js, so a
+// rate edited in the dashboard's Units → Manage tab is the rate the booking
+// page quotes — no redeploy. The table further down is the same rate card
+// hardcoded, kept as the answer for the moments the database has none:
+//
+//   • the first paint, before the catalog request has come back;
+//   • a missing .env or a dead network, which is the case the whole app is
+//     already built to degrade gracefully for (see README).
+//
+// Screens re-read this on every render and re-render when the catalog lands
+// (accomodationList.jsx subscribes via useAccommodationDB), so the swap from
+// fallback to database values needs nothing from the components.
+import {
+    ACCOMMODATION_TYPES,
+    findAccommodationRate,
+    hasAccommodationRates,
+    listAccommodationRates,
+} from './accommodationDB.js'
+
 import houseSmall from '../assets/temp/A-House-Small.png'
 import houseMedium from '../assets/temp/A-House-Medium.png'
 import houseFamily from '../assets/temp/A-House-Family.png'
@@ -11,7 +33,24 @@ import tentSmallImage from '../assets/images/acc4.png'
 import tentLargeImage from '../assets/images/acc5.png'
 import tentPitchingImage from '../assets/images/acc6.png'
 
-// Info that doesn't change with the stay schedule.
+// Photos are bundled assets, so they are keyed by accommodation id here rather
+// than stored in SQL — Vite hashes the filenames at build time and the final
+// URL is not knowable from the database. An accommodation added from the
+// dashboard has no bundled photo, so it falls back to its `image_url` column.
+const IMAGES_BY_ID = {
+    teepee: teepeeImage,
+    small: houseSmall,
+    medium: houseMedium,
+    family: houseFamily,
+    'tent-small': tentSmallImage,
+    'tent-large': tentLargeImage,
+    cottage: cottageImage,
+    pavilion: pavilionImage,
+    'tent-pitching': tentPitchingImage,
+}
+
+// Info that doesn't change with the stay schedule. The fallback list — the
+// database's `accommodation_types` is what is normally shown.
 const ACCOMMODATION_INFO = [
     { id: 'teepee', name: 'Teepee', image: teepeeImage },
     { id: 'small', name: 'A-House Small', image: houseSmall },
@@ -69,7 +108,10 @@ export const INCLUSIONS = {
 // A unit is only offered under a schedule if it has an entry here; that's
 // why Cottage/Pavilion (day-only) and the tents (overnight-only) don't
 // appear in both groups.
-const RATES = {
+//
+// FALLBACK ONLY — accommodation_rates is the live copy. These values are the
+// seeded ones, so a database that has never been edited answers identically.
+const FALLBACK_RATES = {
     day: {
         teepee: { price: 900, pax: '4 Pax', minPax: 1, maxPax: 4 },
         small: { price: 1450, pax: '4 Pax', minPax: 1, maxPax: 4 },
@@ -109,8 +151,42 @@ export function getPaxFit(pax, option){
 // group's price/pax. With no group (no schedule picked yet) every unit is
 // returned with price/pax left null, so the UI can show its own
 // "select a schedule" placeholder instead of guessing a rate.
+//
+// A unit with no rate for the group is left out entirely, which is what makes
+// Cottage day-only and the tents overnight-only — and what makes deleting a
+// rate in the dashboard the way to stop offering a unit under one schedule.
 export function getAccomodationOptions(rateGroup){
-    const rates = rateGroup ? RATES[rateGroup] : null
+    return hasAccommodationRates()
+        ? optionsFromDatabase(rateGroup)
+        : optionsFromFallback(rateGroup)
+}
+
+function optionsFromDatabase(rateGroup){
+    const offered = rateGroup
+        ? new Set(listAccommodationRates(rateGroup).map((rate) => rate.typeId))
+        : null
+
+    return ACCOMMODATION_TYPES
+        .filter((type) => !offered || offered.has(type.id))
+        .map((type) => {
+            const rate = rateGroup ? findAccommodationRate(type.id, rateGroup) : null
+            return {
+                id: type.id,
+                name: type.name,
+                // A type added from the dashboard has no bundled photo, so it
+                // shows whatever image_url staff gave it — or none, which the
+                // cards already render as "No image".
+                image: IMAGES_BY_ID[type.id] ?? type.image ?? null,
+                price: rate?.price ?? null,
+                pax: rate?.paxLabel ?? null,
+                minPax: rate?.minPax ?? null,
+                maxPax: rate?.maxPax ?? null,
+            }
+        })
+}
+
+function optionsFromFallback(rateGroup){
+    const rates = rateGroup ? FALLBACK_RATES[rateGroup] : null
     return ACCOMMODATION_INFO
         .filter((item) => !rates || rates[item.id])
         .map((item) => {

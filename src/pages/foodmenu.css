@@ -39,6 +39,10 @@
   max-width: 1180px;
   margin-top: auto;
   margin-bottom: auto;
+  /* the hero itself is align-items: flex-start, so without this the row stays
+     pinned to the left padding and leaves dead space on wide screens */
+  margin-left: auto;
+  margin-right: auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -157,6 +161,48 @@
 
 .foodmenu-hero-image:hover img {
   transform: scale(1.05);
+}
+
+/* Large desktop — same target as the accommodations carousel: a 1920x1080
+   screen at 100% OS scaling reports a ~1920px viewport. At 125% / 150% it
+   reports 1536px / 1280px and keeps the sizes above. */
+@media (min-width: 1800px) {
+  .foodmenu-hero {
+    padding: 72px 80px 44px;
+  }
+
+  .foodmenu-hero-inner {
+    max-width: 1560px;
+    gap: 4rem;
+  }
+
+  .foodmenu-hero-content {
+    max-width: 720px;
+  }
+
+  .foodmenu-hero-title {
+    font-size: 92px;
+  }
+
+  .foodmenu-hero-subtitle {
+    max-width: 560px;
+    font-size: 1.5rem;
+  }
+
+  .foodmenu-order-btn {
+    padding: 16px 34px;
+    font-size: 16px;
+  }
+
+  .foodmenu-hero-image {
+    width: clamp(420px, 28vw, 540px);
+    height: clamp(420px, 28vw, 540px);
+    border-width: 7px;
+  }
+
+  .foodmenu-hero-image::after {
+    inset: 14px;
+  }
 }
 
 @media (max-width: 860px) {

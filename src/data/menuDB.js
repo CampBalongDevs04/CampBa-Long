@@ -30,16 +30,39 @@
 //    • a missing .env or a dead network still renders the full menu, matching
 //      how the accommodation cards already behave (see README).
 //
+//  A query that SUCCEEDS and returns nothing is a different thing entirely —
+//  staff emptied the menu — and it empties the store. Falling back there would
+//  keep selling guests dishes the kitchen has just removed.
+//
 //  WHY IMAGES ARE KEYS, NOT URLS
 //  -----------------------------
 //  The photos are bundled assets — Vite hashes them at build time, so the final
 //  URL is not knowable from SQL. A row carries the asset's key ('menu1',
 //  'massage44') and the maps below turn it into the imported module. An unknown
 //  or null key just means no photo; nothing breaks.
+//
+//  A dish added from the dashboard has no bundled asset to name, so it carries
+//  an `image_url` instead — see resolveImage(). The key wins when a row has
+//  both, because a bundled photo is the one that survives a redeploy.
+//
+//  WRITING, NOT JUST READING
+//  -------------------------
+//  The bottom half of this module is the admin dashboard's CRUD over the same
+//  two tables. It is here rather than in a module of its own so that a save
+//  and the store it invalidates cannot drift apart: every mutation reloads the
+//  catalog before it returns, which is what makes a price edited in the Food
+//  Menu tab show up on the guest menu page without a redeploy or a refresh.
+//  Only the staff roster may actually write — that is enforced by RLS, not by
+//  this file.
 // ============================================================================
 
 import { useSyncExternalStore } from 'react'
-import { supabase, isSupabaseConfigured } from '../lib/supabaseClient.js'
+import {
+    supabase,
+    isSupabaseConfigured,
+    describeSupabaseError,
+    SUPABASE_SETUP_MESSAGE,
+} from '../lib/supabaseClient.js'
 
 import menu1 from '../assets/images/menu1.png'
 import menu2 from '../assets/images/menu2.png'
@@ -75,6 +98,25 @@ const IMAGES = {
     pre1, pre2, pre3, pre4,
     massage11, massage22, massage33, massage44,
     massage55, massage66, massage77, massage88,
+}
+
+// What the dashboard's photo picker can offer. A key that isn't in here isn't
+// a photo the build ships, so the form falls back to asking for a URL.
+export const FOOD_IMAGE_KEYS = [
+    'menu1', 'menu2', 'menu3', 'menu4', 'menu5', 'menu6', 'menu7',
+    'combo1', 'combo2', 'combo3', 'combo4', 'combo5', 'combo6', 'combo7',
+    'pre1', 'pre2', 'pre3', 'pre4',
+]
+export const SPA_IMAGE_KEYS = [
+    'massage11', 'massage22', 'massage33', 'massage44',
+    'massage55', 'massage66', 'massage77', 'massage88',
+]
+
+// The photo for a row, from whichever of the two it has. A bundled asset beats
+// a URL: it is versioned with the build and cannot 404 later.
+export function resolveMenuImage(imageKey, imageUrl = null) {
+    if (imageKey && IMAGES[imageKey]) return IMAGES[imageKey]
+    return imageUrl || null
 }
 
 // --------------------------------------------------------------- categories
@@ -213,8 +255,9 @@ const DEFAULT_SPA_SERVICES = [
 // from the defaults above. `label` is what goes on an order line: a coffee is
 // only orderable at a given size, so the size belongs in its name.
 function foodItem({
-    id, category, name, desc = null, price, imageKey = null,
+    id, category, name, desc = null, price, imageKey = null, imageUrl = null,
     groupKey = null, groupTitle = null, sizeLabel = null, hasCoffeeOption = false,
+    sortOrder = 0, isActive = true,
 }) {
     return {
         id,
@@ -222,23 +265,36 @@ function foodItem({
         name,
         desc,
         price: Number(price),
-        image: imageKey ? IMAGES[imageKey] ?? null : null,
+        image: resolveMenuImage(imageKey, imageUrl),
+        // The raw columns travel with the item so the dashboard's edit form can
+        // be filled from the same object the list renders.
+        imageKey,
+        imageUrl,
         groupKey,
         groupTitle,
         sizeLabel,
         hasCoffeeOption,
+        sortOrder,
+        isActive,
         label: sizeLabel ? `${name} (${sizeLabel})` : name,
     }
 }
 
-function spaItem({ id, name, desc = null, duration = null, price, imageKey = null }) {
+function spaItem({
+    id, name, desc = null, duration = null, price,
+    imageKey = null, imageUrl = null, sortOrder = 0, isActive = true,
+}) {
     return {
         id,
         name,
         desc,
         duration,
         price: Number(price),
-        image: imageKey ? IMAGES[imageKey] ?? null : null,
+        image: resolveMenuImage(imageKey, imageUrl),
+        imageKey,
+        imageUrl,
+        sortOrder,
+        isActive,
         label: name,
     }
 }
@@ -325,39 +381,75 @@ async function loadCatalog() {
     if (food.error) {
         console.error('Could not load the food menu:', food.error.message)
     } else if (food.data.length > 0) {
-        foodMenu = food.data.map((row) =>
-            foodItem({
-                id: row.id,
-                category: row.category,
-                name: row.name,
-                desc: row.description,
-                price: row.price,
-                imageKey: row.image_key,
-                groupKey: row.group_key,
-                groupTitle: row.group_title,
-                sizeLabel: row.size_label,
-                hasCoffeeOption: row.has_coffee_option,
-            }),
-        )
+        foodMenu = food.data.map(toFoodItem)
+    } else {
+        // Every dish was deleted or hidden from the dashboard. That is a real
+        // state and it must be shown, not papered over with the built-in menu —
+        // otherwise staff would be looking at an empty Food Menu tab while
+        // guests still saw seven dishes they can no longer order.
+        foodMenu = []
     }
 
     if (spa.error) {
         console.error('Could not load the spa services:', spa.error.message)
     } else if (spa.data.length > 0) {
-        spaServices = spa.data.map((row) =>
-            spaItem({
-                id: row.id,
-                name: row.name,
-                desc: row.description,
-                duration: row.duration_label,
-                price: row.price,
-                imageKey: row.image_key,
-            }),
-        )
+        spaServices = spa.data.map(toSpaItem)
+    } else {
+        spaServices = []
     }
 
     notify()
 }
+
+// Postgres row → the item shape. Shared by the guest catalog above and the
+// admin list below, so the two can never disagree about what a row means.
+function toFoodItem(row) {
+    return foodItem({
+        id: row.id,
+        category: row.category,
+        name: row.name,
+        desc: row.description,
+        price: row.price,
+        imageKey: row.image_key,
+        imageUrl: row.image_url,
+        groupKey: row.group_key,
+        groupTitle: row.group_title,
+        sizeLabel: row.size_label,
+        hasCoffeeOption: row.has_coffee_option,
+        sortOrder: row.sort_order ?? 0,
+        isActive: row.is_active !== false,
+    })
+}
+
+function toSpaItem(row) {
+    return spaItem({
+        id: row.id,
+        name: row.name,
+        desc: row.description,
+        duration: row.duration_label,
+        price: row.price,
+        imageKey: row.image_key,
+        imageUrl: row.image_url,
+        sortOrder: row.sort_order ?? 0,
+        isActive: row.is_active !== false,
+    })
+}
+
+// Re-read both catalogs. Exported for the dashboard, which calls it after a
+// save so the guest-facing store is current before the modal even closes.
+export function refreshMenuCatalog() {
+    if (!isSupabaseConfigured) return Promise.resolve()
+    return loadCatalog()
+}
+
+// A dish repriced on the dashboard reaches a guest who is already sitting on
+// the menu page. Both tables are public-readable, so this channel works for an
+// anonymous visitor — unlike the bookings channel, which deliberately delivers
+// nothing to anyone but staff (see accommodationDB.js).
+//
+// Declared above the boot block below, not next to its function: `const` is not
+// hoisted, and the call down there runs while this module is still evaluating.
+const CATALOG_CHANNEL = 'menu-catalog-changes'
 
 // Without credentials every call would fail against a placeholder host and
 // bury the one useful message from supabaseClient.js. The fallback catalog
@@ -365,6 +457,30 @@ async function loadCatalog() {
 // a price edited in Postgres.
 if (isSupabaseConfigured) {
     loadCatalog()
+    watchCatalogRealtime()
+}
+
+function watchCatalogRealtime() {
+    // This module is evaluated more than once under Vite HMR, and supabase-js
+    // refuses to attach handlers to a channel that already subscribed.
+    for (const channel of supabase.getChannels()) {
+        if (channel.topic === `realtime:${CATALOG_CHANNEL}`) {
+            supabase.removeChannel(channel)
+        }
+    }
+
+    supabase
+        .channel(CATALOG_CHANNEL)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'food_menu_items' }, onCatalogChanged)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'spa_services' }, onCatalogChanged)
+        .subscribe()
+}
+
+function onCatalogChanged() {
+    loadCatalog()
+    // Only if a dashboard panel is actually open — nothing else needs the
+    // hidden rows, and a guest's session cannot read them anyway.
+    if (adminCatalog.loaded) loadAdminCatalog()
 }
 
 // =================================================================== queries
@@ -433,4 +549,208 @@ export function groupCoffeeMenu(items = foodMenu) {
 // the order modal and the admin list can't drift apart.
 export function formatMenuPrice(price) {
     return `PHP ${Number(price ?? 0).toFixed(2)}`
+}
+
+// =============================================================== admin store
+//
+//  A SECOND list, deliberately. The store above is what guests are sold, so it
+//  holds active rows only; the dashboard manages the table itself and has to
+//  see a hidden row to be able to bring it back. Keeping them apart is what
+//  makes it impossible for an item staff took off the menu to reappear on the
+//  guest page because some component read the wrong list.
+//
+//  It stays empty until a dashboard panel asks for it — a guest never loads
+//  rows they aren't allowed to act on.
+
+let adminCatalog = { food: [], spa: [], loaded: false, error: null }
+
+function getAdminCatalog() {
+    return adminCatalog
+}
+
+function commitAdminCatalog(next) {
+    adminCatalog = { ...adminCatalog, ...next }
+    notify()
+}
+
+// Every row in both catalogs, hidden ones included, newest ordering first by
+// category then sort_order — the order the dashboard lists them in.
+export async function loadAdminCatalog() {
+    if (!isSupabaseConfigured) {
+        commitAdminCatalog({ loaded: true, error: SUPABASE_SETUP_MESSAGE })
+        return
+    }
+
+    const [food, spa] = await Promise.all([
+        supabase.from('food_menu_items').select('*').order('category').order('sort_order'),
+        supabase.from('spa_services').select('*').order('sort_order'),
+    ])
+
+    const error = food.error ?? spa.error
+    if (error) {
+        console.error('Could not load the catalog for editing:', error.message)
+        commitAdminCatalog({ loaded: true, error: describeSupabaseError(error) })
+        return
+    }
+
+    commitAdminCatalog({
+        food: food.data.map(toFoodItem),
+        spa: spa.data.map(toSpaItem),
+        loaded: true,
+        error: null,
+    })
+}
+
+// Subscribe a dashboard panel to the editable catalog.
+export function useAdminCatalog() {
+    return useSyncExternalStore(subscribe, getAdminCatalog)
+}
+
+// ================================================================= mutations
+//
+//  Only the staff roster can write these tables — the policies in
+//  20260730120000_food_and_spa_catalog.sql say so, and a guest who called any
+//  of the functions below would simply be refused by Postgres. Nothing here is
+//  the security boundary; it is the shape of the edit.
+
+// 'Sinigang na Liempo' → 'sinigang-na-liempo'. Ids are stable text keys, not
+// generated numbers, because a stored order line points at one by id.
+function slugify(text) {
+    return String(text ?? '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+}
+
+// A slug nobody is using yet. An id is what an order line and a price edit both
+// point at, so two dishes sharing one would silently overwrite each other.
+function uniqueId(base, taken) {
+    const root = base || 'item'
+    if (!taken.has(root)) return root
+    let suffix = 2
+    while (taken.has(`${root}-${suffix}`)) suffix += 1
+    return `${root}-${suffix}`
+}
+
+function priceOrError(price) {
+    const value = Number(price)
+    if (!Number.isFinite(value) || value < 0) return null
+    return Math.round(value * 100) / 100
+}
+
+// Both saves take the whole row and upsert it, so the caller does not have to
+// know whether it is creating or editing — a form that was opened on an
+// existing item simply arrives with its id filled in.
+export async function saveFoodItem(draft) {
+    if (!isSupabaseConfigured) return { ok: false, message: SUPABASE_SETUP_MESSAGE }
+
+    const name = String(draft.name ?? '').trim()
+    if (!name) return { ok: false, message: 'Give the item a name.' }
+
+    const price = priceOrError(draft.price)
+    if (price == null) return { ok: false, message: 'Enter a price of 0 or more.' }
+
+    const category = draft.category
+    if (!FOOD_CATEGORIES.some((entry) => entry.id === category)) {
+        return { ok: false, message: 'Pick a category for the item.' }
+    }
+
+    // A coffee row is only orderable at a size, so the size is part of what
+    // makes it a distinct row — and of its id.
+    const sizeLabel = String(draft.sizeLabel ?? '').trim() || null
+    const groupKey = String(draft.groupKey ?? '').trim() || null
+
+    const taken = new Set(adminCatalog.food.map((item) => item.id))
+    if (draft.id) taken.delete(draft.id)
+    const id = draft.id
+        || uniqueId(slugify([category === 'coffee' ? 'coffee' : '', groupKey, name, sizeLabel].filter(Boolean).join('-')), taken)
+
+    const row = {
+        id,
+        category,
+        name,
+        description: String(draft.desc ?? '').trim() || null,
+        price,
+        image_key: String(draft.imageKey ?? '').trim() || null,
+        image_url: String(draft.imageUrl ?? '').trim() || null,
+        group_key: groupKey,
+        group_title: String(draft.groupTitle ?? '').trim() || null,
+        size_label: sizeLabel,
+        has_coffee_option: Boolean(draft.hasCoffeeOption),
+        sort_order: Number(draft.sortOrder) || 0,
+        is_active: draft.isActive !== false,
+    }
+
+    const { error } = await supabase.from('food_menu_items').upsert(row)
+    if (error) {
+        console.error('Could not save the menu item:', error.message)
+        return { ok: false, message: describeSupabaseError(error) }
+    }
+
+    await Promise.all([loadCatalog(), loadAdminCatalog()])
+    return { ok: true, id }
+}
+
+export async function deleteFoodItem(id) {
+    if (!isSupabaseConfigured) return { ok: false, message: SUPABASE_SETUP_MESSAGE }
+
+    const { error } = await supabase.from('food_menu_items').delete().eq('id', id)
+    if (error) {
+        console.error('Could not delete the menu item:', error.message)
+        return { ok: false, message: describeSupabaseError(error) }
+    }
+
+    // Orders already placed against it keep the name and price they were
+    // charged (see add_booking_addon) — deleting the row does not rewrite
+    // anyone's bill, it only stops the item being sold again.
+    await Promise.all([loadCatalog(), loadAdminCatalog()])
+    return { ok: true }
+}
+
+export async function saveSpaService(draft) {
+    if (!isSupabaseConfigured) return { ok: false, message: SUPABASE_SETUP_MESSAGE }
+
+    const name = String(draft.name ?? '').trim()
+    if (!name) return { ok: false, message: 'Give the treatment a name.' }
+
+    const price = priceOrError(draft.price)
+    if (price == null) return { ok: false, message: 'Enter a price of 0 or more.' }
+
+    const taken = new Set(adminCatalog.spa.map((service) => service.id))
+    if (draft.id) taken.delete(draft.id)
+    const id = draft.id || uniqueId(slugify(name), taken)
+
+    const row = {
+        id,
+        name,
+        description: String(draft.desc ?? '').trim() || null,
+        duration_label: String(draft.duration ?? '').trim() || null,
+        price,
+        image_key: String(draft.imageKey ?? '').trim() || null,
+        image_url: String(draft.imageUrl ?? '').trim() || null,
+        sort_order: Number(draft.sortOrder) || 0,
+        is_active: draft.isActive !== false,
+    }
+
+    const { error } = await supabase.from('spa_services').upsert(row)
+    if (error) {
+        console.error('Could not save the spa service:', error.message)
+        return { ok: false, message: describeSupabaseError(error) }
+    }
+
+    await Promise.all([loadCatalog(), loadAdminCatalog()])
+    return { ok: true, id }
+}
+
+export async function deleteSpaService(id) {
+    if (!isSupabaseConfigured) return { ok: false, message: SUPABASE_SETUP_MESSAGE }
+
+    const { error } = await supabase.from('spa_services').delete().eq('id', id)
+    if (error) {
+        console.error('Could not delete the spa service:', error.message)
+        return { ok: false, message: describeSupabaseError(error) }
+    }
+
+    await Promise.all([loadCatalog(), loadAdminCatalog()])
+    return { ok: true }
 }

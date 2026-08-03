@@ -165,6 +165,47 @@ RPCs, and staff-only tables are gated on `public.is_staff()`.
 
 ---
 
+## Editing what the resort sells
+
+Prices, dishes, treatments and accommodations are edited **in the dashboard**,
+not in the code. Each amenity is managed in its own section:
+
+| Section | Tab | What can be added, edited and removed |
+| --- | --- | --- |
+| Food Menu | Foods · Combo Meal · Pre-Order · Beverages | Dishes and combos, and each coffee flavour at each cup size (tap a price in the table to edit that cup) |
+| Spa | Services | Treatments: price, duration, photo |
+| Units | Manage Accommodations | Accommodations, how many of each exist, and the price + capacity under each stay schedule |
+
+Every one of those screens writes to the same rows the guest pages read, so a
+saved price is live on the guest side immediately — the catalogs are on the
+realtime publication, so even a guest already sitting on the menu page follows
+the edit without reloading.
+
+Three things are worth knowing before editing:
+
+- **An item can be hidden instead of deleted.** Unticking "show this on the
+  guest menu" takes it off the guest page and leaves it in the dashboard to be
+  switched back on. Deleting is permanent — but it never rewrites a bill:
+  orders already placed keep the name and price they were charged.
+- **Unit counts create real units.** Raising an accommodation's "how many
+  exist" generates the missing unit rows (`TPE-03`), because availability is
+  counted per physical unit. Lowering it retires the spares; one with a booking
+  on it is kept and simply stops being offered. The unit prefix is fixed after
+  creation — bookings point at ids built from it.
+- **A rate is per stay schedule.** A new accommodation is not offered anywhere
+  on the guest site until it has a price under at least one schedule group —
+  the dashboard says so on the accommodation itself — and removing a rate is
+  how a unit stops being sold under that schedule. That is what makes the
+  Cottage day-only and the tents overnight-only.
+
+Once it has a price, a new accommodation gets a home page card and a "view
+more" window like every other unit, built from its own row: its name, photo
+link, description and "What's Included" list. The units that shipped with the
+site keep their bundled photo and their icon; a new one shows its photo link,
+or the camp's green with a shelter outline until one is given.
+
+---
+
 ## Scripts
 
 | Command | What it does |
