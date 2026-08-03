@@ -245,7 +245,10 @@ function buildCards() {
         .map((type) => {
             const preset = PRESENTATION[type.id] ?? DEFAULT_PRESENTATION;
             const range = ranges.get(type.id);
-            const image = preset.image ?? type.image ?? null;
+            // A photo uploaded in the dashboard wins over the bundled one, the
+            // same way it does on the booking page — otherwise replacing a
+            // unit's photo would change it there and nowhere else.
+            const image = type.image || preset.image || null;
 
             return {
                 id: type.id,

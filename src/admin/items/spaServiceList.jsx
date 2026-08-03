@@ -8,7 +8,6 @@ import {
     saveSpaService,
     deleteSpaService,
     resolveMenuImage,
-    SPA_IMAGE_KEYS,
 } from '../../data/menuDB.js'
 
 // The spa price list, and where staff edit it. Same rows the guest spa page
@@ -19,7 +18,7 @@ import {
 // a service taken off the guest page has to stay visible to whoever might put
 // it back. useSpaServices() (the guest store) never carries them.
 
-function spaFields() {
+function spaFields(values) {
     return [
         { name: 'name', label: 'Treatment', placeholder: 'Traditional Body Massage' },
         {
@@ -37,26 +36,20 @@ function spaFields() {
                 help: 'Shown on the card as written.',
             },
         ],
-        [
-            {
-                name: 'imageKey',
-                label: 'Photo',
-                type: 'select',
-                options: [
-                    { value: '', label: 'No bundled photo' },
-                    ...SPA_IMAGE_KEYS.map((key) => ({ value: key, label: key })),
-                ],
-                help: 'Photos shipped with the site.',
-            },
-            { name: 'sortOrder', label: 'Position', type: 'number', help: 'Lower shows first.' },
-        ],
+        // A treatment that shipped with the site still names a bundled asset in
+        // `imageKey`, which is what fills the frame until staff upload their
+        // own — and the upload clears the key so the new photo is the one the
+        // guest spa page shows.
         {
             name: 'imageUrl',
-            label: 'Photo link',
-            type: 'url',
-            placeholder: 'https://…',
-            help: 'Used when no bundled photo is picked — for a treatment added after the site was built.',
+            label: 'Photo',
+            type: 'image',
+            folder: 'spa',
+            preview: resolveMenuImage(values.imageKey, values.imageUrl),
+            clears: ['imageKey'],
+            help: 'Shown on the guest spa card. JPG, PNG or WebP, up to 5 MB.',
         },
+        { name: 'sortOrder', label: 'Position', type: 'number', help: 'Lower shows first.' },
         { name: 'isActive', label: 'Offer this on the guest spa page', type: 'checkbox' },
     ]
 }
@@ -179,15 +172,6 @@ export default function SpaServiceList() {
                     onDelete={editing.id ? () => deleteSpaService(editing.id) : null}
                     deleteLabel="Delete treatment"
                     onClose={() => setEditing(null)}
-                    renderPreview={(values) => {
-                        const image = resolveMenuImage(values.imageKey, values.imageUrl)
-                        if (!image) return null
-                        return (
-                            <div className="crud-image-preview">
-                                <img src={image} alt="" />
-                            </div>
-                        )
-                    }}
                 />
             )}
         </div>

@@ -181,8 +181,16 @@ saved price is live on the guest side immediately — the catalogs are on the
 realtime publication, so even a guest already sitting on the menu page follows
 the edit without reloading.
 
-Three things are worth knowing before editing:
+Four things are worth knowing before editing:
 
+- **Photos are uploaded, not linked.** Every form with a photo has an **Upload
+  image** button: pick a file and it goes straight into the project's
+  `catalog-images` storage bucket, with the row keeping its URL — so the photo
+  lives with the resort's own data instead of on somebody else's server. Rows
+  that shipped with the site show their built-in photo until one is uploaded
+  over it; the button then reads **Replace image**. Uploading needs the
+  `catalog-images` migration applied and a signed-in staff account, and the
+  limit is 5 MB per photo (JPG, PNG, WebP, AVIF or GIF).
 - **An item can be hidden instead of deleted.** Unticking "show this on the
   guest menu" takes it off the guest page and leaves it in the dashboard to be
   switched back on. Deleting is permanent — but it never rewrites a bill:
@@ -199,10 +207,10 @@ Three things are worth knowing before editing:
   Cottage day-only and the tents overnight-only.
 
 Once it has a price, a new accommodation gets a home page card and a "view
-more" window like every other unit, built from its own row: its name, photo
-link, description and "What's Included" list. The units that shipped with the
-site keep their bundled photo and their icon; a new one shows its photo link,
-or the camp's green with a shelter outline until one is given.
+more" window like every other unit, built from its own row: its name, uploaded
+photo, description and "What's Included" list. The units that shipped with the
+site show their bundled photo until one is uploaded over it; a new one shows the
+camp's green with a shelter outline until it is given a photo.
 
 ---
 

@@ -33,10 +33,13 @@ import tentSmallImage from '../assets/images/acc4.png'
 import tentLargeImage from '../assets/images/acc5.png'
 import tentPitchingImage from '../assets/images/acc6.png'
 
-// Photos are bundled assets, so they are keyed by accommodation id here rather
-// than stored in SQL — Vite hashes the filenames at build time and the final
-// URL is not knowable from the database. An accommodation added from the
-// dashboard has no bundled photo, so it falls back to its `image_url` column.
+// The photos the units SHIPPED with. They are bundled assets, so they are keyed
+// by accommodation id here rather than stored in SQL — Vite hashes the
+// filenames at build time and the final URL is not knowable from the database.
+//
+// A photo uploaded in the dashboard lands in `image_url` and overrides the one
+// below — see resolveAccommodationImage(). An accommodation added from the
+// dashboard has no entry here at all and simply uses its uploaded photo.
 const IMAGES_BY_ID = {
     teepee: teepeeImage,
     small: houseSmall,
@@ -47,6 +50,15 @@ const IMAGES_BY_ID = {
     cottage: cottageImage,
     pavilion: pavilionImage,
     'tent-pitching': tentPitchingImage,
+}
+
+// The photo for one accommodation. The UPLOADED one wins: staff who replace a
+// unit's photo in the dashboard have said what they want shown, and a bundled
+// asset that outranked it would look like the upload had been thrown away.
+// Exported so the booking page, the home page cards and the dashboard's own
+// preview all answer this question the same way.
+export function resolveAccommodationImage(id, imageUrl = null) {
+    return imageUrl || IMAGES_BY_ID[id] || null
 }
 
 // Info that doesn't change with the stay schedule. The fallback list — the
@@ -173,10 +185,10 @@ function optionsFromDatabase(rateGroup){
             return {
                 id: type.id,
                 name: type.name,
-                // A type added from the dashboard has no bundled photo, so it
-                // shows whatever image_url staff gave it — or none, which the
-                // cards already render as "No image".
-                image: IMAGES_BY_ID[type.id] ?? type.image ?? null,
+                // Whatever staff uploaded for it, falling back to the photo the
+                // unit shipped with — or none, which the cards already render
+                // as "No image".
+                image: resolveAccommodationImage(type.id, type.image),
                 price: rate?.price ?? null,
                 pax: rate?.paxLabel ?? null,
                 minPax: rate?.minPax ?? null,
