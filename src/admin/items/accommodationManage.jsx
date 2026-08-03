@@ -79,6 +79,18 @@ function typeFields(values) {
             preview: resolveAccommodationImage(values.id, values.imageUrl),
             help: 'Shown on the booking page and the home page card. JPG, PNG or WebP, up to 5 MB.',
         },
+        // The rest of the carousel. This is where the inside of the unit goes —
+        // the bedding, the deck, the view — which the card's single photo has
+        // never had room for.
+        {
+            name: 'gallery',
+            label: 'Gallery',
+            type: 'gallery',
+            folder: 'accommodations',
+            help: 'Extra photos for the “view more” window — the inside of the unit, the '
+                + 'view, the setup. The main photo above is always the first slide; these '
+                + 'follow in this order.',
+        },
         // The home page card is built from these two. Without them a new
         // accommodation still gets a card — it just has nothing to say on it.
         {
@@ -135,6 +147,7 @@ const BLANK_TYPE = {
     prefix: '',
     total: 1,
     imageUrl: '',
+    gallery: [],
     description: '',
     features: '',
     sortOrder: 0,
@@ -148,6 +161,7 @@ function typeToDraft(type) {
         prefix: type.prefix,
         total: String(type.total),
         imageUrl: type.imageUrl ?? '',
+        gallery: type.gallery ?? [],
         description: type.description ?? '',
         // Stored as an array, edited as lines.
         features: (type.features ?? []).join('\n'),

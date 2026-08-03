@@ -616,6 +616,10 @@ async function loadCatalog() {
             // the cards answer with their built-in copy.
             description: row.description ?? null,
             features: Array.isArray(row.features) ? row.features : null,
+            // The extra angles its "view more" carousel shows after the main
+            // photo. Empty on a database that predates *_accommodation_gallery
+            // .sql, which is simply a one-slide carousel — the same as before.
+            gallery: Array.isArray(row.gallery) ? row.gallery.filter(Boolean) : [],
         })),
     )
 
@@ -1771,6 +1775,7 @@ export async function loadAdminAccommodations() {
             poolId: row.pool_id ?? null,
             description: row.description ?? '',
             features: Array.isArray(row.features) ? row.features : [],
+            gallery: Array.isArray(row.gallery) ? row.gallery.filter(Boolean) : [],
             sortOrder: row.sort_order ?? 0,
             isActive: row.is_active !== false,
             // What actually exists behind `total`. A type sharing another's
@@ -1828,6 +1833,11 @@ export async function saveAccommodationType(draft) {
         features: String(draft.features ?? '')
             .split('\n')
             .map((line) => line.trim())
+            .filter(Boolean),
+        // The carousel's extra photos, in the order the dashboard listed them.
+        // Stored as given: reordering IS the edit, so nothing is sorted here.
+        gallery: (Array.isArray(draft.gallery) ? draft.gallery : [])
+            .map((url) => String(url ?? '').trim())
             .filter(Boolean),
         sort_order: Number(draft.sortOrder) || 0,
         is_active: draft.isActive !== false,

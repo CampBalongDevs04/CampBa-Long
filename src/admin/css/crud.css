@@ -335,6 +335,82 @@
     margin: 10px 0 0;
 }
 
+/* ---------- Gallery field ---------- */
+/* Thumbnails, in the order a guest scrolls them. Sized so a gallery of eight
+   is still one glance rather than a scroll of its own. */
+.crud-gallery-grid {
+    list-style: none;
+    margin: 0 0 4px;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    gap: 10px;
+}
+
+.crud-gallery-item {
+    position: relative;
+    border: 1px solid rgba(198, 161, 91, 0.45);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.crud-gallery-item img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+}
+
+/* The controls sit ON the thumbnail rather than under it: at this size a row
+   of buttons below each photo would be taller than the photo. */
+.crud-gallery-item-bar {
+    position: absolute;
+    inset: auto 0 0 0;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 3px 4px;
+    background: linear-gradient(to top, rgba(10, 22, 14, 0.82), rgba(10, 22, 14, 0));
+}
+
+.crud-gallery-item-bar button {
+    border: 0;
+    background: transparent;
+    color: #F5F1E4;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.9rem;
+    line-height: 1;
+    padding: 3px 5px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.crud-gallery-item-bar button:hover:not(:disabled) {
+    background: rgba(245, 241, 228, 0.22);
+}
+
+.crud-gallery-item-bar button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.crud-gallery-item-bar .is-remove {
+    margin-left: auto;
+    color: #F0B3A9;
+}
+
+/* Which slide this is, so the arrows have something to move against. */
+.crud-gallery-position {
+    font-size: 0.66rem;
+    letter-spacing: 0.5px;
+    color: rgba(245, 241, 228, 0.75);
+}
+
+.crud-gallery-field .crud-message {
+    margin: 10px 0 0;
+}
+
 @media (max-width: 480px) {
     .crud-image-control {
         flex-direction: column;

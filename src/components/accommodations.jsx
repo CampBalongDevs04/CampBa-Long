@@ -261,8 +261,16 @@ function buildCards() {
                 // a database without the card-content columns.
                 features: type.features?.length ? type.features : (preset.features ?? []),
                 description: type.description || preset.description || '',
-                // The unit's photo is the first slide, then any extra angles.
-                images: [image, ...(preset.images ?? []).filter(Boolean)].filter(Boolean),
+                // The unit's photo is the first slide, then the gallery staff
+                // uploaded for it, then any extra angles that shipped with the
+                // site. Deduplicated, because the main photo being pasted into
+                // the gallery as well is an easy thing to do and a confusing
+                // thing to scroll past twice.
+                images: [...new Set([
+                    image,
+                    ...(type.gallery ?? []),
+                    ...(preset.images ?? []),
+                ].filter(Boolean))],
                 paxMin: Number.isFinite(range.paxMin) ? range.paxMin : 1,
                 paxMax: range.paxMax > 0 ? range.paxMax : Infinity,
                 paxText: range.paxText,
@@ -300,6 +308,7 @@ function AccommodationModal({ acc, onClose, onBook }) {
     // accommodation added in the dashboard opens the same window as the ones
     // that shipped with the site.
     const images = acc.images.length ? acc.images : [null];
+    const count = images.length;
     const [slide, setSlide] = useState(0);
 
     const availability = getAvailability(acc.id);
@@ -307,9 +316,16 @@ function AccommodationModal({ acc, onClose, onBook }) {
     const nextAvailable = isFullyBooked ? getNextAvailableDate(acc.id) : null;
     const scheduleLimit = scheduleLimitLabel(acc.id);
 
-    // Close on Escape and keep the page from scrolling behind the modal.
+    // Close on Escape, walk the gallery with the arrow keys, and keep the page
+    // from scrolling behind the modal. The arrows are here rather than on the
+    // buttons because a guest looking at photos has their hands nowhere near
+    // the two small circles on the image.
     useEffect(() => {
-        const onKey = (e) => e.key === 'Escape' && onClose();
+        const onKey = (e) => {
+            if (e.key === 'Escape') onClose();
+            if (e.key === 'ArrowLeft') setSlide((current) => (current - 1 + count) % count);
+            if (e.key === 'ArrowRight') setSlide((current) => (current + 1) % count);
+        };
         window.addEventListener('keydown', onKey);
         const prevOverflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
@@ -317,10 +333,10 @@ function AccommodationModal({ acc, onClose, onBook }) {
             window.removeEventListener('keydown', onKey);
             document.body.style.overflow = prevOverflow;
         };
-    }, [onClose]);
+    }, [onClose, count]);
 
     const goSlide = (index) => {
-        setSlide((index + images.length) % images.length);
+        setSlide((index + count) % count);
     };
 
     return (
@@ -348,7 +364,7 @@ function AccommodationModal({ acc, onClose, onBook }) {
                         )}
                         {acc.featured && <span className="acc-badge">Most Popular</span>}
                     </div>
-                    {images.length > 1 && (
+                    {count > 1 && (
                         <>
                             <button
                                 className="acc-modal-arrow prev"
@@ -364,14 +380,25 @@ function AccommodationModal({ acc, onClose, onBook }) {
                             >
                                 ›
                             </button>
-                            <div className="acc-modal-dots">
-                                {images.map((_, i) => (
+                            <span className="acc-modal-counter">
+                                {slide + 1} / {count}
+                            </span>
+                            {/* Thumbnails rather than dots: a gallery showing
+                                the inside of the unit is something a guest
+                                picks from, and dots say nothing about what is
+                                on the slide they lead to. */}
+                            <div className="acc-modal-thumbs">
+                                {images.map((src, i) => (
                                     <button
-                                        key={i}
-                                        className={`acc-dot${i === slide ? ' on' : ''}`}
+                                        key={src ?? i}
+                                        type="button"
+                                        className={`acc-modal-thumb${i === slide ? ' on' : ''}`}
                                         onClick={() => goSlide(i)}
                                         aria-label={`Go to photo ${i + 1}`}
-                                    />
+                                        aria-current={i === slide}
+                                    >
+                                        {src && <img src={src} alt="" draggable="false" />}
+                                    </button>
                                 ))}
                             </div>
                         </>

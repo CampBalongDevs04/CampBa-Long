@@ -181,7 +181,7 @@ saved price is live on the guest side immediately — the catalogs are on the
 realtime publication, so even a guest already sitting on the menu page follows
 the edit without reloading.
 
-Four things are worth knowing before editing:
+Five things are worth knowing before editing:
 
 - **Photos are uploaded, not linked.** Every form with a photo has an **Upload
   image** button: pick a file and it goes straight into the project's
@@ -191,6 +191,11 @@ Four things are worth knowing before editing:
   over it; the button then reads **Replace image**. Uploading needs the
   `catalog-images` migration applied and a signed-in staff account, and the
   limit is 5 MB per photo (JPG, PNG, WebP, AVIF or GIF).
+- **An accommodation has a gallery, not just a photo.** Under the main photo,
+  **Gallery** takes as many as twelve more — the inside of the unit, the
+  bedding, the view — picked several at a time and reordered with the arrows on
+  each thumbnail. They become the slides of the home page "view more" carousel,
+  after the main photo, in exactly the order shown in the dashboard.
 - **An item can be hidden instead of deleted.** Unticking "show this on the
   guest menu" takes it off the guest page and leaves it in the dashboard to be
   switched back on. Deleting is permanent — but it never rewrites a bill:
@@ -208,7 +213,7 @@ Four things are worth knowing before editing:
 
 Once it has a price, a new accommodation gets a home page card and a "view
 more" window like every other unit, built from its own row: its name, uploaded
-photo, description and "What's Included" list. The units that shipped with the
+photo, gallery, description and "What's Included" list. The units that shipped with the
 site show their bundled photo until one is uploaded over it; a new one shows the
 camp's green with a shelter outline until it is given a photo.
 

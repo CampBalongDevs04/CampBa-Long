@@ -16,7 +16,7 @@ import { uploadCatalogImage } from '../../../data/catalogImages.js'
 //   { name, label, type, options, help, placeholder, disabled, rows }
 //
 // `type` is 'text' | 'url' | 'number' | 'textarea' | 'select' | 'checkbox'
-// | 'image'.
+// | 'image' | 'gallery'.
 //
 // `fields` may also be a FUNCTION of the current values, for the forms whose
 // shape depends on what has been picked so far — a coffee row needs a cup size
@@ -130,6 +130,149 @@ function ImageField({ field, value, onChange, onUploading }) {
     )
 }
 
+// The same upload, but for a LIST of photos rather than one — the extra angles
+// an accommodation's "view more" carousel shows after its main photo.
+//
+// Its value is an array of URLs and the order is what a guest scrolls through,
+// so each thumbnail carries its own move-left / move-right / remove. There is
+// no separate "sort" number to keep in step: the list on screen IS the order
+// stored, which is the only version staff have to think about.
+function GalleryField({ field, value, onChange, onUploading }) {
+    const { name, label, help, folder = 'catalog', max = 12, disabled } = field
+    const inputRef = useRef(null)
+    // "Uploading 2 of 5…" rather than a bare spinner: picking a folder of photos
+    // off a phone is the normal case here and it is not quick.
+    const [progress, setProgress] = useState(null)
+    const [problem, setProblem] = useState('')
+
+    const photos = Array.isArray(value) ? value : []
+    const room = max - photos.length
+
+    const replaceWith = (next) => onChange(name, next)
+
+    const handlePick = async (e) => {
+        const files = [...(e.target.files ?? [])]
+        e.target.value = ''
+        if (files.length === 0) return
+
+        setProblem('')
+        onUploading(name, true)
+
+        // Uploaded one at a time and appended as each lands, so a batch that
+        // fails half way through keeps the photos that did make it — staff
+        // retry the rest rather than the lot.
+        const added = []
+        const failures = []
+        const batch = files.slice(0, Math.max(0, room))
+
+        for (const [index, file] of batch.entries()) {
+            setProgress({ done: index, total: batch.length })
+            const result = await uploadCatalogImage(file, folder)
+            if (result.ok) added.push(result.url)
+            else failures.push(result.message)
+        }
+
+        setProgress(null)
+        onUploading(name, false)
+
+        if (added.length > 0) replaceWith([...photos, ...added])
+
+        if (files.length > batch.length) {
+            failures.push(`Only ${max} photos fit in a gallery, so ${files.length - batch.length} were skipped.`)
+        }
+        // One message, not one per file: a batch usually fails for one reason.
+        if (failures.length > 0) setProblem([...new Set(failures)].join(' '))
+    }
+
+    const move = (from, to) => {
+        if (to < 0 || to >= photos.length) return
+        const next = [...photos]
+        const [moved] = next.splice(from, 1)
+        next.splice(to, 0, moved)
+        replaceWith(next)
+    }
+
+    const remove = (index) => replaceWith(photos.filter((_, i) => i !== index))
+
+    const busy = progress !== null
+
+    return (
+        <div className="crud-field crud-gallery-field">
+            <label htmlFor={`crud-field-${name}`}>{label}</label>
+
+            {photos.length > 0 && (
+                <ul className="crud-gallery-grid">
+                    {photos.map((url, index) => (
+                        <li key={url} className="crud-gallery-item">
+                            <img src={url} alt={`Photo ${index + 2}`} />
+                            <div className="crud-gallery-item-bar">
+                                <button
+                                    type="button"
+                                    aria-label={`Move photo ${index + 1} earlier`}
+                                    disabled={disabled || busy || index === 0}
+                                    onClick={() => move(index, index - 1)}
+                                >
+                                    ‹
+                                </button>
+                                <span className="crud-gallery-position">{index + 1}</span>
+                                <button
+                                    type="button"
+                                    aria-label={`Move photo ${index + 1} later`}
+                                    disabled={disabled || busy || index === photos.length - 1}
+                                    onClick={() => move(index, index + 1)}
+                                >
+                                    ›
+                                </button>
+                                <button
+                                    type="button"
+                                    className="is-remove"
+                                    aria-label={`Remove photo ${index + 1}`}
+                                    disabled={disabled || busy}
+                                    onClick={() => remove(index)}
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            )}
+
+            <input
+                id={`crud-field-${name}`}
+                ref={inputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="crud-image-input"
+                disabled={disabled || busy || room <= 0}
+                onChange={handlePick}
+            />
+            <div className="crud-image-buttons">
+                <button
+                    type="button"
+                    className="crud-btn is-small"
+                    disabled={disabled || busy || room <= 0}
+                    onClick={() => inputRef.current?.click()}
+                >
+                    {busy
+                        ? `Uploading ${progress.done + 1} of ${progress.total}…`
+                        : photos.length > 0
+                          ? 'Add more photos'
+                          : 'Upload gallery images'}
+                </button>
+            </div>
+
+            <p className="crud-field-help">
+                {room <= 0
+                    ? `That is the ${max}-photo limit. Remove one to add another.`
+                    : help || 'Pick several at once. They can be reordered after uploading.'}
+            </p>
+            {problem && <p className="crud-message is-error">{problem}</p>}
+        </div>
+    )
+}
+
 function Field({ field, value, onChange, onUploading }) {
     const { name, label, type = 'text', help, placeholder, options = [], disabled, rows } = field
     const id = `crud-field-${name}`
@@ -137,6 +280,12 @@ function Field({ field, value, onChange, onUploading }) {
     if (type === 'image') {
         return (
             <ImageField field={field} value={value} onChange={onChange} onUploading={onUploading} />
+        )
+    }
+
+    if (type === 'gallery') {
+        return (
+            <GalleryField field={field} value={value} onChange={onChange} onUploading={onUploading} />
         )
     }
 
