@@ -12,8 +12,11 @@ function getFitNote(pax, selected, options){
 
     // Units that hold this group comfortably, and — as a fallback — the ones
     // that hold them at all, even if the group is under the usual size.
-    const fitting = options.filter((item) => getPaxFit(pax, item) === 'fit')
-    const roomy = options.filter((item) => getPaxFit(pax, item) !== 'over')
+    // Tent Pitching is excluded from suggestions: it has no capacity ceiling,
+    // so it always "fits" and isn't a meaningful size-based recommendation.
+    const suggestable = options.filter((item) => item.id !== 'tent-pitching')
+    const fitting = suggestable.filter((item) => getPaxFit(pax, item) === 'fit')
+    const roomy = suggestable.filter((item) => getPaxFit(pax, item) !== 'over')
 
     if (selected){
         const paxLabel = selected.pax ?? 'schedule not yet selected'
@@ -27,10 +30,10 @@ function getFitNote(pax, selected, options){
                 .join(', ')
             return {
                 tone: 'unfit',
-                title: 'Not a fit',
-                text: `${selected.name} (${paxLabel}) holds up to ${selected.maxPax} pax`
-                    + ` — your group of ${pax} is over its capacity.`
-                    + (alternatives ? ` Consider: ${alternatives}.` : ' Contact us for group arrangements.'),
+                title: 'A bigger space would suit you better',
+                text: `${selected.name} (${paxLabel}) comfortably holds up to ${selected.maxPax} pax`
+                    + `, which is a little snug for your group of ${pax}.`
+                    + (alternatives ? ` You might consider: ${alternatives}.` : ' Message us and we’ll help you find the right fit.'),
             }
         }
 
@@ -39,9 +42,9 @@ function getFitNote(pax, selected, options){
         if (fit === 'under'){
             return {
                 tone: 'warn',
-                title: 'Below the usual group size',
-                text: `${selected.name} is set for ${paxLabel}. You can still book it for ${pax}`
-                    + ` — the rate is per unit, so the full price applies.`,
+                title: 'Smaller group? No problem',
+                text: `${selected.name} is usually set up for ${paxLabel}, but you're welcome to book it for ${pax}`
+                    + ` — just note the rate is per unit, so the full price still applies.`,
             }
         }
 
@@ -55,8 +58,8 @@ function getFitNote(pax, selected, options){
     if (roomy.length === 0){
         return {
             tone: 'unfit',
-            title: 'Group booking',
-            text: `No single accomodation fits ${pax} pax — contact us for group arrangements.`,
+            title: 'Let’s find you a fit',
+            text: `We don't have a single accomodation that fits ${pax} pax — message us and we'll help arrange something for your group.`,
         }
     }
 

@@ -21,9 +21,11 @@ const ACCOMMODATION_INFO = [
     { id: 'tent-large', name: 'Big Tent', image: tentLargeImage },
     { id: 'cottage', name: 'Cottage', image: cottageImage },
     { id: 'pavilion', name: 'Pavillion', image: pavilionImage },
-    // Guests pitching their own tent: flat per-tent fee, no capacity limit,
-    // so it has no minPax/maxPax and isn't tracked in accommodationInventory.js.
-    { id: 'tent-pitching', name: 'Tent Pitching', image: tentPitchingImage, unlimited: true },
+    // Guests pitching their own tent: flat per-tent fee, no group-size ceiling
+    // of its own (minPax/maxPax null below) — but it shares the same 4
+    // physical tent slots as Small Tent and Big Tent, tracked via pool_id in
+    // accommodationInventory.js.
+    { id: 'tent-pitching', name: 'Tent Pitching', image: tentPitchingImage },
 ]
 
 // "Free entrance for 2 pax" IS a real perk (it's on the printed rate card),
