@@ -31,11 +31,25 @@ export default function AccomodationList({ selectedAccomodation, onSelectAccomod
 
     // Bring a preselected card (e.g. coming from the home page "Book Now!")
     // into view when the page opens.
+    //
+    // The TRACK is scrolled, not the card — scrollIntoView() walks every
+    // scrollable ancestor including the page itself, so centring a card that
+    // sits below the fold would drag the whole booking page down to step 2 and
+    // land the guest past the dates they still have to pick. Only this carousel
+    // has anything to move here.
     useEffect(() => {
         if (!selectedAccomodation) return
         const track = trackRef.current
         const card = track?.querySelector('.accomodation-card.selected')
-        card?.scrollIntoView({ block: 'nearest', inline: 'center' })
+        if (!track || !card) return
+        // Measured as a DELTA between the two rectangles rather than from
+        // card.offsetLeft: the track is position:static, so offsetLeft is
+        // counted from the booking shell around it and centring on it lands the
+        // card off to one side. The browser clamps the result at both ends.
+        const cardBox = card.getBoundingClientRect()
+        const trackBox = track.getBoundingClientRect()
+        track.scrollLeft +=
+            (cardBox.left + cardBox.width / 2) - (trackBox.left + trackBox.width / 2)
     }, [selectedAccomodation])
 
     return(
@@ -73,6 +87,13 @@ export default function AccomodationList({ selectedAccomodation, onSelectAccomod
                         const nextAvailable = isFullyBooked
                             ? getNextAvailableDate(item.id, stayStart, 60, scheduleKey)
                             : null
+                        // What the promo takes off, in pesos. `originalPrice` is
+                        // only set while one is running, so this doubles as the
+                        // test for whether to say anything at all.
+                        const promoSaving =
+                            item.originalPrice != null && item.price != null
+                                ? item.originalPrice - item.price
+                                : null
 
                         return (
                             <button
@@ -87,13 +108,51 @@ export default function AccomodationList({ selectedAccomodation, onSelectAccomod
                                     {item.image
                                         ? <SkeletonImage src={item.image} alt={item.name} />
                                         : <span className="accomodation-card-noimage">No image</span>}
+                                    {/* On the photo rather than down in the
+                                        price line, because the carousel is
+                                        scrolled past sideways — a guest should
+                                        be able to spot which units are on promo
+                                        without stopping to read each card. */}
+                                    {promoSaving != null && (
+                                        <span className="accomodation-card-promo-flag">Promo</span>
+                                    )}
                                 </div>
                                 <div className="accomodation-card-info">
                                     <span className="accomodation-card-name">{item.name}</span>
                                     <span className="accomodation-card-pax">{item.pax}</span>
+                                    {/* With a promo on, the standing rate is
+                                        shown struck through before the price
+                                        being charged — the discount is only
+                                        legible next to what it came down from.
+                                        `item.price` is already the promo one;
+                                        `originalPrice` is null the rest of the
+                                        time, which is the plain single price. */}
                                     <span className="accomodation-card-price">
-                                        {item.price ? `₱${item.price}` : (rateGroup ? 'Price TBA' : 'Choose schedule')}
+                                        {item.price ? (
+                                            item.originalPrice ? (
+                                                <>
+                                                    <s className="accomodation-card-price-was">
+                                                        ₱{item.originalPrice}
+                                                    </s>
+                                                    <span className="accomodation-card-price-now">
+                                                        ₱{item.price}
+                                                    </span>
+                                                </>
+                                            ) : (
+                                                `₱${item.price}`
+                                            )
+                                        ) : (rateGroup ? 'Price TBA' : 'Choose schedule')}
                                     </span>
+                                    {/* The strike-through says the price moved;
+                                        this says by how much, which is the part
+                                        a guest is actually deciding on. Only
+                                        shown when there IS a saving, so it can
+                                        never read "save ₱0". */}
+                                    {promoSaving > 0 && (
+                                        <span className="accomodation-card-promo-hint">
+                                            Save ₱{promoSaving.toLocaleString('en-PH')} today
+                                        </span>
+                                    )}
                                     <span className={`accomodation-card-available ${unlimited || (availability && availability.available > 0) ? 'is-available' : ''}`}>
                                         {unlimited
                                             ? 'Available'

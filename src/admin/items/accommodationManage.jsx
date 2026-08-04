@@ -12,6 +12,11 @@ import {
     deleteAccommodationRate,
 } from '../../data/accommodationDB.js'
 import { resolveAccommodationImage } from '../../data/accomodationOptions.js'
+import {
+    usePromoMarquee,
+    loadPromoMarquee,
+    savePromoMarquee,
+} from '../../data/promoMarquee.js'
 
 // Units → Manage Accommodations. What the resort sells, and what it costs.
 //
@@ -113,10 +118,25 @@ function typeFields(values) {
     ]
 }
 
-function rateFields() {
+// The promo is a SECOND price beside the standing one, not a replacement for
+// it. Staff used to run a promo by typing the discounted figure over the price
+// and typing the old one back afterwards — which meant the original was gone
+// while the promo ran (nothing to strike through on the card) and the way back
+// depended on remembering it. Here the price field stays the standing rate all
+// year, the promo sits under it, and the checkbox is the whole of starting and
+// ending one. Raising the standing rate later is then just an edit of the price
+// field, promo running or not.
+function rateFields(values) {
     return [
         [
-            { name: 'price', label: 'Price (PHP)', type: 'number', placeholder: '1450' },
+            {
+                name: 'price',
+                label: 'Original price (PHP)',
+                type: 'number',
+                placeholder: '1450',
+                help: 'The standing rate. Leave it alone during a promo — this is what the '
+                    + 'price goes back to when the promo ends.',
+            },
             {
                 name: 'paxLabel',
                 label: 'Capacity shown',
@@ -138,6 +158,44 @@ function rateFields() {
                 help: 'A bigger group cannot book. Leave both blank for no limit.',
             },
         ],
+        {
+            name: 'promoActive',
+            label: 'Run a promo on this rate',
+            type: 'checkbox',
+        },
+        {
+            name: 'promoPrice',
+            label: "Today's promo price (PHP)",
+            type: 'number',
+            placeholder: '1200',
+            // Left editable while the promo is off so next month's promo can be
+            // set up before it goes live — the checkbox is what guests see.
+            help: values.promoActive
+                ? 'Guests are charged this. The original price above is shown struck through beside it.'
+                : 'Kept for next time. Nothing changes for guests until the box above is ticked.',
+        },
+    ]
+}
+
+// The scrolling banner above the accommodations on the home page. Its copy is
+// written here rather than derived from the promos on the rates: a promo is a
+// message before it is arithmetic ("book 2 nights, get a free tent"), and the
+// wording is the part the resort wants to choose.
+function bannerFields() {
+    return [
+        {
+            name: 'messages',
+            label: 'What it says',
+            type: 'textarea',
+            rows: 5,
+            placeholder: 'Summer sale — 20% off all A-Houses\nBook 2 nights, get a free tent pitch',
+            help: 'One line per item. They scroll past in this order, over and over.',
+        },
+        {
+            name: 'isActive',
+            label: 'Show the banner on the home page',
+            type: 'checkbox',
+        },
     ]
 }
 
@@ -175,6 +233,8 @@ function rateToDraft(typeId, rateGroup, rate) {
         typeId,
         rateGroup,
         price: rate ? String(rate.price) : '',
+        promoPrice: rate?.promoPrice != null ? String(rate.promoPrice) : '',
+        promoActive: rate?.promoActive === true,
         paxLabel: rate?.paxLabel ?? '',
         minPax: rate?.minPax ?? '',
         maxPax: rate?.maxPax ?? '',
@@ -183,11 +243,14 @@ function rateToDraft(typeId, rateGroup, rate) {
 
 export default function AccommodationManage() {
     const catalog = useAdminAccommodations()
+    const banner = usePromoMarquee()
     const [editingType, setEditingType] = useState(null)
     const [editingRate, setEditingRate] = useState(null)
+    const [editingBanner, setEditingBanner] = useState(null)
 
     useEffect(() => {
         loadAdminAccommodations()
+        loadPromoMarquee()
     }, [])
 
     const rateFor = (typeId, rateGroup) =>
@@ -203,14 +266,38 @@ export default function AccommodationManage() {
                         these directly.
                     </p>
                 </div>
-                <button
-                    type="button"
-                    className="crud-btn is-primary"
-                    onClick={() => setEditingType(BLANK_TYPE)}
-                >
-                    + Add an accommodation
-                </button>
+                <div className="crud-row-actions">
+                    <button
+                        type="button"
+                        className="crud-btn"
+                        onClick={() =>
+                            setEditingBanner({
+                                messages: banner.messages.join('\n'),
+                                isActive: banner.isActive,
+                            })
+                        }
+                    >
+                        Promo banner
+                        {banner.isActive && <span className="acc-manage-banner-dot" aria-hidden="true" />}
+                    </button>
+                    <button
+                        type="button"
+                        className="crud-btn is-primary"
+                        onClick={() => setEditingType(BLANK_TYPE)}
+                    >
+                        + Add an accommodation
+                    </button>
+                </div>
             </div>
+
+            {/* What the home page is currently scrolling, spelled out here so
+                staff can see a live banner without opening the site — the one
+                piece of copy most likely to be left running after the sale. */}
+            {banner.isActive && banner.messages.length > 0 && (
+                <p className="acc-manage-banner-live">
+                    <strong>Promo banner is live:</strong> {banner.messages.join(' · ')}
+                </p>
+            )}
 
             {catalog.error && <p className="crud-message is-error">{catalog.error}</p>}
 
@@ -285,8 +372,28 @@ export default function AccommodationManage() {
                                             </div>
                                             {rate ? (
                                                 <>
+                                                    {/* The same thing a guest is
+                                                        shown: with a promo on,
+                                                        the standing rate struck
+                                                        through and the promo
+                                                        beside it. Staff can see
+                                                        at a glance which rates
+                                                        are currently discounted
+                                                        without opening each. */}
                                                     <span className="acc-manage-rate-price">
-                                                        {formatPeso(rate.price)}
+                                                        {rate.promoActive && rate.promoPrice != null ? (
+                                                            <>
+                                                                <s className="acc-manage-rate-was">
+                                                                    {formatPeso(rate.price)}
+                                                                </s>
+                                                                {formatPeso(rate.promoPrice)}
+                                                                <span className="acc-manage-rate-promo">
+                                                                    Promo
+                                                                </span>
+                                                            </>
+                                                        ) : (
+                                                            formatPeso(rate.price)
+                                                        )}
                                                     </span>
                                                     <span className="acc-manage-rate-pax">
                                                         {rate.paxLabel || 'No capacity set'}
@@ -359,6 +466,18 @@ export default function AccommodationManage() {
                     }
                     deleteLabel="Stop offering it"
                     onClose={() => setEditingRate(null)}
+                />
+            )}
+
+            {editingBanner && (
+                <CrudModal
+                    title="Promo banner"
+                    subtitle="The scrolling strip above the accommodations on the home page. Unticking the box takes it down and keeps the wording for next time."
+                    fields={bannerFields}
+                    initial={editingBanner}
+                    submitLabel="Save banner"
+                    onSubmit={savePromoMarquee}
+                    onClose={() => setEditingBanner(null)}
                 />
             )}
         </div>

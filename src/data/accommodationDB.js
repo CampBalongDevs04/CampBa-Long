@@ -315,6 +315,28 @@ export function findAccommodationRate(typeId, rateGroup) {
     return ratesByKey.get(rateKey(typeId, rateGroup)) ?? null
 }
 
+// What a guest is actually charged for one rate, promo or not. `price` on a
+// rate is the STANDING price and stays put while a promo runs — ending the
+// promo is a flag going false, not a price being typed back in — so every
+// screen that quotes a number has to ask this rather than read `price`.
+//
+// A promo with no price on it is simply not running: the check constraint in
+// *_accommodation_promo_price.sql refuses that pairing, and this agrees with it
+// rather than quoting ₱0 if a row ever slipped through.
+export function effectiveRatePrice(rate) {
+    if (!rate) return null
+    if (rate.promoActive && rate.promoPrice != null) return rate.promoPrice
+    return rate.price
+}
+
+// The number to strike through beside the promo, or null when there is nothing
+// to strike through — the rate is at its standing price.
+export function strikethroughRatePrice(rate) {
+    if (!rate) return null
+    if (!rate.promoActive || rate.promoPrice == null) return null
+    return rate.price > rate.promoPrice ? rate.price : null
+}
+
 export function listAccommodationRates(rateGroup = null) {
     const all = [...ratesByKey.values()]
     return rateGroup ? all.filter((rate) => rate.rateGroup === rateGroup) : all
@@ -586,7 +608,14 @@ async function loadCatalog() {
             map.set(rateKey(row.type_id, row.rate_group), {
                 typeId: row.type_id,
                 rateGroup: row.rate_group,
+                // The STANDING price. What the guest pays is
+                // effectiveRatePrice(), which is this unless a promo is on.
                 price: Number(row.price),
+                // Null on a database that predates
+                // *_accommodation_promo_price.sql, which is simply "no promo" —
+                // the same as every rate before promos existed.
+                promoPrice: row.promo_price == null ? null : Number(row.promo_price),
+                promoActive: row.promo_active === true,
                 paxLabel: row.pax_label ?? null,
                 minPax: row.min_pax ?? null,
                 maxPax: row.max_pax ?? null,
@@ -1787,6 +1816,8 @@ export async function loadAdminAccommodations() {
             typeId: row.type_id,
             rateGroup: row.rate_group,
             price: Number(row.price),
+            promoPrice: row.promo_price == null ? null : Number(row.promo_price),
+            promoActive: row.promo_active === true,
             paxLabel: row.pax_label ?? null,
             minPax: row.min_pax ?? null,
             maxPax: row.max_pax ?? null,
@@ -1923,6 +1954,11 @@ export async function deleteAccommodationType(id) {
 
 // The price and pax range for one (accommodation, schedule group). Saving one
 // is also what puts a unit on sale under that group in the first place.
+//
+// A promo does NOT go into `price`. The standing rate stays where it is and the
+// promo sits beside it, so ending the promo is a checkbox and raising the
+// standing rate later is an ordinary edit of the price field — see the header of
+// supabase/migrations/*_accommodation_promo_price.sql.
 export async function saveAccommodationRate(draft) {
     if (!isSupabaseConfigured) return { ok: false, message: SUPABASE_SETUP_MESSAGE }
 
@@ -1932,6 +1968,25 @@ export async function saveAccommodationRate(draft) {
 
     const price = Number(draft.price)
     if (!Number.isFinite(price) || price < 0) return { ok: false, message: 'Enter a price of 0 or more.' }
+
+    // Kept even while the promo is off, so running the same promo again next
+    // weekend is one checkbox rather than typing the number back in.
+    const promoActive = draft.promoActive === true
+    const promoBlank = draft.promoPrice === '' || draft.promoPrice == null
+    const promoPrice = promoBlank ? null : Number(draft.promoPrice)
+
+    if (!promoBlank && (!Number.isFinite(promoPrice) || promoPrice < 0)) {
+        return { ok: false, message: 'Enter a promo price of 0 or more, or leave it blank.' }
+    }
+    // Refused rather than saved and quietly ignored: a "promo" at or above the
+    // standing rate strikes through the smaller number on the card, which reads
+    // to a guest as a price increase dressed up as a discount.
+    if (promoPrice != null && promoPrice >= price) {
+        return { ok: false, message: 'The promo price has to be lower than the original price.' }
+    }
+    if (promoActive && promoPrice == null) {
+        return { ok: false, message: 'Enter the promo price before turning the promo on.' }
+    }
 
     const minPax = draft.minPax === '' || draft.minPax == null ? null : Math.floor(Number(draft.minPax))
     const maxPax = draft.maxPax === '' || draft.maxPax == null ? null : Math.floor(Number(draft.maxPax))
@@ -1943,6 +1998,8 @@ export async function saveAccommodationRate(draft) {
         type_id: typeId,
         rate_group: rateGroup,
         price: Math.round(price * 100) / 100,
+        promo_price: promoPrice == null ? null : Math.round(promoPrice * 100) / 100,
+        promo_active: promoActive,
         // What the card shows. Written for staff rather than derived, because
         // 'Any group size' is a real answer and '2-3 Pax' is how the printed
         // rate card words the same thing.

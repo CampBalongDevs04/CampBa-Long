@@ -296,6 +296,47 @@ function scheduleLimitLabel(id) {
     return null;
 }
 
+// Whether a promo is running on this unit, and what it takes off. Read from the
+// same rate table as everything else here, so a promo started in the dashboard
+// reaches the home page without anybody editing this file.
+//
+// The card quotes no price (see the comment on paxRanges), so a struck-through
+// figure has nothing to sit next to — what it can say is how much comes off and
+// which schedule it comes off under. A unit sold under both schedules can be on
+// promo under only one of them, and "save ₱300" on a card whose overnight rate
+// is unchanged would be a promise the booking page then breaks.
+function promoNote(id) {
+    // `originalPrice` is only set while a promo runs, and `price` is already the
+    // promo one — the same pair the booking carousel reads.
+    const savingUnder = (group) => {
+        const option = getAccomodationOptions(group).find((item) => item.id === id);
+        if (!option || option.originalPrice == null || option.price == null) return null;
+        const saving = option.originalPrice - option.price;
+        return saving > 0 ? saving : null;
+    };
+
+    const day = savingUnder('day');
+    const overnight = savingUnder('overnight');
+    if (day == null && overnight == null) return null;
+
+    const peso = (amount) => `₱${amount.toLocaleString('en-PH')}`;
+
+    // On promo under both, and the two savings differ: "up to", because the
+    // bigger number is not what every schedule takes off.
+    if (day != null && overnight != null) {
+        return day === overnight
+            ? `Save ${peso(day)} on every schedule`
+            : `Save up to ${peso(Math.max(day, overnight))}`;
+    }
+
+    // Under one schedule only. Naming it is redundant on a unit that is sold
+    // under one schedule anyway — the card already says "Day Time schedule
+    // only" right above this.
+    const only = scheduleLimitLabel(id) != null;
+    if (day != null) return only ? `Save ${peso(day)}` : `Save ${peso(day)} on Day Time`;
+    return only ? `Save ${peso(overnight)}` : `Save ${peso(overnight)} overnight`;
+}
+
 function paxLabel({ paxMin, paxMax, paxText }) {
     // No ceiling at all (Tent Pitching): say what the rate card says rather
     // than invent a range out of a missing number.
@@ -315,6 +356,7 @@ function AccommodationModal({ acc, onClose, onBook }) {
     const isFullyBooked = availability !== null && availability.available === 0;
     const nextAvailable = isFullyBooked ? getNextAvailableDate(acc.id) : null;
     const scheduleLimit = scheduleLimitLabel(acc.id);
+    const promo = promoNote(acc.id);
 
     // Close on Escape, walk the gallery with the arrow keys, and keep the page
     // from scrolling behind the modal. The arrows are here rather than on the
@@ -363,6 +405,7 @@ function AccommodationModal({ acc, onClose, onBook }) {
                             </>
                         )}
                         {acc.featured && <span className="acc-badge">Most Popular</span>}
+                        {promo && <span className="acc-badge acc-badge-promo">Promo</span>}
                     </div>
                     {count > 1 && (
                         <>
@@ -412,6 +455,7 @@ function AccommodationModal({ acc, onClose, onBook }) {
                         guest has picked Day Time / Day-and-Night / Night-and-Day. */}
                     <p className="acc-modal-meta">{paxLabel(acc)}</p>
                     {scheduleLimit && <p className="acc-schedule-limit">{scheduleLimit}</p>}
+                    {promo && <p className="acc-promo-note">{promo}</p>}
                     {availability !== null && (
                         <p className={`acc-availability${isFullyBooked ? ' booked-out' : ''}`}>
                             {isFullyBooked
@@ -671,6 +715,7 @@ export default function Accommodations() {
                                 const availability = getAvailability(acc.id);
                                 const isFullyBooked = availability !== null && availability.available === 0;
                                 const nextAvailable = isFullyBooked ? getNextAvailableDate(acc.id) : null;
+                                const promo = promoNote(acc.id);
 
                                 return (
                                 <div
@@ -682,6 +727,11 @@ export default function Accommodations() {
                                     <div className="acc-card-photo" style={{ background: acc.photoBg }}>
                                         {acc.featured && <span className="acc-badge">Most Popular</span>}
                                         {isFullyBooked && <span className="acc-badge acc-badge-booked">Fully Booked Today</span>}
+                                        {/* Bottom-left, so it can sit on the
+                                            same photo as "Most Popular" (top
+                                            left) and "Fully Booked" (top right)
+                                            — a unit can genuinely be all three. */}
+                                        {promo && <span className="acc-badge acc-badge-promo">Promo</span>}
                                         {acc.image ? (
                                             <img src={acc.image} alt={acc.title} draggable="false" />
                                         ) : (
@@ -697,6 +747,10 @@ export default function Accommodations() {
                                         {scheduleLimitLabel(acc.id) && (
                                             <p className="acc-schedule-limit">{scheduleLimitLabel(acc.id)}</p>
                                         )}
+                                        {/* The badge says there IS a promo; this
+                                            says what it is worth, which is the
+                                            part worth crossing the page for. */}
+                                        {promo && <p className="acc-promo-note">{promo}</p>}
                                         {availability !== null && (
                                             <p className={`acc-availability${isFullyBooked ? ' booked-out' : ''}`}>
                                                 {isFullyBooked

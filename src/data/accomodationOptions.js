@@ -21,6 +21,8 @@ import {
     findAccommodationRate,
     hasAccommodationRates,
     listAccommodationRates,
+    effectiveRatePrice,
+    strikethroughRatePrice,
 } from './accommodationDB.js'
 
 import houseSmall from '../assets/temp/A-House-Small.png'
@@ -189,7 +191,14 @@ function optionsFromDatabase(rateGroup){
                 // unit shipped with — or none, which the cards already render
                 // as "No image".
                 image: resolveAccommodationImage(type.id, type.image),
-                price: rate?.price ?? null,
+                // `price` is ALWAYS what the guest pays, promo or not — every
+                // screen downstream (the card, the summary, the amount the
+                // booking is created with) reads this one field and none of
+                // them has to know a promo is on.
+                price: effectiveRatePrice(rate),
+                // The standing rate to strike through beside it, or null when
+                // there is no promo running. Display only.
+                originalPrice: strikethroughRatePrice(rate),
                 pax: rate?.paxLabel ?? null,
                 minPax: rate?.minPax ?? null,
                 maxPax: rate?.maxPax ?? null,
@@ -206,6 +215,9 @@ function optionsFromFallback(rateGroup){
             return {
                 ...item,
                 price: rate?.price ?? null,
+                // Promos live in the database only — there is nothing to run one
+                // against here, so the fallback card never shows a struck price.
+                originalPrice: null,
                 pax: rate?.pax ?? null,
                 minPax: rate?.minPax ?? null,
                 maxPax: rate?.maxPax ?? null,

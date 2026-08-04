@@ -1,0 +1,122 @@
+/* The scrolling promo bar above the accommodations.
+
+   It sits between two cream sections, so it is dark: a gold-on-cream strip
+   would read as another band of the page rather than as the one line on it
+   that is only true this week.
+
+   How many times the promo repeats across the bar is counted in JavaScript —
+   it depends on the word, the font and the screen. See the header of
+   promoMarquee.jsx. This file only styles one pass of it. */
+.promo-marquee{
+    position: relative;
+    overflow: hidden;
+    background: var(--forest-dark);
+    border-top: 1px solid var(--gold);
+    border-bottom: 1px solid var(--gold);
+    padding: 11px 0;
+    font-family: 'Jost', sans-serif;
+    /* The strip runs edge to edge under the pointer; nothing in it is
+       clickable, so it should not look like it is. */
+    user-select: none;
+}
+
+/* The two sequences, side by side. `max-content` is what makes the -50% below
+   land exactly one sequence along — a percentage of a stretched width would
+   drift, and the repeat would visibly stutter once a lap. */
+.promo-marquee-track{
+    display: flex;
+    width: max-content;
+    animation: promo-marquee-scroll var(--promo-marquee-seconds, 24s) linear infinite;
+}
+
+/* One sequence: the messages repeated enough times to cover the bar. Both
+   sequences are identical, which is what makes -50% seamless. */
+.promo-marquee-sequence{
+    display: flex;
+    align-items: center;
+}
+
+/* Hovering pauses it, so a guest can actually finish reading the line that
+   caught their eye instead of chasing it off the edge. */
+.promo-marquee:hover .promo-marquee-track,
+.promo-marquee:focus-within .promo-marquee-track{
+    animation-play-state: paused;
+}
+
+@keyframes promo-marquee-scroll{
+    from{ transform: translateX(0); }
+    to{ transform: translateX(-50%); }
+}
+
+/* One run through the promos. `flex: none` so a pass is never squeezed —
+   a shrunk pass is narrower than the one that was measured, and the repeat
+   count would no longer cover the bar. */
+.promo-marquee-pass{
+    flex: none;
+    display: flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.promo-marquee-item{
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding-right: 18px;
+    white-space: nowrap;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 2.4px;
+    text-transform: uppercase;
+    color: var(--cream);
+}
+
+/* The star after each promo. It is what makes a repeated word read as a
+   ribbon — SALE ✦ SALE ✦ SALE — rather than as one long stuck sentence. */
+.promo-marquee-star{
+    color: var(--gold);
+    font-size: 0.66rem;
+    line-height: 1;
+}
+
+@media (max-width: 640px){
+    .promo-marquee{ padding: 9px 0; }
+    .promo-marquee-item{ font-size: 0.66rem; letter-spacing: 1.8px; gap: 13px; padding-right: 13px; }
+}
+
+/* Motion is the whole point of this component, so there is no reduced-motion
+   variant of the effect — there is a reduced-motion version of the CONTENT.
+   The ribbon stands still and every repeat goes away, leaving a plain centred
+   line of promos that says the same thing without moving. */
+@media (prefers-reduced-motion: reduce){
+    .promo-marquee-track{
+        animation: none;
+        width: 100%;
+        justify-content: center;
+    }
+    .promo-marquee-track .promo-marquee-sequence[aria-hidden="true"]{
+        display: none;
+    }
+    .promo-marquee-sequence{
+        flex: 1;
+        justify-content: center;
+    }
+    /* Only the first pass is the promos; the rest are repeats of it, and a
+       ribbon that cannot move has no reason to say the same thing eight times. */
+    .promo-marquee-pass[aria-hidden="true"]{
+        display: none;
+    }
+    .promo-marquee-pass{
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .promo-marquee-item{
+        white-space: normal;
+    }
+    /* Nothing follows the last promo when it is not a loop. */
+    .promo-marquee-item:last-child .promo-marquee-star{
+        display: none;
+    }
+}

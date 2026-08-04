@@ -21,6 +21,32 @@
     gap: 14px;
 }
 
+/* ---------- Promo banner: the home page's scrolling strip ---------- */
+
+/* A live banner is easy to forget about — it is the one piece of copy meant to
+   stop being true. The dot on the button and the line below say it is running
+   without staff having to open the site to find out. */
+.acc-manage-banner-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-left: 7px;
+    border-radius: 50%;
+    background: #3DA35D;
+    vertical-align: middle;
+}
+
+.acc-manage-banner-live {
+    margin: 0 0 14px;
+    padding: 9px 13px;
+    border-radius: 10px;
+    background: rgba(61, 163, 93, 0.12);
+    border: 1px solid rgba(61, 163, 93, 0.4);
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: var(--forest-dark, #16291E);
+}
+
 .acc-manage-card {
     background: #fff;
     border: 1px solid rgba(198, 161, 91, 0.28);
@@ -133,10 +159,32 @@
 }
 
 .acc-manage-rate-price {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
     font-size: 0.98rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+}
+
+/* The standing rate while a promo runs — still on screen, just no longer the
+   number being charged. */
+.acc-manage-rate-was {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: rgba(10, 22, 14, 0.45);
+}
+
+.acc-manage-rate-promo {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(198, 161, 91, 0.9);
+    color: #fff;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
 
 .acc-manage-rate-pax {

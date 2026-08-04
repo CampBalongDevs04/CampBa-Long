@@ -1,5 +1,5 @@
-import { lazy, Suspense } from 'react'
-import { Routes, Route, useLocation } from 'react-router'
+import { lazy, Suspense, useEffect } from 'react'
+import { Routes, Route, useLocation, useNavigationType } from 'react-router'
 import './App.css'
 import Header from './components/Header.jsx'
 import SetupNotice from './components/SetupNotice.jsx'
@@ -23,6 +23,28 @@ const AdminDash = lazy(() => import('./admin/admindash2345.jsx'))
 const Booking = lazy(() => import('./pages/booking.jsx'))
 
 
+// A new page starts at the top of that page.
+//
+// A client-side navigation does not reset the scroll offset the way a real page
+// load does, so following "Book Now!" from half-way down the home page opened
+// the booking form half-way down as well — the guest landed in the middle of
+// the guest-details step with the first three steps already behind them.
+//
+// Only for a PUSH/REPLACE, never for a POP: pressing Back is a request to
+// return to where you were, and the browser restores that offset itself.
+// Forcing the top there would throw away the guest's place on a very long page.
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  const navigationType = useNavigationType()
+
+  useEffect(() => {
+    if (navigationType === 'POP') return
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [pathname, navigationType])
+
+  return null
+}
+
 function App() {
   const location = useLocation()
   const isAdminPage = location.pathname.startsWith('/admindash2345')
@@ -36,6 +58,7 @@ function App() {
       {/* Renders nothing when the keys are present, so this costs a fully
           configured site exactly one boolean check. */}
       <SetupNotice />
+      <ScrollToTop />
       {!isAdminPage && <Header />}
       {/* Guest-facing only. Staff on the dashboard have no use for a support
           bubble aimed at guests, and it would sit over the sidebar. */}

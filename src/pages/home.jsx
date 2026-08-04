@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import '../components/css/Header.css'
 import Offers from '../components/offers.jsx'
 import Accommodations from '../components/accommodations.jsx'
+import PromoMarquee from '../components/promoMarquee.jsx'
 import Testimonials from '../components/testimonials.jsx'
 import Location from '../components/location.jsx'
 import { FAQDemo } from '../components/Usage.tsx'
@@ -96,6 +97,9 @@ function Home() {
             </div>
 
             <Offers />
+            {/* Renders nothing unless staff have switched a promo on, so the
+                page is byte-for-byte what it was the rest of the year. */}
+            <PromoMarquee />
             <Accommodations />
             <Testimonials />
             <Location />
