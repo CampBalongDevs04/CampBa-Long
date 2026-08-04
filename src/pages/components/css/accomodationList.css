@@ -94,12 +94,31 @@
 }
 
 .accomodation-card-image{
+    position: relative;
     width: 100%;
     height: 80px;
     display: flex;
     align-items: center;
     justify-content: center;
     background-color: var(--cream-2);
+}
+
+/* Sits top-LEFT: the selected-state circle owns the top-right corner, and a
+   promo tag covering it would hide which unit the guest has picked. */
+.accomodation-card-promo-flag{
+    position: absolute;
+    top: 6px;
+    left: 0;
+    z-index: 1;
+    padding: 2px 7px 2px 6px;
+    border-radius: 0 999px 999px 0;
+    background: var(--gold);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
 }
 
 .accomodation-card-image img{
@@ -137,6 +156,32 @@
     font-size: 12px;
     font-weight: 600;
     color: var(--gold);
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+/* The standing rate a promo came down from. Lighter and smaller than the price
+   actually being charged, so the eye lands on what the stay costs today. */
+.accomodation-card-price-was{
+    font-weight: 500;
+    font-size: 11px;
+    color: var(--ink);
+    opacity: 0.6;
+}
+
+.accomodation-card-price-now{
+    font-weight: 700;
+}
+
+/* What the promo takes off, in words. Green rather than gold: it is the same
+   "money coming off" the summary's discount lines are, and it should not
+   compete with the price itself for attention. */
+.accomodation-card-promo-hint{
+    font-size: 10px;
+    font-weight: 700;
+    color: #3DA35D;
 }
 
 .accomodation-card-available{

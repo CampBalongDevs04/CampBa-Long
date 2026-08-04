@@ -364,6 +364,17 @@
     color: #FBF7EA;
 }
 
+/* Promo takes the BOTTOM left, because a unit can be the most popular one, on
+   promo, and booked out for today all at once — and all three badges have to be
+   readable on the same photo. Green rather than gold: gold is already "most
+   popular" here, and money coming off is green everywhere else in the app. */
+.acc-badge-promo{
+    top: auto;
+    bottom: 10px;
+    background: linear-gradient(135deg, #4FB86B, #2F8449);
+    color: #FBF7EA;
+}
+
 .acc-card-info{
     background: var(--forest-dark);
     color: #F3F5E9;
@@ -407,6 +418,23 @@
     letter-spacing: 1px;
     text-transform: uppercase;
     color: var(--gold-soft);
+}
+/* What the promo is worth. A pill rather than another line of text: the three
+   lines above it are already small uppercase type in three different colours,
+   and a fourth would read as more of the same rather than as the one thing on
+   this card that is only true today. */
+.acc-promo-note{
+    display: inline-block;
+    margin: 6px 0 0;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: rgba(79, 184, 107, 0.2);
+    border: 1px solid rgba(79, 184, 107, 0.55);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #A8DDB1;
 }
 
 .acc-details{
@@ -662,6 +690,9 @@
 }
 .acc-modal-slide .acc-photo-label{ font-size: 0.65rem; }
 .acc-modal-slide .acc-badge{ top: 14px; left: 14px; }
+/* Must re-clear `top` at this specificity: the rule above pins it, and a badge
+   with both top and bottom set stretches the whole height of the slide. */
+.acc-modal-slide .acc-badge-promo{ top: auto; bottom: 14px; left: 14px; }
 
 .acc-modal-arrow{
     position: absolute;
@@ -786,6 +817,17 @@
     text-transform: uppercase;
     color: var(--gold);
 }
+/* The modal's panel is cream, not forest — the card's pale green would be
+   unreadable on it. `align-self` because this panel is a flex column, where an
+   inline-block would otherwise stretch the pill the full width. */
+.acc-modal-info .acc-promo-note{
+    align-self: flex-start;
+    margin: 8px 0 0;
+    font-size: 0.62rem;
+    background: rgba(47, 132, 73, 0.12);
+    border-color: rgba(47, 132, 73, 0.45);
+    color: #2F8449;
+}
 .acc-modal-desc{
     margin: 14px 0 18px;
     font-size: 0.82rem;
@@ -865,6 +907,7 @@
     .acc-card-info .acc-pax{ font-size: 0.8rem; }
     .acc-card-info .acc-availability{ font-size: 0.68rem; }
     .acc-card-info .acc-schedule-limit{ font-size: 0.66rem; }
+    .acc-card-info .acc-promo-note{ font-size: 0.66rem; }
 
     .acc-details{ padding: 14px 18px 16px; }
     .acc-details h4{ font-size: 1rem; margin-bottom: 11px; }
@@ -903,7 +946,8 @@
     .acc-modal-info h3{ font-size: 1.9rem; }
     .acc-modal-meta{ font-size: 0.82rem; }
     .acc-modal-info .acc-availability,
-    .acc-modal-info .acc-schedule-limit{ font-size: 0.68rem; }
+    .acc-modal-info .acc-schedule-limit,
+    .acc-modal-info .acc-promo-note{ font-size: 0.68rem; }
     .acc-modal-desc{ font-size: 0.9rem; margin: 16px 0 20px; }
     .acc-modal-info h4{ font-size: 1.02rem; }
     .acc-modal-info .acc-feature-list li{ font-size: 0.82rem; }

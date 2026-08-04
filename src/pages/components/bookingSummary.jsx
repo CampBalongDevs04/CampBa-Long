@@ -98,11 +98,35 @@ export default function BookingSummary({ checkIn, checkOut, schedule, selectedAc
                     value={seniors > 0 ? `${seniors} — 10% off` : null}
                     placeholder="None"
                 />
+                {/* Under a promo the standing rate is struck through beside the
+                    one being charged, and what it saves gets its own line in the
+                    same column the entrance discounts use — a guest should be
+                    able to see the discount in the total, not just on the card
+                    they picked the unit from. */}
                 <SummaryRow
                     label="Unit rate"
-                    value={unit?.price != null ? formatPeso(unit.price) : unit ? 'Price TBA' : null}
+                    value={
+                        unit?.price != null ? (
+                            unit.originalPrice ? (
+                                <>
+                                    <s className="summary-row-was">{formatPeso(unit.originalPrice)}</s>{' '}
+                                    {formatPeso(unit.price)}
+                                </>
+                            ) : (
+                                formatPeso(unit.price)
+                            )
+                        ) : unit ? 'Price TBA' : null
+                    }
                     placeholder="Select a unit"
                 />
+                {unit?.originalPrice != null && unit.price != null && (
+                    <div className="summary-row summary-row-discount">
+                        <span className="summary-row-label">Promo discount</span>
+                        <span className="summary-row-value">
+                            − {formatPeso(unit.originalPrice - unit.price)}
+                        </span>
+                    </div>
+                )}
             </div>
 
             <div className="summary-section">
