@@ -1,5 +1,5 @@
 import '../css/units.css'
-import { useAccommodationDB, getBookingStats, getDayOccupancy } from '../../data/accommodationDB.js'
+import { useAccommodationDB, useBookingGroups, getBookingStats, getDayOccupancy } from '../../data/accommodationDB.js'
 
 const units = [
     {
@@ -47,6 +47,13 @@ function formatCount(unit, stats) {
 // them, so the cards move the moment a guest books or an admin cancels.
 export default function Units({ stats }) {
     useAccommodationDB()
+    // getBookingStats() reads combined reservations too (booking_groups), so
+    // this needs its own subscription — useAccommodationDB() alone only
+    // re-renders when the single-unit bookings array changes identity, and
+    // groups usually finish loading a beat later on the initial page load.
+    // Without this, the cards showed last, stale numbers until something
+    // else (switching tabs) forced a remount.
+    useBookingGroups()
     const occupancy = getDayOccupancy()
     const live = {
         ...getBookingStats(),

@@ -609,7 +609,7 @@ function FoodMenuPage() {
       return
     }
     cart.forEach((line) => {
-      addFoodOrderToBooking(targetBooking.id, {
+      addFoodOrderToBooking(targetBooking, {
         // The catalog row, so staff can group the kitchen's work by dish.
         itemId: line.itemId,
         name: line.name,

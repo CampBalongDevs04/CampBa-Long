@@ -3,11 +3,15 @@ import '../css/booking-tabs.css'
 import ReceiptViewer from './receiptViewer'
 import {
     useAccommodationDB,
+    useBookingGroups,
     listBookings,
     getBookingStage,
     formatShortDate,
     confirmBooking,
     cancelBooking,
+    confirmBookingGroup,
+    cancelBookingGroup,
+    groupUnitsLabel,
 } from '../../data/accommodationDB.js'
 
 // Shared panel behind every overview tab (All / Upcomming / Active /
@@ -42,6 +46,9 @@ function orderTotal(orders) {
 
 export default function OverviewList({ filter = 'all', emptyTitle, emptyText }) {
     useAccommodationDB()
+    // listBookings() reads combined reservations too — see the comment in
+    // units.jsx on why this needs its own subscription, not just the one above.
+    useBookingGroups()
     const bookings = listBookings(filter)
     // Held by id so the open lightbox tracks the live row (see bookingsManage).
     const [reviewingId, setReviewingId] = useState(null)
@@ -97,8 +104,10 @@ export default function OverviewList({ filter = 'all', emptyTitle, emptyText }) 
                             </span>
                         </div>
                         <p className="booking-row-meta">
-                            {booking.accomodationName}
-                            {booking.unitId ? ` · ${booking.unitId}` : ''} — {stayLabel(booking)}
+                            {booking.isGroup
+                                ? (groupUnitsLabel(booking.units) || 'Combined reservation')
+                                : `${booking.accomodationName}${booking.unitId ? ` · ${booking.unitId}` : ''}`}
+                            {' '}— {stayLabel(booking)}
                         </p>
                         <p className="booking-row-meta booking-row-sub">
                             {booking.code ?? booking.id} · {PAYMENT_LABEL[booking.payment] ?? booking.payment}
@@ -131,8 +140,8 @@ export default function OverviewList({ filter = 'all', emptyTitle, emptyText }) 
                     key={reviewing.id}
                     booking={reviewing}
                     onClose={() => setReviewingId(null)}
-                    onApprove={(b) => confirmBooking(b.id)}
-                    onCancel={(b) => cancelBooking(b.id)}
+                    onApprove={(b) => (b.isGroup ? confirmBookingGroup(b.id) : confirmBooking(b.id))}
+                    onCancel={(b) => (b.isGroup ? cancelBookingGroup(b.id) : cancelBooking(b.id))}
                 />
             )}
         </div>

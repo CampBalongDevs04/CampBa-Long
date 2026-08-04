@@ -5,7 +5,7 @@ import BookingCalendar from './components/BookingCalendar'
 import TimeSelector from './components/timeSelector'
 import ScheduleNote from './components/scheduleNote'
 import AccomodationList from './components/accomodationList'
-import { getAccomodationOptions, getPaxFit, isFreeEntranceEligible } from '../data/accomodationOptions.js'
+import { getAccomodationOptions, isFreeEntranceEligible } from '../data/accomodationOptions.js'
 import PaxInput from './components/paxInput'
 import KidsCount from './components/kidscount'
 import SeniorCount from './components/seniorCount'
@@ -15,7 +15,7 @@ import BookingSummary from './components/bookingSummary'
 import HoldQueueNotice from './components/holdQueueNotice'
 import { useBookingQueue } from './components/useBookingQueue.js'
 import Footer from '../components/footer'
-import { createBooking, STAY_SCHEDULES as timeOptions } from '../data/accommodationDB.js'
+import { createBooking, createGroupBooking, STAY_SCHEDULES as timeOptions } from '../data/accommodationDB.js'
 
 // Paying is deliberately NOT one of these steps any more. It happens from My
 // Bookings, after the unit is held — see the comment on handleConfirm.
@@ -61,8 +61,11 @@ export default function Booking(){
     const navigate = useNavigate()
     const [selectedTime, setSelectedTime] = useState(null)
     const [dates, setDates] = useState({ checkIn: null, checkOut: null })
-    const [selectedAccomodation, setSelectedAccomodation] = useState(
-        location.state?.accomodationId ?? null
+    // A cart, not a single pick: { [accommodationId]: quantity }, one entry
+    // per type with quantity > 0. A guest arriving from "Book Now!" or "Book
+    // Again" still lands with exactly one unit pre-added.
+    const [cart, setCart] = useState(() =>
+        location.state?.accomodationId ? { [location.state.accomodationId]: 1 } : {}
     )
     const [droppedUnitNote, setDroppedUnitNote] = useState(null)
     const [pax, setPax] = useState(null)
@@ -85,41 +88,73 @@ export default function Booking(){
     const rateGroup = selectedTime !== null ? timeOptions[selectedTime].rateGroup : null
     const scheduleKey = selectedTime !== null ? timeOptions[selectedTime].key : null
 
+    // The cart, resolved against this schedule's prices/capacity. A stale id
+    // (dropped by a schedule switch, or never valid) simply has no option and
+    // is filtered out — see handleSelectTime, which is what actually removes
+    // it from `cart` itself.
+    const accommodationOptions = getAccomodationOptions(rateGroup)
+    const cartLines = Object.entries(cart)
+        .filter(([, qty]) => qty > 0)
+        .map(([id, qty]) => ({ id, qty, option: accommodationOptions.find((item) => item.id === id) ?? null }))
+        .filter((line) => line.option != null)
+    const cartUnitCount = cartLines.reduce((sum, line) => sum + line.qty, 0)
+    const cartUnlimited = cartLines.some((line) => line.option.maxPax == null)
+    const cartCapacity = cartUnlimited
+        ? null
+        : cartLines.reduce((sum, line) => sum + line.option.maxPax * line.qty, 0)
+    const cartFreeEntranceEligible =
+        cartLines.length > 0 && cartLines.every((line) => isFreeEntranceEligible(line.id))
+
     // Switching schedules can change which units are even offered (e.g.
-    // Cottage is day-only, tents are overnight-only) — drop a selection
-    // that's no longer valid for the newly chosen schedule. The unit can
-    // also arrive preselected from the home page "Book Now!", so say what
-    // was dropped instead of just clearing the card.
+    // Cottage is day-only, tents are overnight-only) — drop whatever in the
+    // cart is no longer valid for the newly chosen schedule. Units can also
+    // arrive pre-added from the home page "Book Now!", so say what was
+    // dropped instead of just clearing the cards.
     function handleSelectTime(index){
         setSelectedTime(index)
         const nextRateGroup = timeOptions[index]?.rateGroup ?? null
-        if (!selectedAccomodation) return
-        const stillOffered = getAccomodationOptions(nextRateGroup).some(
-            (item) => item.id === selectedAccomodation
-        )
-        if (stillOffered) {
+        const cartIds = Object.keys(cart).filter((id) => cart[id] > 0)
+        if (cartIds.length === 0) return
+
+        const stillOffered = new Set(getAccomodationOptions(nextRateGroup).map((item) => item.id))
+        const droppedIds = cartIds.filter((id) => !stillOffered.has(id))
+        if (droppedIds.length === 0) {
             setDroppedUnitNote(null)
             return
         }
-        // No rate group here: look the name up across every unit, since the
-        // dropped one is by definition missing from the new group's list.
-        const dropped = getAccomodationOptions(null).find(
-            (item) => item.id === selectedAccomodation
-        )
-        setSelectedAccomodation(null)
+
+        // No rate group here: look the names up across every unit, since the
+        // dropped ones are by definition missing from the new group's list.
+        const allOptions = getAccomodationOptions(null)
+        const droppedNames = droppedIds
+            .map((id) => allOptions.find((item) => item.id === id)?.name)
+            .filter(Boolean)
+
+        setCart((current) => {
+            const next = { ...current }
+            for (const id of droppedIds) delete next[id]
+            return next
+        })
+
         // `checkIn` carries the schedule's name ('Day Time: '), trailing
-        // separator included — strip it for use mid-sentence. An id that
-        // matches no unit at all gets no note; there is nothing to explain.
+        // separator included — strip it for use mid-sentence. Names that
+        // failed to resolve get no note; there is nothing to explain.
         const scheduleName = timeOptions[index].checkIn.replace(/[:\s]+$/, '')
         setDroppedUnitNote(
-            dropped
-                ? `${dropped.name} isn't offered on the ${scheduleName} schedule — pick another unit below.`
+            droppedNames.length > 0
+                ? `${droppedNames.join(', ')} ${droppedNames.length > 1 ? "aren't" : "isn't"} offered on`
+                    + ` the ${scheduleName} schedule and ${droppedNames.length > 1 ? 'were' : 'was'} removed from your selection.`
                 : null
         )
     }
 
-    function handleSelectAccomodation(id){
-        setSelectedAccomodation(id)
+    function handleCartQtyChange(id, qty){
+        setCart((current) => {
+            const next = { ...current }
+            if (qty <= 0) delete next[id]
+            else next[id] = qty
+            return next
+        })
         setDroppedUnitNote(null)
         setBookingError(null)
     }
@@ -154,22 +189,19 @@ export default function Booking(){
     const missingSteps = [
         !(dates.checkIn && (sameDayCheckout || dates.checkOut) && selectedTime !== null)
             && 'Dates & Schedule',
-        !selectedAccomodation && 'Accommodation',
+        cartUnitCount === 0 && 'Accommodation',
         !(pax && guest.fullName.trim() && guest.mobile.trim() && guest.email.trim())
             && 'Guest Information',
     ].filter(Boolean)
 
-    // A group larger than the unit's maxPax is the one pax rule that blocks
-    // the booking — that's how many people it physically holds. Under minPax
-    // is deliberately allowed (the rate is per unit, not per head); PaxInput
-    // just notes it. Not a "missing step": every field is filled, the numbers
-    // simply don't work together, so it gets its own message.
-    const selectedUnit = selectedAccomodation
-        ? getAccomodationOptions(rateGroup).find((item) => item.id === selectedAccomodation) ?? null
-        : null
-    const capacityIssue = getPaxFit(pax, selectedUnit) === 'over'
-        ? `${selectedUnit.name} holds up to ${selectedUnit.maxPax} pax.`
-            + ` Lower your guest count or pick a bigger accommodation for your group of ${pax}.`
+    // A group larger than the cart's COMBINED capacity is the one pax rule
+    // that blocks the booking — that's how many people the selected units
+    // physically hold, together. Under capacity is deliberately allowed (the
+    // rate is per unit, not per head); PaxInput just notes it. Not a "missing
+    // step": every field is filled, the numbers simply don't work together.
+    const capacityIssue = pax != null && cartUnitCount > 0 && !cartUnlimited && pax > cartCapacity
+        ? `Your selected accommodation${cartUnitCount > 1 ? 's hold' : ' holds'} up to ${cartCapacity} pax combined.`
+            + ` Lower your guest count or add another unit for your group of ${pax}.`
         : null
 
     // One reservation attempt. Split out of handleConfirm because it is made
@@ -187,35 +219,109 @@ export default function Booking(){
         setSubmitting(true)
 
         const schedule = selectedTime !== null ? timeOptions[selectedTime] : null
-        const unit = selectedAccomodation
-            ? getAccomodationOptions(schedule?.rateGroup).find((item) => item.id === selectedAccomodation)
-            : null
         const checkOut = sameDayCheckout ? dates.checkIn : dates.checkOut
         const entrance = computeEntranceFee({
             perHead: schedule?.entranceFee ?? 0,
             pax: pax ?? 0,
             seniors,
             kids,
-            freeEntranceEligible: isFreeEntranceEligible(unit?.id),
+            freeEntranceEligible: cartFreeEntranceEligible,
         })
+        const entranceBreakdown = {
+            perHead: entrance.perHead,
+            seniorDiscount: entrance.seniorDiscount,
+            freeApplied: entrance.freeApplied,
+            freeSavings: entrance.freeSavings,
+            total: entrance.total,
+        }
 
-        // No payment happens here any more, and that is the point: the unit is
-        // held FIRST. Paying used to come before the reservation existed, which
-        // meant nothing was reserved while the guest was away in their banking
-        // app — the last unit could be taken from under them, and by the time
-        // they found out the money had already been sent. It also made it
-        // impossible for food and spa to be part of the down payment, since
-        // add-ons attach to a booking that did not yet exist.
+        // No payment happens here any more, and that is the point: the units
+        // are held FIRST. Paying used to come before the reservation existed,
+        // which meant nothing was reserved while the guest was away in their
+        // banking app — the last unit could be taken from under them, and by
+        // the time they found out the money had already been sent. It also
+        // made it impossible for food and spa to be part of the down payment,
+        // since add-ons attach to a booking that did not yet exist.
         //
         // The guest is handed to My Bookings to settle 50% of the whole stay.
-        //
-        // The database picks and holds a free unit for exactly these hours.
-        // If someone else took the last one while this form was open, it says
-        // so instead of creating an overlapping reservation.
-        const result = await createBooking({
-            typeId: unit?.id ?? null,
-            typeName: unit?.name ?? 'Accommodation',
-            typePax: unit?.pax ?? null,
+
+        // A cart of exactly one unit still goes through the plain single-unit
+        // path (createBooking → book_stay) rather than the group path below —
+        // that's the ONLY path with a hold-queue, so a guest waiting on the
+        // last A-House still gets offered a place in line. A combined
+        // reservation (2+ units) has no queue in this version: it either
+        // reserves every unit at once or refuses outright naming which one
+        // ran out — see the migration header for why that's still safe.
+        if (cartUnitCount === 1) {
+            const unit = cartLines[0].option
+
+            const result = await createBooking({
+                typeId: unit?.id ?? null,
+                typeName: unit?.name ?? 'Accommodation',
+                typePax: unit?.pax ?? null,
+                scheduleKey,
+                checkIn: dates.checkIn,
+                checkOut,
+                guest,
+                pax,
+                kids,
+                seniors,
+                entrance: entranceBreakdown,
+                price: unit?.price ?? null,
+            })
+
+            setSubmitting(false)
+
+            if (!result.ok) {
+                setBookingError(result.message)
+
+                // "Someone is holding it" and "someone ahead of you in line is
+                // taking it" are both answered by waiting, not by sending the
+                // guest back to the carousel. The cart stays exactly as it is
+                // — the queue is going to replay this same booking for them.
+                if (result.canWait) {
+                    setQueueRequest((current) => current ?? {
+                        typeId: unit?.id ?? null,
+                        scheduleKey,
+                        checkIn: dates.checkIn,
+                        checkOut,
+                        guestName: guest.fullName || null,
+                    })
+                    return
+                }
+
+                setQueueRequest(null)
+                // Only an "unavailable" answer means the unit is gone for good;
+                // a network or server error should leave the cart intact.
+                if (result.reason === 'unavailable') {
+                    setCart({})
+                    document.getElementById('step-accommodation')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+                return
+            }
+
+            setBookingError(null)
+            // Unmounts the queue panel, which releases the place in line on its
+            // way out — the unit is booked, so holding it would only delay
+            // whoever is behind. Cleared before navigating, while this
+            // component still exists.
+            setQueueRequest(null)
+            navigate('/my-booking', {
+                state: { justBooked: result.booking.code, payNow: true },
+            })
+            return
+        }
+
+        // 2+ units: one combined reservation. The database holds every unit
+        // in one transaction and rolls the whole thing back the instant one
+        // of them fails — see book_stay_group() — so there is nothing partial
+        // to reconcile here, only a plain success or refusal.
+        const items = cartLines.flatMap((line) =>
+            Array.from({ length: line.qty }, () => ({ typeId: line.id, price: line.option.price }))
+        )
+
+        const result = await createGroupBooking({
+            items,
             scheduleKey,
             checkIn: dates.checkIn,
             checkOut,
@@ -223,56 +329,27 @@ export default function Booking(){
             pax,
             kids,
             seniors,
-            entrance: {
-                perHead: entrance.perHead,
-                seniorDiscount: entrance.seniorDiscount,
-                freeApplied: entrance.freeApplied,
-                freeSavings: entrance.freeSavings,
-                total: entrance.total,
-            },
-            price: unit?.price ?? null,
+            entrance: entranceBreakdown,
         })
 
         setSubmitting(false)
 
         if (!result.ok) {
             setBookingError(result.message)
-
-            // "Someone is holding it" and "someone ahead of you in line is
-            // taking it" are both answered by waiting, not by sending the guest
-            // back to the carousel. The selection stays exactly as it is — the
-            // queue is going to replay this same booking for them.
-            if (result.canWait) {
-                setQueueRequest((current) => current ?? {
-                    typeId: unit?.id ?? null,
-                    scheduleKey,
-                    checkIn: dates.checkIn,
-                    checkOut,
-                    guestName: guest.fullName || null,
-                })
-                return
-            }
-
             setQueueRequest(null)
-            // Only an "unavailable" answer means the unit is gone for good; a
-            // network or server error should leave the selection intact.
+            // The cart is left as-is rather than cleared: only one line was
+            // the problem, and clearing all of it would throw away choices
+            // that were fine. The message names which one ran out.
             if (result.reason === 'unavailable') {
-                setSelectedAccomodation(null)
                 document.getElementById('step-accommodation')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
             }
             return
         }
 
         setBookingError(null)
-        // Unmounts the queue panel, which releases the place in line on its way
-        // out — the unit is booked, so holding it would only delay whoever is
-        // behind. Cleared before navigating, while this component still exists.
         setQueueRequest(null)
-        // The code travels with the navigation so My Bookings can single this
-        // reservation out and open its payment panel, rather than dropping the
-        // guest into an undifferentiated list with a bill somewhere in it.
         navigate('/my-booking', {
-            state: { justBooked: result.booking.code, payNow: true },
+            state: { justBooked: result.group.code, payNow: true },
         })
     }
 
@@ -292,7 +369,7 @@ export default function Booking(){
     function handleLeaveQueue(){
         setQueueRequest(null)
         setBookingError(null)
-        setSelectedAccomodation(null)
+        setCart({})
         document.getElementById('step-accommodation')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
 
@@ -367,8 +444,8 @@ export default function Booking(){
                             <StepHeader index={1} />
                             <div className="booking-step-body">
                                 <AccomodationList
-                                    selectedAccomodation={selectedAccomodation}
-                                    onSelectAccomodation={handleSelectAccomodation}
+                                    cart={cart}
+                                    onQtyChange={handleCartQtyChange}
                                     checkIn={dates.checkIn}
                                     checkOut={sameDayCheckout ? dates.checkIn : dates.checkOut}
                                     rateGroup={rateGroup}
@@ -384,7 +461,7 @@ export default function Booking(){
                                 <PaxInput
                                     pax={pax}
                                     onPaxChange={handlePaxChange}
-                                    selectedAccomodation={selectedAccomodation}
+                                    cartLines={cartLines}
                                     guest={guest}
                                     onGuestChange={setGuest}
                                     rateGroup={rateGroup}
@@ -430,7 +507,7 @@ export default function Booking(){
                                 )}
                                 {queueRequest && (
                                     <HoldQueueNotice
-                                        typeName={selectedUnit?.name ?? 'That unit'}
+                                        typeName={cartLines[0]?.option?.name ?? 'That unit'}
                                         entry={queue.entry}
                                         msLeft={queue.msLeft}
                                         ready={queue.ready}
@@ -456,7 +533,7 @@ export default function Booking(){
                         checkIn={dates.checkIn}
                         checkOut={sameDayCheckout ? dates.checkIn : dates.checkOut}
                         schedule={selectedTime !== null ? timeOptions[selectedTime] : null}
-                        selectedAccomodation={selectedAccomodation}
+                        cartLines={cartLines}
                         guest={guest}
                         pax={pax}
                         kids={kids}

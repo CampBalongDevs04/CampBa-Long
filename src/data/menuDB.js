@@ -134,7 +134,7 @@ export const FLAVORED_COFFEE_OPTIONS = [
     'Vanilla Latte', 'Hazelnut Latte', 'Choco Hazelnut Latte',
     'Salted Caramel Latte', 'Matcha Latte', 'White Mocha',
 ]
-export const FLAVORED_COFFEE_UPCHARGE = 10
+export const FLAVORED_COFFEE_UPCHARGE = 30
 
 // ------------------------------------------------------------------ defaults
 // The seed's twin. Kept compact — coffee is authored as (flavor × sizes) and

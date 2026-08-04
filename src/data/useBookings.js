@@ -4,6 +4,8 @@ import {
     deleteBooking,
     addFoodOrder,
     addSpaOrder,
+    addFoodOrderToGroup,
+    addSpaOrderToGroup,
     payBooking,
     findOrderableBooking,
 } from './accommodationDB.js'
@@ -34,9 +36,16 @@ export function useBookings(){
         // Add-ons attach to the most recent live booking (they are stored
         // newest-first). No receipt is needed: payment comes after the booking
         // now, and the down payment includes whatever has been ordered.
+        //
+        // findOrderableBooking() can hand back either shape — a single-unit
+        // booking or a combined reservation — so these take the whole target
+        // it returned, not just an id, and route to whichever add_*_addon
+        // RPC actually owns that row.
         findOrderableBooking,
-        addFoodOrderToBooking: addFoodOrder,
-        addSpaOrderToBooking: addSpaOrder,
+        addFoodOrderToBooking: (target, order) =>
+            target.isGroup ? addFoodOrderToGroup(target.id, order) : addFoodOrder(target.id, order),
+        addSpaOrderToBooking: (target, order) =>
+            target.isGroup ? addSpaOrderToGroup(target.id, order) : addSpaOrder(target.id, order),
         payBooking,
     }
 }

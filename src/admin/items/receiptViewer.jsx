@@ -4,6 +4,7 @@ import {
     getReceiptUrl,
     getBookingStage,
     DOWNPAYMENT_RATE,
+    groupUnitsLabel,
 } from '../../data/accommodationDB.js'
 
 // The proof-of-payment lightbox. Staff open this from the bookings table to
@@ -205,10 +206,11 @@ export default function ReceiptViewer({ booking, onClose, onApprove, onCancel })
                             </dd>
                         </div>
                         <div className="receipt-fact">
-                            <dt>Unit</dt>
+                            <dt>{booking.isGroup ? 'Units' : 'Unit'}</dt>
                             <dd>
-                                {booking.accomodationName}
-                                {booking.unitId ? ` · ${booking.unitId}` : ''}
+                                {booking.isGroup
+                                    ? groupUnitsLabel(booking.units) || 'Combined reservation'
+                                    : `${booking.accomodationName}${booking.unitId ? ` · ${booking.unitId}` : ''}`}
                             </dd>
                         </div>
                         <div className="receipt-fact">

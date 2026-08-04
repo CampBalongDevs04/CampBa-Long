@@ -11,6 +11,11 @@ import {
     forgetMyBookings,
     wasCancelledByPaymentTimeout,
     PAYMENT_WINDOW_MINUTES,
+    useMyBookingGroups,
+    cancelBookingGroup,
+    deleteBookingGroup,
+    payBookingGroup,
+    groupUnitCounts,
 } from '../data/accommodationDB.js'
 import { splitFreeEntrance } from '../data/entranceFee.js'
 
@@ -323,19 +328,279 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, 
     )
 }
 
+// A combined reservation's card — same shape as BookingCard, since it is the
+// same lifecycle (held → paid → confirmed) and the same payment panel, just
+// naming several units instead of one. Kept as its own component rather than
+// branching inside BookingCard because so much of the "one unit" framing
+// (the header's unit id, the singular accomodationName) has no single answer
+// here — it reads better written straight through than threaded with ternaries.
+function GroupBookingCard({ group, onCancel, onDelete, onSaveReceipt, payNow }){
+    const status = getBookingStage(group)
+    const { start, end } = splitTimes(group.schedule)
+    const outstanding = Math.max(
+        0,
+        Math.round(((group.downpayment ?? 0) - (group.paidSubmitted ?? 0)) * 100) / 100,
+    )
+    const timedOut = wasCancelledByPaymentTimeout(group)
+    const counts = groupUnitCounts(group.units)
+    const unitCount = group.units?.length ?? 0
+    const accommodationLabel = counts
+        .map((entry) => `${entry.name}${entry.qty > 1 ? ` ×${entry.qty}` : ''}`)
+        .join(', ') || 'Combined Reservation'
+    const releasedLabel = unitCount > 1 ? 'your units' : 'your unit'
+
+    return (
+        <article className="booking-card">
+            <div className="booking-card-header">
+                <div className="booking-card-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 11.5 12 4l8 7.5" />
+                        <path d="M6 10v9.5a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V10" />
+                    </svg>
+                </div>
+                <div className="booking-card-heading">
+                    <h3 className="booking-card-name">{accommodationLabel}</h3>
+                    <p className="booking-card-id">
+                        Booking ID: {group.code ?? group.id}
+                        {' '}• {unitCount} unit{unitCount === 1 ? '' : 's'}
+                    </p>
+                </div>
+                <span className={`booking-card-status status-${status}`}>
+                    {STATUS_LABELS[status]}
+                </span>
+            </div>
+
+            <div className="booking-card-grid">
+                <div className="booking-card-field">
+                    <span className="field-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="5" width="18" height="16" rx="2.5" />
+                            <path d="M8 3v4M16 3v4M3 10h18" />
+                        </svg>
+                    </span>
+                    <div>
+                        <p className="field-label">Check-in</p>
+                        <p className="field-value">{formatDate(group.checkIn)}</p>
+                        {start && <p className="field-sub">@{start}</p>}
+                    </div>
+                </div>
+
+                <div className="booking-card-field">
+                    <span className="field-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="5" width="18" height="16" rx="2.5" />
+                            <path d="M8 3v4M16 3v4M3 10h18" />
+                        </svg>
+                    </span>
+                    <div>
+                        <p className="field-label">Check-out</p>
+                        <p className="field-value">{formatDate(group.checkOut)}</p>
+                        {end && <p className="field-sub">@{end}</p>}
+                    </div>
+                </div>
+
+                <div className="booking-card-field">
+                    <span className="field-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="9" cy="8" r="3.2" />
+                            <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
+                            <circle cx="17" cy="8.5" r="2.4" />
+                            <path d="M15.5 14.2c2.4.4 4 2.2 4 4.8" />
+                        </svg>
+                    </span>
+                    <div>
+                        <p className="field-label">Guest Details</p>
+                        <p className="field-value">{group.guest?.fullName || 'Not provided'}</p>
+                        {group.pax && <p className="field-sub">{group.pax} guests</p>}
+                        {group.kids > 0 && (
+                            <p className="field-sub">{group.kids} kids (7 &amp; below, no entrance fee)</p>
+                        )}
+                        {group.seniors > 0 && (
+                            <p className="field-sub">{group.seniors} senior citizens (10% off, ID required)</p>
+                        )}
+                    </div>
+                </div>
+
+                <div className="booking-card-field">
+                    <span className="field-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="6" width="18" height="13" rx="2.2" />
+                            <path d="M3 10.5h18" />
+                            <path d="M7 15h4" />
+                        </svg>
+                    </span>
+                    <div>
+                        <p className="field-label">Down payment (50%)</p>
+                        <p className="field-value">
+                            {group.downpayment != null ? formatPeso(group.downpayment) : 'Price TBA'}
+                        </p>
+                        <p className="field-sub">
+                            {outstanding > 0
+                                ? `${formatPeso(outstanding)} still due`
+                                : group.hasReceipt
+                                    ? 'receipt submitted'
+                                    : 'pending'}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="booking-card-field booking-card-field-stacked">
+                    <p className="field-label">Units in this reservation</p>
+                    {counts.map((entry) => (
+                        <p className="field-value" key={entry.name}>
+                            {entry.name}{entry.qty > 1 ? ` ×${entry.qty}` : ''}
+                        </p>
+                    ))}
+                </div>
+
+                {group.entrance?.total > 0 && (() => {
+                    const { kidsApplied, kidsFree, perkApplied, perkSavings } = splitFreeEntrance({
+                        freeApplied: group.entrance.freeApplied,
+                        freeSavings: group.entrance.freeSavings,
+                        kids: group.kids,
+                        perHead: group.entrance.perHead,
+                    })
+                    return (
+                        <div className="booking-card-field">
+                            <span className="field-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4" />
+                                    <path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
+                                    <path d="M9 12h6" />
+                                </svg>
+                            </span>
+                            <div>
+                                <p className="field-label">Entrance Fee</p>
+                                <p className="field-value">{formatPeso(group.entrance.total)}</p>
+                                <p className="field-sub">
+                                    {formatPeso(group.entrance.perHead)}/head, half prepaid
+                                    {kidsApplied > 0
+                                        ? ` • free entrance (${kidsApplied} pax, kids 7 & below) −${formatPeso(kidsFree)}`
+                                        : ''}
+                                    {perkApplied > 0
+                                        ? ` • free entrance (${perkApplied} pax, resort inclusion) −${formatPeso(perkSavings)}`
+                                        : ''}
+                                    {group.entrance.seniorDiscount > 0
+                                        ? ` • senior discount −${formatPeso(group.entrance.seniorDiscount)}`
+                                        : ''}
+                                </p>
+                            </div>
+                        </div>
+                    )
+                })()}
+            </div>
+
+            <div className="booking-card-divider" />
+
+            <div className="booking-card-grid booking-card-grid-secondary">
+                <div className="booking-card-field booking-card-field-stacked">
+                    <p className="field-label">Contact Information</p>
+                    <p className="field-value">{group.guest?.email || 'Not provided'}</p>
+                    <p className="field-value">{group.guest?.mobile || 'Not provided'}</p>
+                </div>
+
+                <div className="booking-card-field booking-card-field-stacked">
+                    <p className="field-label">Booking Summary</p>
+                    <p className="field-value">
+                        {stayLabel(group)}
+                        {group.stayTotal ? ` • ${formatPeso(group.stayTotal)} total` : ''}
+                    </p>
+                    <p className="field-sub">Payment: Down Payment</p>
+                    <p className="field-sub">
+                        Schedule: {group.schedule?.description ?? 'none'} • Spa: {spaOrderSummary(group)} • Food: {foodOrderSummary(group)}
+                    </p>
+                    {group.spaOrders?.length > 0 && (
+                        <p className="field-sub">Spa total: {formatPeso(spaOrderTotal(group))}</p>
+                    )}
+                    {group.foodOrders?.length > 0 && (
+                        <p className="field-sub">Food total: {formatPeso(foodOrderTotal(group))}</p>
+                    )}
+                </div>
+            </div>
+
+            {timedOut && (
+                <div className="booking-card-timeout" role="status">
+                    <span className="booking-card-timeout-icon" aria-hidden="true">⏱</span>
+                    <div>
+                        <p className="booking-card-timeout-title">
+                            Payment window closed — please try to book again
+                        </p>
+                        <p className="booking-card-timeout-text">
+                            Every unit in this reservation is held for {PAYMENT_WINDOW_MINUTES} minutes
+                            while you send the down payment. No receipt arrived in that time, so
+                            this reservation was cancelled automatically and {releasedLabel} went
+                            back to other guests. You were not charged anything.
+                        </p>
+                        <p className="booking-card-timeout-text">
+                            Start a new cart below to book again — have your GCash or bank app
+                            ready first, and upload the screenshot as soon as it's reserved.
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            <BookingPayment
+                booking={group}
+                autoOpen={payNow}
+                onPay={payBookingGroup}
+                accommodationLabel={accommodationLabel}
+                releasedLabel={releasedLabel}
+            />
+
+            <div className="booking-card-actions">
+                {status === 'cancelled' ? (
+                    <button
+                        type="button"
+                        className="booking-card-delete"
+                        onClick={() => onDelete(group.id)}
+                    >
+                        Delete Booking
+                    </button>
+                ) : (
+                    <button
+                        type="button"
+                        className="booking-card-cancel"
+                        onClick={() => onCancel(group.id)}
+                        disabled={status === 'completed'}
+                    >
+                        Cancel Reservation
+                    </button>
+                )}
+                <button
+                    type="button"
+                    className="booking-card-receipt"
+                    onClick={() => onSaveReceipt(group)}
+                >
+                    Save Receipt
+                </button>
+            </div>
+        </article>
+    )
+}
+
 function MyBooking() {
     const navigate = useNavigate()
     const location = useLocation()
     const { bookings, cancelBooking, deleteBooking } = useBookings()
+    const groups = useMyBookingGroups()
     const [error, setError] = useState(null)
     // False in a private window that blocks localStorage: the reservation is
     // real and staff have it, but this tab is the only thing holding the key
     // to the list. Better to say so than to let it vanish unexplained.
     const persistent = bookingsPersistOnThisDevice()
 
-    // Set when the guest arrives straight from a completed booking.
+    // Single-unit and combined reservations interleaved, newest first — one
+    // list to a guest who booked some of each, not two separate ones to
+    // reconcile by eye. Each row already knows which kind it is (`isGroup`).
+    const entries = [...bookings, ...groups].sort(
+        (a, b) => new Date(b.createdAt ?? 0) - new Date(a.createdAt ?? 0)
+    )
+
+    // Set when the guest arrives straight from a completed booking — a
+    // 'CBL-…' code from bookings, or a 'CBG-…' one from groups.
     const justBooked = location.state?.justBooked
         ? bookings.find((booking) => booking.code === location.state.justBooked)
+            ?? groups.find((group) => group.code === location.state.justBooked)
         : null
     // The booking form sends the guest here TO PAY, so that one card's payment
     // panel opens itself. Only that card: opening every panel on a list of past
@@ -358,6 +623,19 @@ function MyBooking() {
     async function handleDelete(id){
         setError(null)
         const result = await deleteBooking(id)
+        if (result && !result.ok) setError(result.message)
+    }
+
+    // Same two writes, for a combined reservation.
+    async function handleCancelGroup(id){
+        setError(null)
+        const result = await cancelBookingGroup(id)
+        if (result && !result.ok) setError(result.message)
+    }
+
+    async function handleDeleteGroup(id){
+        setError(null)
+        const result = await deleteBookingGroup(id)
         if (result && !result.ok) setError(result.message)
     }
 
@@ -413,17 +691,17 @@ function MyBooking() {
                     <section className="my-booking-confirmed" role="status">
                         <p className="my-booking-confirmed-title">
                             {payNowId
-                                ? `Unit held for booking ${justBooked.code}`
+                                ? `${justBooked.isGroup ? 'Units' : 'Unit'} held for booking ${justBooked.code}`
                                 : `Booking ${justBooked.code} received`}
                         </p>
                         <p className="my-booking-confirmed-text">
                             {payNowId ? (
                                 <>
-                                    Your unit is reserved for the next{' '}
+                                    Your {justBooked.isGroup ? 'units are' : 'unit is'} reserved for the next{' '}
                                     {PAYMENT_WINDOW_MINUTES} minutes. Send the{' '}
                                     {formatPeso(justBooked.downpayment)} down payment and
                                     upload the receipt below before the timer runs out, or
-                                    the booking is cancelled and the unit released.
+                                    the booking is cancelled and the {justBooked.isGroup ? 'units are' : 'unit is'} released.
                                     Ordering food or a spa treatment first adds them to
                                     that amount.
                                 </>
@@ -444,7 +722,7 @@ function MyBooking() {
                     </section>
                 )}
 
-                {bookings.length === 0 ? (
+                {entries.length === 0 ? (
                     <section className="my-booking-empty" aria-live="polite">
                         <div className="my-booking-empty-icon" aria-hidden="true">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -466,16 +744,27 @@ function MyBooking() {
                 ) : (
                     <>
                         <div className="my-booking-list" aria-live="polite">
-                            {bookings.map((booking) => (
-                                <BookingCard
-                                    key={booking.id}
-                                    booking={booking}
-                                    onCancel={handleCancel}
-                                    onBookAgain={handleBookAgain}
-                                    onDelete={handleDelete}
-                                    onSaveReceipt={handleSaveReceipt}
-                                    payNow={booking.id === payNowId}
-                                />
+                            {entries.map((entry) => (
+                                entry.isGroup ? (
+                                    <GroupBookingCard
+                                        key={entry.id}
+                                        group={entry}
+                                        onCancel={handleCancelGroup}
+                                        onDelete={handleDeleteGroup}
+                                        onSaveReceipt={handleSaveReceipt}
+                                        payNow={entry.id === payNowId}
+                                    />
+                                ) : (
+                                    <BookingCard
+                                        key={entry.id}
+                                        booking={entry}
+                                        onCancel={handleCancel}
+                                        onBookAgain={handleBookAgain}
+                                        onDelete={handleDelete}
+                                        onSaveReceipt={handleSaveReceipt}
+                                        payNow={entry.id === payNowId}
+                                    />
+                                )
                             ))}
                         </div>
 

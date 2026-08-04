@@ -9,6 +9,7 @@
 // the same on every browser and needs nothing that isn't already here.
 
 import { splitFreeEntrance } from '../../data/entranceFee.js'
+import { groupUnitsLabel } from '../../data/accommodationDB.js'
 
 // Layout is authored at this width and drawn at SCALE, so the file stays crisp
 // when it is opened full-screen on a phone or zoomed into at the gate.
@@ -72,11 +73,23 @@ function orderTotal(orders){
     return (orders ?? []).reduce((sum, order) => sum + Number(order.total ?? 0), 0)
 }
 
+// A single-unit booking already has one name (accomodationName). A combined
+// reservation has several — one per `units` entry — so this rolls them into
+// the same kind of one-line summary GroupBookingCard shows on screen, rather
+// than leaving the line blank on the saved receipt.
+function accommodationSummary(booking){
+    if (booking.accomodationName) return booking.accomodationName
+    return groupUnitsLabel(booking.units) || 'Accommodation'
+}
+
 // Everything the sheet says, worked out once. Nothing here is fetched: the
 // booking row is already in hand, so saving works offline and cannot reach
 // another guest's reservation.
 function buildReceipt(booking, statusLabel, savedAt){
-    const rate = booking.price != null ? Number(booking.price) : null
+    const rate = (booking.price ?? booking.unitSubtotal) != null
+        ? Number(booking.price ?? booking.unitSubtotal)
+        : null
+    const accommodationName = accommodationSummary(booking)
     const entrance = Number(booking.entrance?.total ?? 0)
     const foodOrders = booking.foodOrders ?? []
     const spaOrders = booking.spaOrders ?? []
@@ -112,7 +125,7 @@ function buildReceipt(booking, statusLabel, savedAt){
     const charges = [
         {
             label: 'Accommodation rate',
-            sub: booking.accomodationName,
+            sub: accommodationName,
             value: rate != null ? formatPeso(rate) : 'To be advised',
         },
     ]
@@ -202,7 +215,7 @@ function buildReceipt(booking, statusLabel, savedAt){
             {
                 title: 'Stay',
                 rows: [
-                    { label: 'Accommodation', value: booking.accomodationName },
+                    { label: 'Accommodation', value: accommodationName },
                     { label: 'Schedule', value: scheduleLabel(booking) },
                     {
                         label: 'Check-in',

@@ -3,10 +3,15 @@ import '../css/bookings-manage.css'
 import ReceiptViewer from './receiptViewer'
 import {
     useAccommodationDB,
+    useBookingGroups,
     getBookingStage,
     confirmBooking,
     markBookingPaidFull,
     cancelBooking,
+    confirmBookingGroup,
+    markBookingGroupPaidFull,
+    cancelBookingGroup,
+    groupUnitsLabel,
 } from '../../data/accommodationDB.js'
 
 // Rows come straight from the accommodation database — the same records the
@@ -51,14 +56,18 @@ function formatRange(booking) {
 }
 
 // The unit the database assigned, e.g. "A-House Small · AHS-02". Tent pitching
-// has no unit to assign, so it falls back to the type name alone.
+// has no unit to assign, so it falls back to the type name alone. A combined
+// reservation has several, so it gets the same "Teepee ×2, A-House Small"
+// rollup My Bookings shows.
 function unitLabel(booking) {
+    if (booking.isGroup) return groupUnitsLabel(booking.units) || 'Combined reservation'
     if (!booking.unitId) return booking.accomodationName
     return `${booking.accomodationName} · ${booking.unitId}`
 }
 
 export default function BookingsManage() {
     const bookings = useAccommodationDB()
+    const groups = useBookingGroups()
     const [filter, setFilter] = useState('all')
     const [query, setQuery] = useState('')
     // The receipt under review, held by id rather than by object so the open
@@ -66,9 +75,21 @@ export default function BookingsManage() {
     // instead of leaving a stale Approve button behind.
     const [reviewingId, setReviewingId] = useState(null)
 
+    // Single-unit bookings and combined reservations, one table — each row
+    // already knows which kind it is (`isGroup`), which is all the actions
+    // column below needs to call the right RPC.
     const rows = useMemo(
-        () => bookings.map((booking) => ({ ...booking, stage: getBookingStage(booking) })),
-        [bookings],
+        () => [
+            // A row with a groupId is one unit of a combined reservation —
+            // it's represented here by its booking_groups row instead, so
+            // showing it again on its own would list the same reservation
+            // twice (and offer a second, wrong "Approve" button for it).
+            // It stays in the underlying `bookings` array un-filtered — the
+            // Units occupancy board still needs it there.
+            ...bookings.filter((booking) => booking.groupId == null).map((booking) => ({ ...booking, stage: getBookingStage(booking) })),
+            ...groups.map((group) => ({ ...group, stage: getBookingStage(group) })),
+        ],
+        [bookings, groups],
     )
 
     const reviewing = rows.find((b) => b.id === reviewingId) ?? null
@@ -240,7 +261,7 @@ export default function BookingsManage() {
                                                         onClick={() =>
                                                             b.receiptPath
                                                                 ? setReviewingId(b.id)
-                                                                : confirmBooking(b.id)
+                                                                : b.isGroup ? confirmBookingGroup(b.id) : confirmBooking(b.id)
                                                         }
                                                     >
                                                         {b.receiptPath ? 'Review' : 'Approve'}
@@ -250,7 +271,7 @@ export default function BookingsManage() {
                                                     <button
                                                         type="button"
                                                         className="bookings-action"
-                                                        onClick={() => markBookingPaidFull(b.id)}
+                                                        onClick={() => (b.isGroup ? markBookingGroupPaidFull(b.id) : markBookingPaidFull(b.id))}
                                                     >
                                                         Mark Paid
                                                     </button>
@@ -259,7 +280,7 @@ export default function BookingsManage() {
                                                     <button
                                                         type="button"
                                                         className="bookings-action bookings-action-danger"
-                                                        onClick={() => cancelBooking(b.id)}
+                                                        onClick={() => (b.isGroup ? cancelBookingGroup(b.id) : cancelBooking(b.id))}
                                                     >
                                                         Cancel
                                                     </button>
@@ -281,8 +302,8 @@ export default function BookingsManage() {
                     key={reviewing.id}
                     booking={reviewing}
                     onClose={() => setReviewingId(null)}
-                    onApprove={(booking) => confirmBooking(booking.id)}
-                    onCancel={(booking) => cancelBooking(booking.id)}
+                    onApprove={(booking) => (booking.isGroup ? confirmBookingGroup(booking.id) : confirmBooking(booking.id))}
+                    onCancel={(booking) => (booking.isGroup ? cancelBookingGroup(booking.id) : cancelBooking(booking.id))}
                 />
             )}
         </div>
