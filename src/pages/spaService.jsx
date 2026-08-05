@@ -355,7 +355,7 @@ function SpaService() {
             return
         }
         cart.forEach((line) => {
-            addSpaOrderToBooking(targetBooking.id, {
+            addSpaOrderToBooking(targetBooking, {
                 itemId: line.itemId,
                 name: line.name,
                 unitPrice: line.unitPrice,

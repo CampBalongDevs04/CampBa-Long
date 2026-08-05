@@ -1,5 +1,5 @@
 import '../components/css/bookingSummary.css'
-import { getAccomodationOptions, isFreeEntranceEligible } from '../../data/accomodationOptions.js'
+import { isFreeEntranceEligible } from '../../data/accomodationOptions.js'
 import { computeEntranceFee } from '../../data/entranceFee.js'
 // Same rate the database applies to the booking row, so the figure quoted here
 // is the one My Bookings will ask for on the next screen.
@@ -32,24 +32,36 @@ function SummaryRow({ label, value, placeholder }){
     )
 }
 
-export default function BookingSummary({ checkIn, checkOut, schedule, selectedAccomodation, guest, pax, kids, seniors }){
-    const unit = selectedAccomodation
-        ? getAccomodationOptions(schedule?.rateGroup).find((item) => item.id === selectedAccomodation)
-        : null
+export default function BookingSummary({ checkIn, checkOut, schedule, cartLines, guest, pax, kids, seniors }){
+    const lines = cartLines ?? []
 
     const entrance = computeEntranceFee({
         perHead: schedule?.entranceFee ?? 0,
         pax: pax ?? 0,
         seniors: seniors ?? 0,
         kids: kids ?? 0,
-        freeEntranceEligible: isFreeEntranceEligible(unit?.id),
+        // The perk applies only when EVERY selected type qualifies for it —
+        // the same rule booking.jsx uses to decide what to actually charge.
+        freeEntranceEligible: lines.length > 0 && lines.every((line) => isFreeEntranceEligible(line.id)),
     })
 
+    const pricedLines = lines.filter((line) => line.option.price != null)
+    const unitSubtotal = lines.length > 0 && pricedLines.length === lines.length
+        ? lines.reduce((sum, line) => sum + line.option.price * line.qty, 0)
+        : null
+    // Summed across every line with a promo running, qty included — the
+    // per-card "Save ₱X" hint totalled up for the whole cart rather than
+    // just the one unit a single-select booking used to have.
+    const promoSavingsTotal = lines.reduce((sum, line) => {
+        if (line.option.originalPrice == null || line.option.price == null) return sum
+        return sum + (line.option.originalPrice - line.option.price) * line.qty
+    }, 0)
+
     // The down payment is half of the WHOLE stay, entrance fees included — not
-    // half the unit rate. Food and spa go into it too, but they can only be
+    // half the unit rate(s). Food and spa go into it too, but they can only be
     // ordered once the booking exists, so at this point there are none: this
     // quote is the floor, and My Bookings shows the live figure.
-    const stayTotal = unit?.price != null ? unit.price + entrance.total : null
+    const stayTotal = unitSubtotal != null ? unitSubtotal + entrance.total : null
     const downpayment = stayTotal != null ? stayTotal * DOWNPAYMENT_RATE : null
     const onSiteBalance = stayTotal != null ? stayTotal - downpayment : null
 
@@ -78,11 +90,29 @@ export default function BookingSummary({ checkIn, checkOut, schedule, selectedAc
 
             <div className="summary-section">
                 <p className="summary-section-label">Accommodation</p>
-                <SummaryRow
-                    label="Unit"
-                    value={unit ? `${unit.name}${unit.pax ? ` (${unit.pax})` : ''}` : null}
-                    placeholder="Select a unit"
-                />
+                {lines.length === 0 ? (
+                    <SummaryRow label="Units" value={null} placeholder="Select at least one unit" />
+                ) : (
+                    lines.map((line) => (
+                        <SummaryRow
+                            key={line.id}
+                            label={`${line.option.name}${line.qty > 1 ? ` ×${line.qty}` : ''}`}
+                            value={line.option.price != null ? (
+                                line.option.originalPrice ? (
+                                    <>
+                                        <s className="summary-row-was">
+                                            {formatPeso(line.option.originalPrice * line.qty)}
+                                        </s>{' '}
+                                        {formatPeso(line.option.price * line.qty)}
+                                    </>
+                                ) : (
+                                    formatPeso(line.option.price * line.qty)
+                                )
+                            ) : 'Price TBA'}
+                            placeholder="Price TBA"
+                        />
+                    ))
+                )}
                 <SummaryRow
                     label="Guests"
                     value={pax ? `${pax} pax` : null}
@@ -104,26 +134,15 @@ export default function BookingSummary({ checkIn, checkOut, schedule, selectedAc
                     able to see the discount in the total, not just on the card
                     they picked the unit from. */}
                 <SummaryRow
-                    label="Unit rate"
-                    value={
-                        unit?.price != null ? (
-                            unit.originalPrice ? (
-                                <>
-                                    <s className="summary-row-was">{formatPeso(unit.originalPrice)}</s>{' '}
-                                    {formatPeso(unit.price)}
-                                </>
-                            ) : (
-                                formatPeso(unit.price)
-                            )
-                        ) : unit ? 'Price TBA' : null
-                    }
-                    placeholder="Select a unit"
+                    label="Unit rate total"
+                    value={unitSubtotal != null ? formatPeso(unitSubtotal) : lines.length > 0 ? 'Price TBA' : null}
+                    placeholder="Select at least one unit"
                 />
-                {unit?.originalPrice != null && unit.price != null && (
+                {promoSavingsTotal > 0 && (
                     <div className="summary-row summary-row-discount">
                         <span className="summary-row-label">Promo discount</span>
                         <span className="summary-row-value">
-                            − {formatPeso(unit.originalPrice - unit.price)}
+                            − {formatPeso(promoSavingsTotal)}
                         </span>
                     </div>
                 )}
@@ -214,10 +233,10 @@ export default function BookingSummary({ checkIn, checkOut, schedule, selectedAc
                     label="Stay subtotal"
                     value={
                         stayTotal != null
-                            ? `${formatPeso(unit.price)} + ${formatPeso(entrance.total)} = ${formatPeso(stayTotal)}`
+                            ? `${formatPeso(unitSubtotal)} + ${formatPeso(entrance.total)} = ${formatPeso(stayTotal)}`
                             : null
                     }
-                    placeholder="Select a unit and schedule"
+                    placeholder="Select at least one unit and a schedule"
                 />
                 <SummaryRow
                     label={`Down payment (${RATE_LABEL})`}
@@ -248,7 +267,7 @@ export default function BookingSummary({ checkIn, checkOut, schedule, selectedAc
                 <span className="summary-total-value">
                     {downpayment != null
                         ? formatPeso(downpayment)
-                        : unit ? 'Price TBA' : '—'}
+                        : lines.length > 0 ? 'Price TBA' : '—'}
                 </span>
             </div>
             <p className="summary-total-hint">

@@ -10,7 +10,7 @@ import {
 } from '../../data/accommodationDB.js'
 import { getAccomodationOptions } from '../../data/accomodationOptions.js'
 
-export default function AccomodationList({ selectedAccomodation, onSelectAccomodation, checkIn, checkOut, rateGroup, scheduleKey, droppedUnitNote }){
+export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut, rateGroup, scheduleKey, droppedUnitNote }){
     const trackRef = useRef(null)
     // Re-renders whenever anything is booked or cancelled — anywhere in the
     // app — so the counts below are never stale.
@@ -20,6 +20,8 @@ export default function AccomodationList({ selectedAccomodation, onSelectAccomod
     const stayEnd = checkOut ?? null
     const list = getAccomodationOptions(rateGroup)
     const schedule = getSchedule(scheduleKey)
+    const cartCount = (id) => cart?.[id] ?? 0
+    const hasSelection = Object.values(cart ?? {}).some((qty) => qty > 0)
 
     const scrollByCard = (direction) => {
         const track = trackRef.current
@@ -38,7 +40,7 @@ export default function AccomodationList({ selectedAccomodation, onSelectAccomod
     // land the guest past the dates they still have to pick. Only this carousel
     // has anything to move here.
     useEffect(() => {
-        if (!selectedAccomodation) return
+        if (!hasSelection) return
         const track = trackRef.current
         const card = track?.querySelector('.accomodation-card.selected')
         if (!track || !card) return
@@ -50,7 +52,7 @@ export default function AccomodationList({ selectedAccomodation, onSelectAccomod
         const trackBox = track.getBoundingClientRect()
         track.scrollLeft +=
             (cardBox.left + cardBox.width / 2) - (trackBox.left + trackBox.width / 2)
-    }, [selectedAccomodation])
+    }, [hasSelection])
 
     return(
         <div className="accomodation-list">
@@ -95,15 +97,24 @@ export default function AccomodationList({ selectedAccomodation, onSelectAccomod
                                 ? item.originalPrice - item.price
                                 : null
 
+                        const qty = cartCount(item.id)
+                        // Capped at what's actually free for the stay — a
+                        // guest can put 2 Teepees in the cart when 2 are open,
+                        // never 3. Unlimited (tent pitching) and "no schedule
+                        // picked yet" (availability still null) both leave the
+                        // + button enabled; there's simply no ceiling to check yet.
+                        const maxQty = unlimited || availability == null ? null : availability.available
+                        const atMax = maxQty != null && qty >= maxQty
+                        const canAdd = !isFullyBooked && !atMax
+
                         return (
-                            <button
-                                type="button"
-                                className={`accomodation-card ${selectedAccomodation === item.id ? 'selected' : ''} ${isFullyBooked ? 'fully-booked' : ''}`}
+                            <div
+                                className={`accomodation-card ${qty > 0 ? 'selected' : ''} ${isFullyBooked ? 'fully-booked' : ''}`}
                                 key={item.id}
-                                disabled={isFullyBooked}
-                                onClick={() => onSelectAccomodation?.(item.id)}
                             >
-                                <span className="accomodation-card-circle"></span>
+                                {qty > 0 && (
+                                    <span className="accomodation-card-circle" aria-hidden="true">{qty}</span>
+                                )}
                                 <div className="accomodation-card-image">
                                     {item.image
                                         ? <SkeletonImage src={item.image} alt={item.name} />
@@ -163,7 +174,30 @@ export default function AccomodationList({ selectedAccomodation, onSelectAccomod
                                                     : `${availability.available} of ${availability.total} available`}
                                     </span>
                                 </div>
-                            </button>
+                                <div className="accomodation-card-qty">
+                                    <button
+                                        type="button"
+                                        className="accomodation-card-qty-step"
+                                        aria-label={`Remove one ${item.name}`}
+                                        onClick={() => onQtyChange?.(item.id, qty - 1)}
+                                        disabled={qty <= 0}
+                                    >
+                                        &minus;
+                                    </button>
+                                    <span className="accomodation-card-qty-count" aria-live="polite">
+                                        {qty} {qty === 1 ? 'unit' : 'units'}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        className="accomodation-card-qty-step"
+                                        aria-label={`Add one ${item.name}`}
+                                        onClick={() => onQtyChange?.(item.id, qty + 1)}
+                                        disabled={!canAdd}
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                            </div>
                         )
                     })}
                 </div>

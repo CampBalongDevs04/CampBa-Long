@@ -7,7 +7,11 @@ import { getAccomodationOptions, getPaxFit } from '../../data/accomodationOption
 const MIN_PAX = 1
 const MAX_PAX = 20
 
-function getFitNote(pax, selected, options){
+// `cartLines` is one entry per selected accommodation type — { id, qty,
+// option } — since a guest can now put more than one type (and more than one
+// of a type) in the cart. Capacity is judged on the COMBINED total, not any
+// one line.
+function getFitNote(pax, cartLines, options){
     if (!pax) return null
 
     // Units that hold this group comfortably, and — as a fallback — the ones
@@ -18,40 +22,52 @@ function getFitNote(pax, selected, options){
     const fitting = suggestable.filter((item) => getPaxFit(pax, item) === 'fit')
     const roomy = suggestable.filter((item) => getPaxFit(pax, item) !== 'over')
 
-    if (selected){
-        const paxLabel = selected.pax ?? 'schedule not yet selected'
-        const fit = getPaxFit(pax, selected)
+    if (cartLines.length > 0){
+        const unlimited = cartLines.some((line) => line.option.maxPax == null)
+        const capacity = unlimited
+            ? null
+            : cartLines.reduce((sum, line) => sum + line.option.maxPax * line.qty, 0)
+        const names = cartLines
+            .map((line) => `${line.option.name}${line.qty > 1 ? ` ×${line.qty}` : ''}`)
+            .join(', ')
+        const plural = cartLines.length > 1 || cartLines[0].qty > 1
 
-        // Over capacity — the unit cannot physically take them, so this is a
-        // blocking warning, not a hint. Confirm is held until it's resolved.
-        if (fit === 'over'){
+        // Over capacity — the units cannot physically take them, so this is a
+        // blocking warning, not a hint. Confirm is held until it's resolved
+        // (booking.jsx's capacityIssue).
+        if (!unlimited && pax > capacity){
             const alternatives = (fitting.length > 0 ? fitting : roomy)
                 .map((item) => item.name)
                 .join(', ')
             return {
                 tone: 'unfit',
-                title: 'A bigger space would suit you better',
-                text: `${selected.name} (${paxLabel}) comfortably holds up to ${selected.maxPax} pax`
+                title: 'A bigger selection would suit you better',
+                text: `${names} ${plural ? 'hold' : 'holds'} up to ${capacity} pax combined`
                     + `, which is a little snug for your group of ${pax}.`
-                    + (alternatives ? ` You might consider: ${alternatives}.` : ' Message us and we’ll help you find the right fit.'),
+                    + (alternatives ? ` You might add: ${alternatives}.` : ' Message us and we’ll help you find the right fit.'),
             }
         }
 
-        // Under the usual group size — allowed. The rate is per unit, so a
-        // smaller group just books the whole thing; say so and move on.
-        if (fit === 'under'){
-            return {
-                tone: 'warn',
-                title: 'Smaller group? No problem',
-                text: `${selected.name} is usually set up for ${paxLabel}, but you're welcome to book it for ${pax}`
-                    + ` — just note the rate is per unit, so the full price still applies.`,
+        // Under the usual group size — allowed, the rate is per unit. Only
+        // spelled out for a single type: once the cart mixes different units,
+        // "usually set up for" stops being one meaningful number.
+        if (!unlimited && cartLines.length === 1 && cartLines[0].option.minPax != null){
+            const [line] = cartLines
+            if (pax < line.option.minPax * line.qty){
+                return {
+                    tone: 'warn',
+                    title: 'Smaller group? No problem',
+                    text: `${names} ${plural ? 'are' : 'is'} usually set up for ${line.option.pax}${line.qty > 1 ? ' each' : ''},`
+                        + ` but you're welcome to book for ${pax}`
+                        + ` — just note the rate is per unit, so the full price still applies.`,
+                }
             }
         }
 
         return {
             tone: 'fit',
             title: 'Good fit',
-            text: `${selected.name} (${paxLabel}) is fit for your group of ${pax}.`,
+            text: `${names} ${plural ? 'are' : 'is'} fit for your group of ${pax}.`,
         }
     }
 
@@ -70,20 +86,21 @@ function getFitNote(pax, selected, options){
     }
 }
 
-export default function PaxInput({ pax, onPaxChange, selectedAccomodation, guest, onGuestChange, rateGroup }){
+export default function PaxInput({ pax, onPaxChange, cartLines, guest, onGuestChange, rateGroup }){
     const options = getAccomodationOptions(rateGroup)
-    const selected = selectedAccomodation
-        ? options.find((item) => item.id === selectedAccomodation) ?? null
-        : null
-    const note = getFitNote(pax, selected, options)
+    const lines = cartLines ?? []
+    const note = getFitNote(pax, lines, options)
 
-    // The counter is NOT capped at the unit's maxPax. Silently refusing the
-    // 6th guest of a 5-pax cottage looks like a broken button; letting the
-    // number through and answering with the warning above tells them what is
-    // actually wrong, and Confirm is what holds the booking back (booking.jsx).
-    // minPax is never enforced at all — the rate is per unit, not per head, so
-    // a smaller group is free to book and only gets the yellow note.
-    const capacity = selected?.maxPax ?? null
+    // The counter is NOT capped at the cart's combined maxPax. Silently
+    // refusing the 6th guest of a 5-pax cottage looks like a broken button;
+    // letting the number through and answering with the warning above tells
+    // them what is actually wrong, and Confirm is what holds the booking back
+    // (booking.jsx). minPax is never enforced at all — the rate is per unit,
+    // not per head, so a smaller group is free to book and only gets the note.
+    const cartUnlimited = lines.some((line) => line.option.maxPax == null)
+    const capacity = lines.length > 0 && !cartUnlimited
+        ? lines.reduce((sum, line) => sum + line.option.maxPax * line.qty, 0)
+        : null
     const limited = capacity != null
 
     const clamp = (value) => Math.min(MAX_PAX, Math.max(MIN_PAX, value))
@@ -92,14 +109,9 @@ export default function PaxInput({ pax, onPaxChange, selectedAccomodation, guest
 
     const overCapacity = limited && pax != null && pax > capacity
     const capacityTitle = limited
-        ? `${selected.name} takes ${selected.pax}.`
+        ? `Your selected accommodation${lines.length > 1 ? 's take' : ' takes'} up to ${capacity}.`
         : undefined
-    // '2–3' for a unit with a minimum, plain '4' when it only has a ceiling.
-    const rangeLabel = limited
-        ? (selected.minPax != null && selected.minPax !== capacity
-            ? `${selected.minPax}–${capacity}`
-            : `${capacity}`)
-        : null
+    const rangeLabel = limited ? `${capacity}` : null
 
     return(
         <div className="guest-info">

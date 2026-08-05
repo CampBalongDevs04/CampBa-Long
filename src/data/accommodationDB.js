@@ -358,6 +358,11 @@ export function listAccommodationRates(rateGroup = null) {
 // reservation. Keeping them apart is what makes that structurally impossible.
 let bookings = []
 let myBookings = []
+// Combined reservations (2+ units booked together) — same owner/staff split
+// as bookings/myBookings above, and for the same reason. See
+// supabase/migrations/20260804000000_accommodation_booking_groups.sql.
+let bookingGroups = []
+let myBookingGroups = []
 // Type-level availability answered by the database, keyed by the query.
 const availabilityCache = new Map()
 // Queries already in flight, so a re-render storm makes one request, not fifty.
@@ -415,6 +420,14 @@ export function getMyBookingsSnapshot() {
     return myBookings
 }
 
+export function getBookingGroupsSnapshot() {
+    return bookingGroups
+}
+
+export function getMyBookingGroupsSnapshot() {
+    return myBookingGroups
+}
+
 // Subscribe an ADMIN screen to every booking. Returns nothing without a staff
 // session, which is what makes the dashboard empty rather than wrong.
 export function useAccommodationDB() {
@@ -427,6 +440,15 @@ export function useMyBookings() {
     return useSyncExternalStore(subscribeBookings, getMyBookingsSnapshot)
 }
 
+// Same two-audience split as above, for combined (multi-unit) reservations.
+export function useBookingGroups() {
+    return useSyncExternalStore(subscribeBookings, getBookingGroupsSnapshot)
+}
+
+export function useMyBookingGroups() {
+    return useSyncExternalStore(subscribeBookings, getMyBookingGroupsSnapshot)
+}
+
 // A new array identity is what tells useSyncExternalStore something changed.
 function commit(next) {
     bookings = next
@@ -435,6 +457,16 @@ function commit(next) {
 
 function commitMine(next) {
     myBookings = next
+    notify()
+}
+
+function commitGroups(next) {
+    bookingGroups = next
+    notify()
+}
+
+function commitMineGroups(next) {
+    myBookingGroups = next
     notify()
 }
 
@@ -469,6 +501,14 @@ function fromRow(row) {
         accomodationName: findAccommodationType(row.type_id)?.name ?? row.type_id ?? 'Accommodation',
         accomodationPax: null,
         unitId: row.unit_id,
+        // Set when this row is one unit of a combined reservation — present
+        // only on the staff read (loadStaffBookings selects '*'); my_bookings()
+        // no longer returns member rows to guests at all, so this is always
+        // null there. Lets a screen that reads the FLAT bookings array (the
+        // admin table) tell a member row apart from an ordinary one, without
+        // that array losing the row entirely — occupancy (blockingBookings(),
+        // the Units board) still needs every held unit in it, member or not.
+        groupId: row.group_id ?? null,
 
         scheduleKey: row.schedule_key,
         checkInDate: row.check_in_date,
@@ -585,6 +625,122 @@ function upsertLocal(booking) {
     else commitMine(myBookings.map((item) => (item.id === booking.id ? booking : item)))
 }
 
+// Postgres row → the shape every screen expects, for a COMBINED reservation.
+// `row.units` is what my_booking_groups() sends (camelCase, from its jsonb_agg);
+// `row.bookings` is what a staff read gets from PostgREST's nested embed
+// (`select('*, bookings(...)')`, raw snake_case columns) — accepted here too
+// so both loading paths share this one mapper, exactly like fromRow() above
+// already serves both the RPC and the raw-table staff read.
+function fromGroupRow(row) {
+    const schedule = getSchedule(row.schedule_key)
+    const rawUnits = row.units ?? row.bookings ?? []
+    const units = rawUnits.map((u) => {
+        const typeId = u.typeId ?? u.type_id ?? null
+        return {
+            unitId: u.unitId ?? u.unit_id ?? null,
+            typeId,
+            typeName: findAccommodationType(typeId)?.name ?? typeId ?? 'Accommodation',
+            price: Number(u.price ?? 0),
+        }
+    })
+
+    return {
+        id: row.id,
+        code: row.code,
+        status: row.status,
+        // What tells the UI this is a combined reservation rather than a
+        // single-unit booking — same card shape otherwise, so the two can be
+        // rendered from mostly-shared code.
+        isGroup: true,
+        units,
+
+        scheduleKey: row.schedule_key,
+        checkInDate: row.check_in_date,
+        checkOutDate: row.check_out_date,
+        startsAt: new Date(row.starts_at).getTime(),
+        endsAt: new Date(row.ends_at).getTime(),
+        checkIn: row.starts_at,
+        checkOut: row.ends_at,
+        sameDayCheckout: schedule?.sameDay === true,
+        schedule: schedule
+            ? { checkIn: schedule.checkIn, time: schedule.time, description: schedule.description }
+            : null,
+
+        guest: {
+            fullName: row.guest_name,
+            email: row.guest_email ?? '',
+            mobile: row.guest_mobile ?? '',
+        },
+        pax: row.pax,
+        kids: row.kids ?? 0,
+        seniors: row.seniors ?? 0,
+        entrance: {
+            total: Number(row.entrance_total ?? 0),
+            perHead: Number(row.entrance_per_head ?? 0),
+            seniorDiscount: Number(row.entrance_senior_discount ?? 0),
+            freeApplied: Number(row.entrance_free_applied ?? 0),
+            freeSavings: Number(row.entrance_free_savings ?? 0),
+        },
+
+        unitSubtotal: Number(row.unit_subtotal ?? 0),
+        downpayment: row.downpayment != null ? Number(row.downpayment) : null,
+        // Same shape as fromRow()'s stayTotal: units + entrance + whatever
+        // food/spa has been ordered against the group (add_group_addon()).
+        stayTotal:
+            Number(row.unit_subtotal ?? 0) + Number(row.entrance_total ?? 0) + addonsTotal(row),
+        // Same meaning as fromRow()'s `total` — the admin table's "Total"
+        // column, which for a single booking is really just the unit rate.
+        total: Number(row.unit_subtotal ?? 0),
+        payment: row.payment,
+        hasReceipt: Boolean(row.receipt_url),
+        // Same masking rule as fromRow(): a guest (my_booking_groups()) only
+        // ever sees 'pending-upload'; staff, reading the raw table, get the
+        // real storage path ReceiptViewer needs to mint a signed URL.
+        receiptPath:
+            row.receipt_url && row.receipt_url !== RECEIPT_PENDING_MARKER
+                ? row.receipt_url
+                : null,
+
+        foodOrders: row.food_orders ?? [],
+        spaOrders: row.spa_orders ?? [],
+        receipts: receiptList(row),
+        paidSubmitted: receiptList(row).reduce((sum, entry) => sum + entry.amount, 0),
+        createdAt: row.created_at,
+
+        cancelReason: row.cancel_reason ?? null,
+        paymentDueAt: paymentDueAt(row),
+    }
+}
+
+// One name × quantity entry per distinct accommodation type in a combined
+// reservation, e.g. [{ name: 'Teepee', qty: 2 }, { name: 'A-House Small', qty: 1 }].
+// Shared by every screen that lists a group's units — My Bookings, the admin
+// table, the receipt viewer and the saved receipt image — so they can't drift
+// on how it's rolled up.
+export function groupUnitCounts(units) {
+    const counts = []
+    for (const unit of units ?? []) {
+        const existing = counts.find((entry) => entry.name === unit.typeName)
+        if (existing) existing.qty += 1
+        else counts.push({ name: unit.typeName, qty: 1 })
+    }
+    return counts
+}
+
+// The counts above, flattened to the one-line label every screen shows:
+// 'Teepee ×2, A-House Small'.
+export function groupUnitsLabel(units) {
+    return groupUnitCounts(units)
+        .map((entry) => `${entry.name}${entry.qty > 1 ? ` ×${entry.qty}` : ''}`)
+        .join(', ')
+}
+
+function upsertLocalGroup(group) {
+    const index = myBookingGroups.findIndex((item) => item.id === group.id)
+    if (index === -1) commitMineGroups([group, ...myBookingGroups])
+    else commitMineGroups(myBookingGroups.map((item) => (item.id === group.id ? group : item)))
+}
+
 // =================================================================== loading
 
 // The catalog is public (RLS allows anon select), so this always succeeds.
@@ -684,6 +840,26 @@ async function loadStaffBookings() {
     return true
 }
 
+// Same as loadStaffBookings(), for combined reservations. The nested
+// `bookings(...)` select is PostgREST following the group_id foreign key —
+// no separate staff RPC needed, the same "staff manage booking groups" /
+// "staff manage bookings" RLS policies that already gate the flat table gate
+// this join too.
+async function loadStaffBookingGroups() {
+    const { data, error } = await supabase
+        .from('booking_groups')
+        .select('*, bookings(unit_id, type_id, price, status)')
+        .order('created_at', { ascending: false })
+
+    if (error) {
+        console.error('Could not load group reservations:', error.message)
+        return false
+    }
+
+    commitGroups(data.map(fromGroupRow))
+    return true
+}
+
 // The bookings made by THIS browser, and only those. my_bookings() matches on
 // the hash of the owner token, so a guest on another device — or in another
 // browser, or a private window — gets an empty list here no matter what.
@@ -710,6 +886,23 @@ async function loadMyBookings() {
     if (!sameBookings(myBookings, next)) commitMine(next)
 }
 
+// Same as loadMyBookings(), for this browser's own combined reservations.
+async function loadMyBookingGroups() {
+    const { data, error } = await supabase.rpc('my_booking_groups', {
+        p_owner_token: getOwnerToken(),
+    })
+
+    if (error) {
+        console.error('Could not load your group reservations:', error.message)
+        return
+    }
+
+    syncServerClock(data?.[0]?.server_now)
+
+    const next = (data ?? []).map(fromGroupRow)
+    if (!sameBookingGroups(myBookingGroups, next)) commitMineGroups(next)
+}
+
 // Cheap equality over the fields a guest can see change: staff confirming a
 // booking, a cancellation, an add-on landing, or a payment being credited.
 // `downpayment` and `paidSubmitted` are in here because the payment panel is
@@ -733,6 +926,23 @@ function sameBookings(a, b) {
     })
 }
 
+// Same cheap equality, for combined reservations.
+function sameBookingGroups(a, b) {
+    if (a.length !== b.length) return false
+    return a.every((group, index) => {
+        const other = b[index]
+        return (
+            group.id === other.id &&
+            group.status === other.status &&
+            group.cancelReason === other.cancelReason &&
+            group.payment === other.payment &&
+            group.downpayment === other.downpayment &&
+            group.paidSubmitted === other.paidSubmitted &&
+            group.units.length === other.units.length
+        )
+    })
+}
+
 // Load both sets. The guest list is loaded unconditionally — a staff member is
 // also a person who books stays, and their My Bookings page must show theirs
 // and no one else's. Only the admin board additionally gets the whole table.
@@ -748,11 +958,14 @@ async function loadBookings() {
     await sweepExpiredBookings()
 
     await loadMyBookings()
+    await loadMyBookingGroups()
 
     if (staffSession) {
         if (!(await loadStaffBookings())) staffSession = false
+        else await loadStaffBookingGroups()
     } else {
         commit([])
+        commitGroups([])
     }
 }
 
@@ -814,6 +1027,10 @@ function watchRealtime() {
             clearCaches()
             loadStaffBookings()
         })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_groups' }, () => {
+            clearCaches()
+            loadStaffBookingGroups()
+        })
         .subscribe()
 }
 
@@ -846,6 +1063,7 @@ function startRevalidating() {
         // to them for the admin board, but Realtime says nothing about which
         // of those rows are the signed-in person's own.
         loadMyBookings()
+        loadMyBookingGroups()
     }, AVAILABILITY_TTL_MS)
 }
 
@@ -908,7 +1126,9 @@ supabase.auth.onAuthStateChange((event) => {
         stopRealtime()
         clearCaches()
         commit([])          // the admin board empties …
+        commitGroups([])
         loadMyBookings()    // … the guest's own list is unaffected
+        loadMyBookingGroups()
     }
 })
 
@@ -1323,6 +1543,89 @@ export async function createBooking(draft) {
     return { ok: true, booking }
 }
 
+// Create a COMBINED reservation: several units, one code, one hold, one down
+// payment. `items` is one entry per unit — `{ typeId, price }`, the same type
+// repeated for quantity > 1. All-or-nothing: book_stay_group() rolls back
+// every unit it already picked the instant one item fails, so there is no
+// partial reservation to clean up here — see the migration header for why.
+//
+// Deliberately NOT used for a cart of exactly one unit — booking.jsx keeps
+// that on the plain createBooking()/book_stay path so the single-unit case
+// keeps its hold-queue (waiting for a unit that is currently held by someone
+// else), which group reservations don't have in this first version.
+export async function createGroupBooking(draft) {
+    const {
+        items = [],
+        scheduleKey = null,
+        checkIn,
+        checkOut = null,
+        guest = {},
+        pax = null,
+        kids = 0,
+        seniors = 0,
+        entrance = null,
+    } = draft
+
+    if (!checkIn || !scheduleKey) {
+        return { ok: false, reason: 'invalid', message: 'Pick your dates and a stay schedule first.' }
+    }
+    if (items.length === 0) {
+        return { ok: false, reason: 'invalid', message: 'Pick at least one accommodation.' }
+    }
+    if (!isSupabaseConfigured) {
+        return { ok: false, reason: 'error', message: SUPABASE_SETUP_MESSAGE }
+    }
+
+    const schedule = getSchedule(scheduleKey)
+    const effectiveCheckOut = schedule?.sameDay ? checkIn : (checkOut ?? checkIn)
+
+    const { data, error } = await supabase.rpc('book_stay_group', {
+        p_items: items.map((item) => ({ type_id: item.typeId, price: item.price })),
+        p_schedule_key: scheduleKey,
+        p_check_in: toISODate(checkIn),
+        p_check_out: toISODate(effectiveCheckOut),
+        p_guest_name: guest.fullName ?? 'Guest',
+        p_guest_email: guest.email ?? null,
+        p_guest_mobile: guest.mobile ?? null,
+        p_pax: pax,
+        p_kids: kids,
+        p_seniors: seniors,
+        p_entrance_total: entrance?.total ?? null,
+        p_entrance_per_head: entrance?.perHead ?? 0,
+        p_entrance_senior_discount: entrance?.seniorDiscount ?? 0,
+        p_entrance_free_applied: entrance?.freeApplied ?? 0,
+        p_entrance_free_savings: entrance?.freeSavings ?? 0,
+        p_owner_token: getOwnerToken(),
+    })
+
+    if (error) {
+        // Same three-way classification as createBooking() above, minus
+        // 'held'/'queued' — a cart has no hold-queue in this version, so
+        // book_accommodation() inside book_stay_group() only ever answers
+        // 'unavailable' or a plain error.
+        const text = error.message ?? ''
+        const hint = error.hint ?? (/fully booked|just taken/i.test(text) ? 'unavailable' : null)
+
+        return {
+            ok: false,
+            reason: hint ?? 'error',
+            message: hint
+                ? [error.message, error.details].filter(Boolean).join(' ')
+                : `Could not save your reservation: ${describeSupabaseError(error)}`,
+        }
+    }
+
+    const row = Array.isArray(data) ? data[0] : data
+    // book_stay_group() returns the booking_groups row itself, which has no
+    // `units` column — fill it in from what was just sent, since on success
+    // every one of them was reserved exactly as asked.
+    const group = fromGroupRow({ ...row, units: items.map(({ typeId, price }) => ({ typeId, price })) })
+    clearCaches()
+    upsertLocalGroup(group)
+
+    return { ok: true, group }
+}
+
 // A booking can sit in both lists at once — a staff member's own stay is on
 // the admin board AND in their My Bookings. So local edits touch both, in one
 // notify, rather than leaving one screen showing a stale copy of the other.
@@ -1338,11 +1641,27 @@ function removeLocal(id) {
     notify()
 }
 
+function applyPatchGroup(id, patch) {
+    bookingGroups = bookingGroups.map((g) => (g.id === id ? { ...g, ...patch } : g))
+    myBookingGroups = myBookingGroups.map((g) => (g.id === id ? { ...g, ...patch } : g))
+    notify()
+}
+
+function removeLocalGroup(id) {
+    bookingGroups = bookingGroups.filter((g) => g.id !== id)
+    myBookingGroups = myBookingGroups.filter((g) => g.id !== id)
+    notify()
+}
+
 // Is this one of the caller's OWN bookings? Decides which write path a
 // mutation takes, so a staff member cancelling their own stay from My Bookings
 // goes through the ownership RPC rather than the admin's table write.
 function ownedByThisDevice(id) {
     return myBookings.some((booking) => booking.id === id)
+}
+
+function ownedByThisDeviceGroup(id) {
+    return myBookingGroups.some((group) => group.id === id)
 }
 
 // Staff-only. A guest's update on this table is refused outright, which is why
@@ -1366,6 +1685,31 @@ export function confirmBooking(id) {
 // Admin recorded the balance paid on-site.
 export function markBookingPaidFull(id) {
     return patchBooking(id, { payment: 'paid-full' })
+}
+
+// Staff-only, same as patchBooking() above but for the group row. Confirming
+// or marking a group paid-full does not need to touch its member `bookings`
+// rows — those already stopped being "unpaid holds" the moment
+// pay_booking_group() mirrored the receipt onto them (see the migration), and
+// their own `status` staying 'pending' is harmless: nothing reads a member
+// row's status directly once it has a group_id, only the group's.
+async function patchBookingGroup(id, patch) {
+    const { error } = await supabase.from('booking_groups').update(patch).eq('id', id)
+    if (error) {
+        console.error('Could not update reservation:', error.message)
+        return { ok: false, message: error.message }
+    }
+    clearCaches()
+    applyPatchGroup(id, patch)
+    return { ok: true }
+}
+
+export function confirmBookingGroup(id) {
+    return patchBookingGroup(id, { status: 'upcoming', payment: 'down-payment' })
+}
+
+export function markBookingGroupPaidFull(id) {
+    return patchBookingGroup(id, { payment: 'paid-full' })
 }
 
 // Frees the unit for those dates again — from either side of the app. Staff
@@ -1418,6 +1762,68 @@ export async function deleteBooking(id) {
     return { ok: true }
 }
 
+// Same as cancelBooking() above, for a combined reservation: frees every
+// member unit's dates at once. The guest/RPC path does this in one statement
+// (cancel_booking_group() cascades to the member `bookings` rows itself); the
+// staff path writes both tables directly since staff already have full RLS
+// access to each — same trust level as every other direct staff write here.
+export async function cancelBookingGroup(id) {
+    if (!ownedByThisDeviceGroup(id) && staffSession) {
+        const { error: unitsError } = await supabase
+            .from('bookings')
+            .update({ status: 'cancelled' })
+            .eq('group_id', id)
+        if (unitsError) {
+            console.error('Could not release the reservation\'s units:', unitsError.message)
+            return { ok: false, message: unitsError.message }
+        }
+        return patchBookingGroup(id, { status: 'cancelled' })
+    }
+
+    const { error } = await supabase.rpc('cancel_booking_group', {
+        p_group_id: id,
+        p_owner_token: getOwnerToken(),
+    })
+
+    if (error) {
+        console.error('Could not cancel reservation:', error.message)
+        return { ok: false, message: error.message }
+    }
+
+    clearCaches()
+    applyPatchGroup(id, { status: 'cancelled' })
+    return { ok: true }
+}
+
+// Same as deleteBooking() above, for a combined reservation.
+export async function deleteBookingGroup(id) {
+    if (!ownedByThisDeviceGroup(id) && staffSession) {
+        const { error: unitsError } = await supabase.from('bookings').delete().eq('group_id', id)
+        if (unitsError) {
+            console.error('Could not delete reservation units:', unitsError.message)
+            return { ok: false, message: unitsError.message }
+        }
+        const { error } = await supabase.from('booking_groups').delete().eq('id', id)
+        if (error) {
+            console.error('Could not delete reservation:', error.message)
+            return { ok: false, message: error.message }
+        }
+    } else {
+        const { error } = await supabase.rpc('dismiss_booking_group', {
+            p_group_id: id,
+            p_owner_token: getOwnerToken(),
+        })
+        if (error) {
+            console.error('Could not remove reservation from your list:', error.message)
+            return { ok: false, message: error.message }
+        }
+    }
+
+    clearCaches()
+    removeLocalGroup(id)
+    return { ok: true }
+}
+
 // Settle a booking that already exists. This is "Proceed to Payment": the
 // reservation was made first, so the guest is paying against a real row whose
 // amount already includes whatever food and spa they have ordered.
@@ -1454,6 +1860,40 @@ export async function payBooking(bookingId, file) {
 
     const row = Array.isArray(data) ? data[0] : data
     upsertLocal(fromRow(row))
+    return { ok: true }
+}
+
+// Same as payBooking() above, for a combined reservation's down payment.
+export async function payBookingGroup(groupId, file) {
+    if (!file) {
+        return { ok: false, message: 'Choose a screenshot of your payment first.' }
+    }
+
+    const upload = await uploadReceipt(file)
+    if (!upload.ok) return upload
+
+    const { data, error } = await supabase.rpc('pay_booking_group', {
+        p_group_id: groupId,
+        p_owner_token: getOwnerToken(),
+        p_receipt_path: upload.path,
+    })
+
+    if (error) {
+        console.error('Could not record your payment:', error.message)
+        if (error.hint === PAYMENT_TIMEOUT_REASON) await loadMyBookingGroups()
+        return {
+            ok: false,
+            reason: error.hint === PAYMENT_TIMEOUT_REASON ? 'expired' : 'error',
+            message: error.message,
+        }
+    }
+
+    const row = Array.isArray(data) ? data[0] : data
+    // pay_booking_group() returns the booking_groups row alone — no `units`
+    // column to rebuild the list from, so carry over what this device already
+    // knows about the reservation rather than lose it on this update.
+    const existing = myBookingGroups.find((g) => g.id === row.id)
+    upsertLocalGroup(fromGroupRow({ ...row, units: existing?.units ?? [] }))
     return { ok: true }
 }
 
@@ -1503,12 +1943,20 @@ export function wasCancelledByPaymentTimeout(booking) {
 // server's clock, so calling it early cancels nothing.
 async function sweepExpiredBookings() {
     if (!isSupabaseConfigured) return 0
-    const { data, error } = await supabase.rpc('expire_stale_bookings')
-    if (error) {
-        console.error('Could not release expired bookings:', error.message)
-        return 0
+    const [bookingsResult, groupsResult] = await Promise.all([
+        supabase.rpc('expire_stale_bookings'),
+        // Only flips booking_groups.status — the member `bookings` rows are
+        // already caught by the call above, whatever table they belong to.
+        // See the migration header for why that's enough.
+        supabase.rpc('expire_stale_booking_groups'),
+    ])
+    if (bookingsResult.error) {
+        console.error('Could not release expired bookings:', bookingsResult.error.message)
     }
-    const expired = Number(data ?? 0)
+    if (groupsResult.error) {
+        console.error('Could not release expired group reservations:', groupsResult.error.message)
+    }
+    const expired = Number(bookingsResult.data ?? 0) + Number(groupsResult.data ?? 0)
     // Units came back on the market; every cached count is now wrong.
     if (expired > 0) clearCaches()
     return expired
@@ -1520,7 +1968,11 @@ async function sweepExpiredBookings() {
 export async function expireStaleBookings() {
     const expired = await sweepExpiredBookings()
     await loadMyBookings()
-    if (expired > 0 && staffSession) await loadStaffBookings()
+    await loadMyBookingGroups()
+    if (expired > 0 && staffSession) {
+        await loadStaffBookings()
+        await loadStaffBookingGroups()
+    }
     return { ok: true, expired }
 }
 
@@ -1550,6 +2002,35 @@ export function addSpaOrder(bookingId, order) {
     return addAddon(bookingId, 'spa', order)
 }
 
+// Same as addAddon() above, for a combined reservation — the order goes on
+// the group's own row, not any one of its units.
+async function addGroupAddon(groupId, kind, order) {
+    const { data, error } = await supabase.rpc('add_group_addon', {
+        p_group_id: groupId,
+        p_kind: kind,
+        p_order: order,
+        p_owner_token: getOwnerToken(),
+    })
+    if (error) {
+        console.error(`Could not add ${kind} order:`, error.message)
+        return { ok: false, message: error.message }
+    }
+    const row = Array.isArray(data) ? data[0] : data
+    // add_group_addon() doesn't return `units` — carry over what this device
+    // already knows about the reservation rather than lose it on this update.
+    const existing = myBookingGroups.find((g) => g.id === row.id)
+    upsertLocalGroup(fromGroupRow({ ...row, units: existing?.units ?? [] }))
+    return { ok: true }
+}
+
+export function addFoodOrderToGroup(groupId, order) {
+    return addGroupAddon(groupId, 'food', order)
+}
+
+export function addSpaOrderToGroup(groupId, order) {
+    return addGroupAddon(groupId, 'spa', order)
+}
+
 // ------------------------------------------------------------ derived status
 // 'pending' bookings stay pending until staff act on them; only a verified
 // ('upcoming') stay can lapse into 'active' and then 'completed'.
@@ -1567,51 +2048,78 @@ export function isBookingActive(booking) {
 }
 
 // The admin overview tabs and the bookings table read through this.
+// A single-unit reservation's own row, or the whole `bookings` table for
+// occupancy — but never a combined reservation's member units, which would
+// otherwise list (and let staff "Approve") the same reservation once per
+// unit. A group reservation belongs on this list through booking_groups, not
+// through its members — see bookingsManage.jsx, which does that merge itself.
+function matchesBookingFilter(entry, filter) {
+    if (filter === 'all') return true
+    const stage = getBookingStage(entry)
+    switch (filter) {
+        case 'upcomming':
+        case 'upcoming':
+            return stage === 'upcoming'
+        case 'active':
+            return stage === 'active'
+        case 'completed':
+            return stage === 'completed'
+        case 'cancelled':
+            return stage === 'cancelled'
+        case 'pending':
+            return stage === 'pending'
+        case 'paid-full':
+            return entry.payment === 'paid-full' && stage !== 'cancelled'
+        case 'down-payment':
+            return entry.payment === 'down-payment' && stage !== 'cancelled'
+        default:
+            return true
+    }
+}
+
+// Single-unit reservations and combined reservations, merged and filtered the
+// same way — a group's member units are never in this list on their own (see
+// fromRow()'s groupId), only once, via its booking_groups row. Newest first,
+// which concatenating two already-sorted arrays doesn't give you on its own.
 export function listBookings(filter = 'all') {
-    if (filter === 'all') return bookings
-    return bookings.filter((booking) => {
-        const stage = getBookingStage(booking)
-        switch (filter) {
-            case 'upcomming':
-            case 'upcoming':
-                return stage === 'upcoming'
-            case 'active':
-                return stage === 'active'
-            case 'completed':
-                return stage === 'completed'
-            case 'cancelled':
-                return stage === 'cancelled'
-            case 'pending':
-                return stage === 'pending'
-            case 'paid-full':
-                return booking.payment === 'paid-full' && stage !== 'cancelled'
-            case 'down-payment':
-                return booking.payment === 'down-payment' && stage !== 'cancelled'
-            default:
-                return true
-        }
-    })
+    return [
+        ...bookings.filter((booking) => booking.groupId == null),
+        ...bookingGroups,
+    ]
+        .filter((entry) => matchesBookingFilter(entry, filter))
+        .sort((a, b) => new Date(b.createdAt ?? 0) - new Date(a.createdAt ?? 0))
+}
+
+// One booking or one group reservation counted the same way — a combined
+// reservation is one entry here regardless of how many units it holds,
+// exactly like it is one row in bookingsManage.jsx and one card in My
+// Bookings. `total`/`downpayment`/`payment` mean the same thing on both
+// shapes (fromRow() and fromGroupRow() agree on that), so this needs no
+// branching between them.
+function accumulateBookingStats(entry, stats) {
+    const stage = getBookingStage(entry)
+    if (stage === 'cancelled') return
+    stats.totalBooking += 1
+    if (stage === 'upcoming') stats.upcomming += 1
+    if (stage === 'active') stats.active += 1
+    if (entry.payment === 'paid-full') stats.revenue += entry.total ?? 0
+    else if (entry.payment === 'down-payment') stats.revenue += entry.downpayment ?? 0
+    if (stage === 'pending' || entry.payment === 'unpaid') stats.pendingPayment += 1
 }
 
 export function getBookingStats() {
-    let upcomming = 0
-    let active = 0
-    let revenue = 0
-    let pendingPayment = 0
-    let totalBooking = 0
+    const stats = { totalBooking: 0, upcomming: 0, active: 0, revenue: 0, pendingPayment: 0 }
 
+    // A group's member units are excluded here (see listBookings()) since the
+    // reservation itself is counted below, via bookingGroups.
     for (const booking of bookings) {
-        const stage = getBookingStage(booking)
-        if (stage === 'cancelled') continue
-        totalBooking += 1
-        if (stage === 'upcoming') upcomming += 1
-        if (stage === 'active') active += 1
-        if (booking.payment === 'paid-full') revenue += booking.total ?? 0
-        else if (booking.payment === 'down-payment') revenue += booking.downpayment ?? 0
-        if (stage === 'pending' || booking.payment === 'unpaid') pendingPayment += 1
+        if (booking.groupId == null) accumulateBookingStats(booking, stats)
+    }
+    for (const group of bookingGroups) {
+        accumulateBookingStats(group, stats)
     }
 
-    return { totalBooking, upcomming, active, revenue, pendingPayment }
+    return stats
 }
 
 // ------------------------------------------------------ add-on order views
@@ -1638,8 +2146,10 @@ function addonLines(booking, kind) {
         code: booking.code ?? booking.id,
         guestName: booking.guest?.fullName || 'Guest',
         guestMobile: booking.guest?.mobile ?? '',
-        accomodationName: booking.accomodationName,
-        unitId: booking.unitId,
+        accomodationName: booking.isGroup
+            ? (groupUnitsLabel(booking.units) || 'Combined reservation')
+            : booking.accomodationName,
+        unitId: booking.isGroup ? null : booking.unitId,
         checkIn: booking.checkIn,
         stage: getBookingStage(booking),
         // Null on orders placed before the catalog existed, and on a line whose
@@ -1654,11 +2164,22 @@ function addonLines(booking, kind) {
     }))
 }
 
+// Single-unit bookings and combined reservations — a group's member units
+// never carry add-ons of their own (add_group_addon() only ever writes to the
+// group's row), but they're excluded on principle same as everywhere else
+// that reads this pair of arrays.
+function addonableBookings() {
+    return [
+        ...bookings.filter((booking) => booking.groupId == null),
+        ...bookingGroups,
+    ]
+}
+
 // Every add-on line across every booking, newest first.
 // `kind` is 'all' | 'food' | 'spa'.
 export function listAddonOrders(kind = 'all') {
     const lines = []
-    for (const booking of bookings) {
+    for (const booking of addonableBookings()) {
         if (getBookingStage(booking) === 'cancelled') continue
         if (kind !== 'spa') lines.push(...addonLines(booking, 'food'))
         if (kind !== 'food') lines.push(...addonLines(booking, 'spa'))
@@ -1671,7 +2192,7 @@ export function listAddonOrders(kind = 'all') {
 // kind drop out entirely, which is what makes the dashboard's Food and Spa tabs
 // different lists rather than the same list with empty cards in it.
 export function listBookingsWithAddons(kind = 'all') {
-    return bookings
+    return addonableBookings()
         .filter((booking) => getBookingStage(booking) !== 'cancelled')
         .map((booking) => {
             const food = kind === 'spa' ? [] : addonLines(booking, 'food')
@@ -1724,7 +2245,14 @@ export function findOrderableBooking() {
     // This device's own bookings only. Reading the admin list here would let a
     // signed-in staff member's food order attach itself to whichever guest
     // happened to be at the top of the table.
-    return myBookings.find((booking) => isBookingActive(booking)) ?? null
+    //
+    // Single-unit bookings and combined reservations merged, newest first —
+    // a guest whose only live reservation is a group of Teepees needs this to
+    // find it too, not just an ordinary one-unit booking.
+    const merged = [...myBookings, ...myBookingGroups].sort(
+        (a, b) => new Date(b.createdAt ?? 0) - new Date(a.createdAt ?? 0)
+    )
+    return merged.find((booking) => isBookingActive(booking)) ?? null
 }
 
 // True once a staff session is reading the real booking rows. The admin

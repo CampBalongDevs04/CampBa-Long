@@ -1,6 +1,7 @@
 import '../css/tabFoodSpa.css'
 import {
     useAccommodationDB,
+    useBookingGroups,
     listBookingsWithAddons,
     getBookingStage,
     formatShortDate,
@@ -78,6 +79,9 @@ function OrderGroup({ title, lines, total }) {
 
 export default function AddonOrderPanel({ kind = 'all', emptyTitle, emptyText }) {
     useAccommodationDB()
+    // listBookingsWithAddons() reads combined reservations too — see the
+    // comment in units.jsx on why this needs its own subscription.
+    useBookingGroups()
     const entries = listBookingsWithAddons(kind)
 
     if (entries.length === 0) {

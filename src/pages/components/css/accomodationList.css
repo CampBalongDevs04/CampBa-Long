@@ -59,7 +59,6 @@
     border: 1px solid var(--gold-soft);
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    cursor: pointer;
     text-align: left;
     font-family: inherit;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -80,17 +79,63 @@
     top: 6px;
     right: 6px;
     z-index: 1;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    border: 2px solid var(--gold-soft);
-    background-color: var(--cream);
-    transition: background-color 0.2s ease, border-color 0.2s ease;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    background-color: #3DA35D;
+    border: 2px solid #3DA35D;
 }
 
-.accomodation-card.selected .accomodation-card-circle{
-    background-color: #3DA35D;
-    border-color: #3DA35D;
+.accomodation-card-qty{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 6px 10px 10px;
+    border-top: 1px solid var(--gold-soft);
+}
+
+.accomodation-card-qty-step{
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 15px;
+    line-height: 1;
+    color: var(--forest);
+    background-color: var(--cream-2);
+    border: 1px solid var(--gold-soft);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.accomodation-card-qty-step:hover:not(:disabled){
+    border-color: var(--gold);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+}
+
+.accomodation-card-qty-step:disabled{
+    opacity: 0.4;
+    cursor: default;
+}
+
+.accomodation-card-qty-count{
+    flex: 1;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--forest);
 }
 
 .accomodation-card-image{

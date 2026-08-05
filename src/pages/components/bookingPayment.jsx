@@ -83,7 +83,19 @@ function ChargeGroup({ title, note, children }){
     )
 }
 
-export default function BookingPayment({ booking, autoOpen = false }){
+export default function BookingPayment({
+    booking,
+    autoOpen = false,
+    // Swapped for payBookingGroup(groupId, file) by GroupBookingCard — same
+    // (id, file) shape, so everything below is unaware which one it's calling.
+    onPay = payBooking,
+    // What the "Accommodation" charge row's sub-label reads, and what the
+    // payment-closed message calls the thing that went back on the market.
+    // A group reservation has neither a single accomodationName nor a single
+    // unitId, so GroupBookingCard supplies its own.
+    accommodationLabel = booking.accomodationName,
+    releasedLabel = booking.unitId ? `unit ${booking.unitId}` : 'your unit',
+}){
     const panelRef = useRef(null)
     const [receipt, setReceipt] = useState(null)
     const [status, setStatus] = useState('idle')   // idle | sending | sent
@@ -104,7 +116,9 @@ export default function BookingPayment({ booking, autoOpen = false }){
     const open = toggled ?? (autoOpen || payWindow.tracked)
     const foodTotal = round2(orderTotal(booking.foodOrders))
     const spaTotal = round2(orderTotal(booking.spaOrders))
-    const unitRate = booking.price ?? 0
+    // A single-unit booking has `price`; a combined reservation has
+    // `unitSubtotal` instead (the sum across every unit) — never both.
+    const unitRate = booking.price ?? booking.unitSubtotal ?? 0
     const entranceTotal = booking.entrance?.total ?? 0
 
     // The two halves of what this stay costs, kept apart on purpose. Entrance
@@ -175,7 +189,7 @@ export default function BookingPayment({ booking, autoOpen = false }){
         setError(null)
         setStatus('sending')
 
-        const result = await payBooking(booking.id, receipt)
+        const result = await onPay(booking.id, receipt)
 
         if (!result.ok){
             setStatus('idle')
@@ -232,8 +246,8 @@ export default function BookingPayment({ booking, autoOpen = false }){
                         >
                             <ChargeRow
                                 label="Accommodation"
-                                sub={booking.accomodationName}
-                                value={booking.price != null ? formatPeso(unitRate) : 'Price TBA'}
+                                sub={accommodationLabel}
+                                value={(booking.price ?? booking.unitSubtotal) != null ? formatPeso(unitRate) : 'Price TBA'}
                             />
                             {entranceTotal > 0 && (
                                 <ChargeRow
@@ -389,7 +403,7 @@ export default function BookingPayment({ booking, autoOpen = false }){
                                     Your {payWindow.windowMinutes} minutes to send the{' '}
                                     {formatPeso(outstanding)} down payment have passed, so
                                     this booking has been cancelled and{' '}
-                                    {booking.unitId ? `unit ${booking.unitId}` : 'your unit'}{' '}
+                                    {releasedLabel}{' '}
                                     is back on the market. Nothing has been charged.
                                 </p>
                                 <p className="booking-pay-closed-text">
