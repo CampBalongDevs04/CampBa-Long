@@ -32,7 +32,16 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
     }
 
     // Bring a preselected card (e.g. coming from the home page "Book Now!")
-    // into view when the page opens.
+    // into view, and re-home the carousel every time the schedule switches.
+    //
+    // `list` is the same array length or not — Day Time and the overnight
+    // schedules don't offer the same units — but it's still the SAME track
+    // DOM node underneath, so the browser keeps whatever scrollLeft it had
+    // from the last schedule instead of resetting it. Left alone, switching
+    // back to Day Time after scrolling around under an overnight schedule
+    // would leave the track exactly where that schedule left it, showing
+    // some card other than the new list's first — with no visual hint that
+    // there's anything to the left.
     //
     // The TRACK is scrolled, not the card — scrollIntoView() walks every
     // scrollable ancestor including the page itself, so centring a card that
@@ -40,19 +49,25 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
     // land the guest past the dates they still have to pick. Only this carousel
     // has anything to move here.
     useEffect(() => {
-        if (!hasSelection) return
         const track = trackRef.current
-        const card = track?.querySelector('.accomodation-card.selected')
-        if (!track || !card) return
-        // Measured as a DELTA between the two rectangles rather than from
-        // card.offsetLeft: the track is position:static, so offsetLeft is
-        // counted from the booking shell around it and centring on it lands the
-        // card off to one side. The browser clamps the result at both ends.
-        const cardBox = card.getBoundingClientRect()
-        const trackBox = track.getBoundingClientRect()
-        track.scrollLeft +=
-            (cardBox.left + cardBox.width / 2) - (trackBox.left + trackBox.width / 2)
-    }, [hasSelection])
+        if (!track) return
+        const card = hasSelection ? track.querySelector('.accomodation-card.selected') : null
+        if (card) {
+            // Measured as a DELTA between the two rectangles rather than from
+            // card.offsetLeft: the track is position:static, so offsetLeft is
+            // counted from the booking shell around it and centring on it lands
+            // the card off to one side. The browser clamps the result at both
+            // ends.
+            const cardBox = card.getBoundingClientRect()
+            const trackBox = track.getBoundingClientRect()
+            track.scrollLeft +=
+                (cardBox.left + cardBox.width / 2) - (trackBox.left + trackBox.width / 2)
+        } else {
+            // Nothing selected under this schedule — start from its first
+            // card rather than wherever the previous schedule left the track.
+            track.scrollLeft = 0
+        }
+    }, [hasSelection, rateGroup])
 
     return(
         <div className="accomodation-list">

@@ -100,7 +100,7 @@ export const INCLUSIONS = {
     day: [
         'Free entrance for 2 pax (not applicable for Cottage & Pavilion)',
         'Free parking',
-        '3 hours free use of jacuzzi',
+        '3 hours free use of cold spring jacuzzi',
         'Free use of charcoal griller',
         'Access to swimming pool, kiddie pool & running water',
         'Access to bathrooms and showers',
@@ -108,7 +108,7 @@ export const INCLUSIONS = {
     overnight: [
         'Free entrance for 2 pax (not applicable for Tent Pitching)',
         'Free parking',
-        '3 hours free use of jacuzzi',
+        '3 hours free use of cold spring jacuzzi',
         'Free use of charcoal griller',
         'Access to swimming pool, kiddie pool & running water',
         'Access to bathrooms and showers',
