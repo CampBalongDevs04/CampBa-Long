@@ -179,6 +179,11 @@
 }
 
 .accomodation-card-info{
+    /* Grows to fill whatever height the row's tallest card (usually the one
+       with a promo line) forces onto every card, so the qty row's top border
+       lands at the same height on every card instead of trailing right behind
+       however many info lines that one card happens to have. */
+    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 2px;
