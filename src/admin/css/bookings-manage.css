@@ -143,6 +143,14 @@
     letter-spacing: 0.5px;
 }
 
+/* Party makeup: "8 pax · 2 seniors, 1 kid". The senior count is what the front
+   desk applies the senior discount against, so it must not wrap into an
+   unreadable stack on a narrow screen. */
+.col-guests {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
 .col-total {
     text-align: right;
     font-weight: 600;

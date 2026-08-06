@@ -530,6 +530,8 @@ function fromRow(row) {
         pax: row.pax,
         kids: row.kids ?? 0,
         seniors: row.seniors ?? 0,
+        // Counted, never priced — the resort applies the PWD discount in person.
+        pwd: row.pwd ?? 0,
         // The card renders every field of this breakdown, so all of them must
         // be numbers — a missing one used to throw inside formatPeso().
         entrance: {
@@ -674,6 +676,8 @@ function fromGroupRow(row) {
         pax: row.pax,
         kids: row.kids ?? 0,
         seniors: row.seniors ?? 0,
+        // Counted, never priced — the resort applies the PWD discount in person.
+        pwd: row.pwd ?? 0,
         entrance: {
             total: Number(row.entrance_total ?? 0),
             perHead: Number(row.entrance_per_head ?? 0),
@@ -1447,6 +1451,7 @@ export async function createBooking(draft) {
         pax = null,
         kids = 0,
         seniors = 0,
+        pwd = 0,
         entrance = null,
         price = null,
         hasReceipt = false,
@@ -1481,6 +1486,7 @@ export async function createBooking(draft) {
         p_pax: pax,
         p_kids: kids,
         p_seniors: seniors,
+        p_pwd: pwd,
         p_price: price,
         p_entrance_total: entrance?.total ?? null,
         // The storage path of the uploaded image. A non-null value is also what
@@ -1563,6 +1569,7 @@ export async function createGroupBooking(draft) {
         pax = null,
         kids = 0,
         seniors = 0,
+        pwd = 0,
         entrance = null,
     } = draft
 
@@ -1590,6 +1597,7 @@ export async function createGroupBooking(draft) {
         p_pax: pax,
         p_kids: kids,
         p_seniors: seniors,
+        p_pwd: pwd,
         p_entrance_total: entrance?.total ?? null,
         p_entrance_per_head: entrance?.perHead ?? 0,
         p_entrance_senior_discount: entrance?.seniorDiscount ?? 0,

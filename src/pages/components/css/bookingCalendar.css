@@ -270,6 +270,37 @@
 }
 
 /* ---- footer ---- */
+/* The chosen range, said in one line under the two panels. */
+.cal-range-summary {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0 0;
+    padding: 10px 14px;
+    background: var(--cream-2, var(--cream));
+    border: 1px solid var(--gold-soft);
+    border-radius: 999px;
+    font-size: 15px;
+    color: var(--ink);
+}
+
+.cal-range-summary strong {
+    font-weight: 700;
+    color: var(--forest);
+}
+
+.cal-range-nights {
+    margin-left: auto;
+    padding: 2px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--cream);
+    background: var(--forest);
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
 .cal-footer {
     display: flex;
     align-items: center;

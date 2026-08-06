@@ -55,6 +55,27 @@ function formatRange(booking) {
     return from === to ? from : `${from} → ${to}`
 }
 
+// Who is in the party, for the Guests column: total pax, then the two counts
+// that change what happens at the desk.
+//
+// The SENIOR and PWD counts are the reason this column exists. The senior discount is no
+// longer applied by the system — the resort gives it in person against a Senior
+// Citizen ID (see SENIOR_DISCOUNT_RATE in data/entranceFee.js) — so whoever is
+// settling the balance has to be able to see how many seniors the booking
+// declared. It was on the booking row all along and shown nowhere staff look.
+//
+// Kids ride along because they are the other count that alters the money and
+// they cost nothing to show once the column exists.
+function guestsLabel(booking) {
+    if (!booking.pax) return '—'
+    const extras = [
+        booking.seniors > 0 ? `${booking.seniors} senior${booking.seniors > 1 ? 's' : ''}` : null,
+        booking.pwd > 0 ? `${booking.pwd} PWD` : null,
+        booking.kids > 0 ? `${booking.kids} kid${booking.kids > 1 ? 's' : ''}` : null,
+    ].filter(Boolean)
+    return extras.length ? `${booking.pax} pax · ${extras.join(', ')}` : `${booking.pax} pax`
+}
+
 // The unit the database assigned, e.g. "A-House Small · AHS-02". Tent pitching
 // has no unit to assign, so it falls back to the type name alone. A combined
 // reservation has several, so it gets the same "Teepee ×2, A-House Small"
@@ -182,6 +203,7 @@ export default function BookingsManage() {
                                 <tr>
                                     <th>Booking ID</th>
                                     <th>Guest</th>
+                                    <th>Guests</th>
                                     <th>Unit</th>
                                     <th>Stay</th>
                                     <th>Schedule</th>
@@ -201,6 +223,7 @@ export default function BookingsManage() {
                                             {/* Staff quote the CBL-… code to guests, not the uuid. */}
                                             <td className="col-id">{b.code ?? b.id}</td>
                                             <td>{b.guest?.fullName || '—'}</td>
+                                            <td className="col-guests">{guestsLabel(b)}</td>
                                             <td>{unitLabel(b)}</td>
                                             <td>{formatRange(b)}</td>
                                             <td>{b.schedule?.time ?? '—'}</td>

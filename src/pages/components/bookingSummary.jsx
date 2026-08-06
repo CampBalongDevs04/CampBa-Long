@@ -1,9 +1,12 @@
 import '../components/css/bookingSummary.css'
-import { isFreeEntranceEligible } from '../../data/accomodationOptions.js'
-import { computeEntranceFee } from '../../data/entranceFee.js'
 // Same rate the database applies to the booking row, so the figure quoted here
 // is the one My Bookings will ask for on the next screen.
 import { DOWNPAYMENT_RATE } from '../../data/accommodationDB.js'
+import { ENTRANCE_PER_NIGHT } from '../../data/extendedStay.js'
+import {
+    PWD_DISCOUNT_IN_SYSTEM, PWD_DISCOUNT_LABEL,
+    SENIOR_DISCOUNT_IN_SYSTEM, SENIOR_DISCOUNT_LABEL,
+} from '../../data/entranceFee.js'
 
 const RATE_LABEL = `${DOWNPAYMENT_RATE * 100}%`
 
@@ -21,6 +24,13 @@ function formatPeso(amount){
     })}`
 }
 
+// Stands in for the entrance breakdown when this renders without a quote, so
+// the panel shows its placeholders instead of throwing on the first read.
+const NO_ENTRANCE = {
+    perHead: 0, paxCount: 0, paxTotal: 0, kidsCount: 0, kidsFree: 0,
+    perkApplied: 0, perkSavings: 0, seniorCount: 0, seniorDiscount: 0, total: 0,
+}
+
 function SummaryRow({ label, value, placeholder }){
     return(
         <div className="summary-row">
@@ -32,38 +42,38 @@ function SummaryRow({ label, value, placeholder }){
     )
 }
 
-export default function BookingSummary({ checkIn, checkOut, schedule, cartLines, guest, pax, kids, seniors }){
-    const lines = cartLines ?? []
+// `quote` is computeStayQuote() from data/extendedStay.js, built once on the
+// booking page and handed down here — the same object reserve() stores, so
+// what this panel adds up and what the guest is charged cannot disagree.
+//
+// Every money figure on it is for the WHOLE stay: the unit rates and the
+// entrance fees are both multiplied by the number of nights. Where that
+// multiplication matters to a guest reading the column — a three-night stay
+// showing ₱6,750 against a ₱2,250 card — the row shows the arithmetic rather
+// than just the product.
+export default function BookingSummary({ checkIn, checkOut, schedule, quote, guest, pax, kids, seniors, pwd }){
+    const {
+        nights = 1,
+        lengthSet = false,
+        isExtended = false,
+        lines = [],
+        unitNightly = null,
+        unitTotal = null,
+        promoSavings: promoSavingsTotal = 0,
+        entranceNightly = NO_ENTRANCE,
+        entrance = NO_ENTRANCE,
+        entranceNights = 1,
+        stayTotal = null,
+        downpayment = null,
+        balance: onSiteBalance = null,
+    } = quote ?? {}
 
-    const entrance = computeEntranceFee({
-        perHead: schedule?.entranceFee ?? 0,
-        pax: pax ?? 0,
-        seniors: seniors ?? 0,
-        kids: kids ?? 0,
-        // The perk applies only when EVERY selected type qualifies for it —
-        // the same rule booking.jsx uses to decide what to actually charge.
-        freeEntranceEligible: lines.length > 0 && lines.every((line) => isFreeEntranceEligible(line.id)),
-    })
-
-    const pricedLines = lines.filter((line) => line.option.price != null)
-    const unitSubtotal = lines.length > 0 && pricedLines.length === lines.length
-        ? lines.reduce((sum, line) => sum + line.option.price * line.qty, 0)
-        : null
-    // Summed across every line with a promo running, qty included — the
-    // per-card "Save ₱X" hint totalled up for the whole cart rather than
-    // just the one unit a single-select booking used to have.
-    const promoSavingsTotal = lines.reduce((sum, line) => {
-        if (line.option.originalPrice == null || line.option.price == null) return sum
-        return sum + (line.option.originalPrice - line.option.price) * line.qty
-    }, 0)
-
-    // The down payment is half of the WHOLE stay, entrance fees included — not
-    // half the unit rate(s). Food and spa go into it too, but they can only be
-    // ordered once the booking exists, so at this point there are none: this
-    // quote is the floor, and My Bookings shows the live figure.
-    const stayTotal = unitSubtotal != null ? unitSubtotal + entrance.total : null
-    const downpayment = stayTotal != null ? stayTotal * DOWNPAYMENT_RATE : null
-    const onSiteBalance = stayTotal != null ? stayTotal - downpayment : null
+    // Reads as "× 3 nights" only when there is more than one — a one-night
+    // stay is the plain single figure it has always been.
+    const nightsSuffix = isExtended ? ` × ${nights} nights` : ''
+    // Day Time has no nights to charge per: it is a single 7-hour block, and
+    // calling its ₱150 a nightly rate would be wrong on the face of it.
+    const perNight = schedule != null && schedule.sameDay !== true
 
     return(
         <aside className="booking-summary" aria-label="Booking summary">
@@ -86,6 +96,25 @@ export default function BookingSummary({ checkIn, checkOut, schedule, cartLines,
                     value={schedule ? `${schedule.time} (${schedule.description})` : null}
                     placeholder="Select a schedule"
                 />
+                {/* The multiplier for everything below it, so it is stated
+                    before the first figure it multiplies rather than left for
+                    the guest to infer from the two dates. */}
+                {/* `nights` is clamped to 1 so no figure below it is ever zero,
+                    which means it cannot be trusted as the answer to "has the
+                    guest chosen yet" — `lengthSet` is. Without that, a stay
+                    with no check-out yet would read "1 night" as though it had
+                    been picked. */}
+                <SummaryRow
+                    label="Length of stay"
+                    value={
+                        schedule && lengthSet
+                            ? schedule.sameDay
+                                ? 'Same day (1 stay)'
+                                : `${nights} ${nights === 1 ? 'night' : 'nights'}`
+                            : null
+                    }
+                    placeholder={schedule ? 'Set how many nights' : 'Select a schedule'}
+                />
             </div>
 
             <div className="summary-section">
@@ -96,17 +125,17 @@ export default function BookingSummary({ checkIn, checkOut, schedule, cartLines,
                     lines.map((line) => (
                         <SummaryRow
                             key={line.id}
-                            label={`${line.option.name}${line.qty > 1 ? ` ×${line.qty}` : ''}`}
-                            value={line.option.price != null ? (
-                                line.option.originalPrice ? (
+                            label={`${line.name}${line.qty > 1 ? ` ×${line.qty}` : ''}${isExtended ? ` × ${nights} nights` : ''}`}
+                            value={line.total != null ? (
+                                line.wasTotal ? (
                                     <>
                                         <s className="summary-row-was">
-                                            {formatPeso(line.option.originalPrice * line.qty)}
+                                            {formatPeso(line.wasTotal)}
                                         </s>{' '}
-                                        {formatPeso(line.option.price * line.qty)}
+                                        {formatPeso(line.total)}
                                     </>
                                 ) : (
-                                    formatPeso(line.option.price * line.qty)
+                                    formatPeso(line.total)
                                 )
                             ) : 'Price TBA'}
                             placeholder="Price TBA"
@@ -125,7 +154,27 @@ export default function BookingSummary({ checkIn, checkOut, schedule, cartLines,
                 />
                 <SummaryRow
                     label="Senior citizens"
-                    value={seniors > 0 ? `${seniors} — 10% off` : null}
+                    value={
+                        seniors > 0
+                            ? SENIOR_DISCOUNT_IN_SYSTEM
+                                ? `${seniors} — ${SENIOR_DISCOUNT_LABEL} off`
+                                : `${seniors} — discount claimed at the resort`
+                            : null
+                    }
+                    placeholder="None"
+                />
+                {/* PWD sits beside seniors because it is the same kind of fact:
+                    a declared count the front desk needs, not a number this
+                    page subtracts anything for. */}
+                <SummaryRow
+                    label="Persons with disability"
+                    value={
+                        pwd > 0
+                            ? PWD_DISCOUNT_IN_SYSTEM
+                                ? `${pwd} — ${PWD_DISCOUNT_LABEL} off`
+                                : `${pwd} — discount claimed at the resort`
+                            : null
+                    }
                     placeholder="None"
                 />
                 {/* Under a promo the standing rate is struck through beside the
@@ -133,9 +182,25 @@ export default function BookingSummary({ checkIn, checkOut, schedule, cartLines,
                     same column the entrance discounts use — a guest should be
                     able to see the discount in the total, not just on the card
                     they picked the unit from. */}
+                {/* On an extended stay the nightly subtotal earns its own row,
+                    because it is the number on the cards the guest just picked
+                    from — the row under it is that number times the nights. */}
+                {isExtended && (
+                    <SummaryRow
+                        label="Unit rate per night"
+                        value={unitNightly != null ? formatPeso(unitNightly) : lines.length > 0 ? 'Price TBA' : null}
+                        placeholder="Select at least one unit"
+                    />
+                )}
                 <SummaryRow
-                    label="Unit rate total"
-                    value={unitSubtotal != null ? formatPeso(unitSubtotal) : lines.length > 0 ? 'Price TBA' : null}
+                    label={`Unit rate total${nightsSuffix}`}
+                    value={
+                        unitTotal != null
+                            ? isExtended
+                                ? `${formatPeso(unitNightly)} × ${nights} = ${formatPeso(unitTotal)}`
+                                : formatPeso(unitTotal)
+                            : lines.length > 0 ? 'Price TBA' : null
+                    }
                     placeholder="Select at least one unit"
                 />
                 {promoSavingsTotal > 0 && (
@@ -151,10 +216,26 @@ export default function BookingSummary({ checkIn, checkOut, schedule, cartLines,
             <div className="summary-section">
                 <p className="summary-section-label">Entrance Fees</p>
                 <SummaryRow
-                    label="Rate per head"
-                    value={schedule ? `${formatPeso(entrance.perHead)} (${schedule.description})` : null}
+                    label={perNight ? 'Rate per head, per night' : 'Rate per head'}
+                    value={schedule ? `${formatPeso(entranceNightly.perHead)} (${schedule.description})` : null}
                     placeholder="Select a schedule"
                 />
+                {/* Entrance is charged for every night of the stay, the same
+                    way the unit is — so on an extended stay the per-head
+                    figure the discounts below are worked out from is the
+                    nightly rate times the nights, and it is worth showing as
+                    that multiplication rather than as a number out of nowhere. */}
+                {isExtended && entranceNights > 1 && (
+                    <SummaryRow
+                        label={`Rate per head${nightsSuffix}`}
+                        value={
+                            schedule
+                                ? `${formatPeso(entranceNightly.perHead)} × ${entranceNights} = ${formatPeso(entrance.perHead)}`
+                                : null
+                        }
+                        placeholder="Select a schedule"
+                    />
+                )}
                 {/* Every head at the full rate first, then what comes off it —
                     the column reads top-to-bottom as the subtotal's arithmetic. */}
                 <SummaryRow
@@ -182,10 +263,14 @@ export default function BookingSummary({ checkIn, checkOut, schedule, cartLines,
                         </span>
                     </div>
                 )}
-                {entrance.seniorCount > 0 && (
+                {/* Keyed off the AMOUNT, not the senior count. With the discount
+                    moved to the front desk there is nothing to subtract here,
+                    and a row reading "− ₱0.00" would look like the guest had
+                    been given something and then charged for it anyway. */}
+                {entrance.seniorDiscount > 0 && (
                     <div className="summary-row summary-row-discount">
                         <span className="summary-row-label">
-                            Senior discount (10% × {entrance.seniorCount})
+                            Senior discount ({SENIOR_DISCOUNT_LABEL} × {entrance.seniorCount})
                         </span>
                         <span className="summary-row-value">
                             {schedule ? `− ${formatPeso(entrance.seniorDiscount)}` : '—'}
@@ -193,18 +278,32 @@ export default function BookingSummary({ checkIn, checkOut, schedule, cartLines,
                     </div>
                 )}
                 <SummaryRow
-                    label="Entrance subtotal"
-                    value={schedule ? formatPeso(entrance.total) : null}
+                    label={`Entrance subtotal${ENTRANCE_PER_NIGHT ? nightsSuffix : ''}`}
+                    value={
+                        schedule
+                            ? isExtended && entranceNights > 1
+                                ? `${formatPeso(entranceNightly.total)} × ${entranceNights} = ${formatPeso(entrance.total)}`
+                                : formatPeso(entrance.total)
+                            : null
+                    }
                     placeholder="Select a schedule"
                 />
                 <p className="summary-note-inline">
-                    Entrance is charged for every guest in your group. Kids 7 &amp;
+                    Entrance is charged for every guest in your group
+                    {ENTRANCE_PER_NIGHT && perNight ? ', for every night of your stay' : ''}. Kids 7 &amp;
                     below get in free, and your stay includes free entrance for up
-                    to 2 more pax (not applicable for Tent Pitching, Cottage or
+                    to 2 more pax {ENTRANCE_PER_NIGHT && perNight ? 'each night ' : ''}(not applicable for Tent Pitching, Cottage or
                     Pavilion). Half of your entrance fees is included in the down
-                    payment; the rest is settled on-site at check-in. Seniors must
-                    present a Senior Citizen ID or other
-                    valid ID for the discount.
+                    payment; the rest is settled on-site at check-in.
+                    {SENIOR_DISCOUNT_IN_SYSTEM ? (
+                        <> Seniors must present a Senior Citizen ID or other valid ID
+                        for the discount.</>
+                    ) : (
+                        <> The <strong>senior citizen discount is given at the resort</strong>,
+                        not on this page — the totals above are at the full rate. Present a
+                        Senior Citizen ID at check-in and it comes off the balance you settle
+                        on-site.</>
+                    )}
                 </p>
             </div>
 
@@ -230,10 +329,10 @@ export default function BookingSummary({ checkIn, checkOut, schedule, cartLines,
             <div className="summary-section">
                 <p className="summary-section-label">Payment</p>
                 <SummaryRow
-                    label="Stay subtotal"
+                    label={`Stay subtotal${isExtended ? ` (${nights} nights)` : ''}`}
                     value={
                         stayTotal != null
-                            ? `${formatPeso(unitSubtotal)} + ${formatPeso(entrance.total)} = ${formatPeso(stayTotal)}`
+                            ? `${formatPeso(unitTotal)} + ${formatPeso(entrance.total)} = ${formatPeso(stayTotal)}`
                             : null
                     }
                     placeholder="Select at least one unit and a schedule"

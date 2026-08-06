@@ -4,6 +4,7 @@ import Payment from './payment.jsx'
 import PaymentCountdown from './paymentCountdown.jsx'
 import { formatCountdown, usePaymentWindow } from './usePaymentWindow.js'
 import { payBooking, getBookingStage, DOWNPAYMENT_RATE } from '../../data/accommodationDB.js'
+import { countNights } from '../../data/extendedStay.js'
 
 // The payment panel inside a My Bookings card. Paying used to be step 4 of the
 // booking form, before the reservation existed; it lives here now, next to the
@@ -120,6 +121,15 @@ export default function BookingPayment({
     // `unitSubtotal` instead (the sum across every unit) — never both.
     const unitRate = booking.price ?? booking.unitSubtotal ?? 0
     const entranceTotal = booking.entrance?.total ?? 0
+    // Both figures above are for the WHOLE stay: an extended booking's `price`
+    // is the nightly rate already multiplied by its nights, and the entrance
+    // breakdown was scaled the same way when the booking was created (see
+    // data/extendedStay.js). Nothing here multiplies — it only needs to say
+    // how many nights the numbers already cover.
+    const nights = booking.sameDayCheckout
+        ? 1
+        : Math.max(1, countNights(booking.checkIn, booking.checkOut))
+    const nightsNote = nights > 1 ? ` for ${nights} nights` : ''
 
     // The two halves of what this stay costs, kept apart on purpose. Entrance
     // fees belong with the unit — they are settled together when the booking is
@@ -246,13 +256,13 @@ export default function BookingPayment({
                         >
                             <ChargeRow
                                 label="Accommodation"
-                                sub={accommodationLabel}
+                                sub={`${accommodationLabel}${nightsNote}`}
                                 value={(booking.price ?? booking.unitSubtotal) != null ? formatPeso(unitRate) : 'Price TBA'}
                             />
                             {entranceTotal > 0 && (
                                 <ChargeRow
                                     label="Entrance fees"
-                                    sub={`${formatPeso(booking.entrance.perHead)}/head`}
+                                    sub={`${formatPeso(booking.entrance.perHead)}/head${nightsNote}`}
                                     value={formatPeso(entranceTotal)}
                                 />
                             )}

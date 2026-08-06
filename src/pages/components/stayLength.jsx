@@ -1,0 +1,151 @@
+import './css/stayLength.css'
+import {
+    checkOutForNights,
+    countNights,
+    isSelectableCheckOut,
+    maxNightsFrom,
+    minNightsFrom,
+} from '../../data/extendedStay.js'
+
+// THE CALENDAR IS THE RANGE PICKER
+// --------------------------------
+// Picking Aug 6 and then Aug 9 on the two calendar panels IS how a stay gets
+// its length — that is the whole interaction, and there is no ceiling on it: a
+// week, a fortnight, whatever the guest wants.
+//
+// This is the shortcut beside it, for the guest who thinks "a week" rather than
+// "the 13th". It holds no state of its own: it reads the nights back out of the
+// two dates and writes a check-out date when used, so it and the calendar are
+// the same fact said two ways and cannot drift apart.
+//
+// Only overnight schedules have nights to count — Day Time is a fixed
+// 10:00–17:00 block — so the caller hides this for a same-day schedule.
+
+// Jumps worth one tap. Two nights and three cover most weekends; the last two
+// are the reason this control exists at all, since nobody wants to count
+// fourteen days across two calendar pages to book a fortnight.
+const QUICK_PICKS = [
+    { nights: 1, label: '1 night' },
+    { nights: 2, label: '2 nights' },
+    { nights: 3, label: '3 nights' },
+    { nights: 7, label: '1 week' },
+    { nights: 14, label: '2 weeks' },
+]
+
+function formatDate(date){
+    if (!date) return null
+    return date.toLocaleDateString('en-US', {
+        weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+    })
+}
+
+export default function StayLength({ checkIn, checkOut, schedule, onChange }){
+    const nights = countNights(checkIn, checkOut)
+    const floor = minNightsFrom(checkIn)
+    const ceiling = maxNightsFrom(checkIn)
+    const disabled = !checkIn
+
+    // `direction` is which way the guest is moving, handed down to
+    // checkOutForNights() so a value that lands on a maintenance Monday is
+    // nudged the way they were already going — pressing "−" never bounces the
+    // number back up.
+    const setNights = (value, direction = 1) => {
+        if (disabled) return
+        const next = checkOutForNights(checkIn, value, direction)
+        if (!next) return
+        if (checkOut && next.getTime() === checkOut.getTime()) return
+        onChange?.(next)
+    }
+
+    // A Sunday arrival cannot check out on the Monday, so its shortest stay is
+    // two nights. Worth saying rather than leaving "−" mysteriously dead.
+    const atFloor = nights > 0 && nights <= floor
+
+    return (
+        <div className={`stay-length${disabled ? ' stay-length-disabled' : ''}`}>
+            <div className="stay-length-head">
+                <span className="stay-length-label" id="stay-length-label">
+                    Length of Stay
+                </span>
+                <span className="stay-length-sub">
+                    Set it here or pick your check-out straight on the calendar —
+                    each night is charged at the {schedule?.description ?? 'overnight'} rate,
+                    unit rate and entrance fees both.
+                </span>
+            </div>
+
+            <div className="stay-length-counter" role="group" aria-labelledby="stay-length-label">
+                <button
+                    type="button"
+                    className="stay-length-step"
+                    aria-label="One night shorter"
+                    onClick={() => setNights(nights - 1, -1)}
+                    disabled={disabled || nights <= floor}
+                >
+                    &minus;
+                </button>
+
+                <span className="stay-length-count" aria-live="polite" aria-atomic="true">
+                    {nights > 0 ? `${nights} ${nights === 1 ? 'night' : 'nights'}` : '—'}
+                </span>
+
+                <button
+                    type="button"
+                    className="stay-length-step"
+                    aria-label="One night longer"
+                    onClick={() => setNights(Math.max(floor - 1, nights) + 1, 1)}
+                    disabled={disabled || nights >= ceiling}
+                >
+                    +
+                </button>
+            </div>
+
+            <div className="stay-length-choices">
+                {QUICK_PICKS.map(({ nights: value, label }) => {
+                    // Offered only when it delivers exactly what it says. A
+                    // one-night stay from a Sunday would check out on
+                    // maintenance Monday, so checkOutForNights() nudges it to
+                    // two — correct behaviour for the stepper, but a chip
+                    // reading "1 night" that books two is a small lie. It is
+                    // dropped from the row instead.
+                    const target = checkIn ? checkOutForNights(checkIn, value, 1) : null
+                    if (!target || !isSelectableCheckOut(checkIn, target)) return null
+                    if (countNights(checkIn, target) !== value) return null
+                    return (
+                        <button
+                            key={value}
+                            type="button"
+                            className={`stay-length-chip${value === nights ? ' selected' : ''}`}
+                            onClick={() => setNights(value, 1)}
+                            aria-pressed={value === nights}
+                        >
+                            {label}
+                        </button>
+                    )
+                })}
+            </div>
+
+            <p className="stay-length-note" role="note">
+                <span className="stay-length-note-dot" aria-hidden="true"></span>
+                <span className="stay-length-note-body">
+                    {!checkIn ? (
+                        <>Pick a <strong>check-in date</strong> above, then choose your check-out — or set the nights here.</>
+                    ) : nights < 1 ? (
+                        <>
+                            Choose your <strong>check-out date</strong> on the calendar, or set the
+                            nights here. Stay as long as you like.
+                        </>
+                    ) : (
+                        <>
+                            Checking out <strong>{formatDate(checkOut)}</strong>
+                            {schedule ? ` at ${schedule.time.split(' - ')[1]}` : ''}.
+                            {atFloor && floor > 1
+                                ? ' A Sunday check-in stays at least 2 nights — Monday is maintenance day, so no one checks out on it.'
+                                : ''}
+                        </>
+                    )}
+                </span>
+            </p>
+        </div>
+    )
+}

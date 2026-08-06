@@ -10,7 +10,12 @@ import {
 } from '../../data/accommodationDB.js'
 import { getAccomodationOptions } from '../../data/accomodationOptions.js'
 
-export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut, rateGroup, scheduleKey, droppedUnitNote }){
+// `nights` is how many nights the chosen dates come to (1 for Day Time and for
+// a plain overnight stay). The cards keep quoting the RATE — that is what the
+// rate card says and what a guest compares units on — and add what it comes to
+// for the stay underneath, so an extended stay never looks cheaper on the card
+// than it is in the summary.
+export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut, nights = 1, rateGroup, scheduleKey, droppedUnitNote }){
     const trackRef = useRef(null)
     // Re-renders whenever anything is booked or cancelled — anywhere in the
     // app — so the counts below are never stale.
@@ -20,6 +25,8 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
     const stayEnd = checkOut ?? null
     const list = getAccomodationOptions(rateGroup)
     const schedule = getSchedule(scheduleKey)
+    const stayNights = Math.max(1, Number(nights) || 1)
+    const isExtended = stayNights > 1
     const cartCount = (id) => cart?.[id] ?? 0
     const hasSelection = Object.values(cart ?? {}).some((qty) => qty > 0)
 
@@ -73,9 +80,16 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
         <div className="accomodation-list">
             <p className="accomodation-availability-note">
                 {hasDates
-                    ? `Showing availability for ${formatShortDate(stayStart)}${stayEnd && formatShortDate(stayEnd) !== formatShortDate(stayStart) ? ` – ${formatShortDate(stayEnd)}` : ''}${schedule ? `, ${schedule.time}` : ''}`
+                    ? `Showing availability for ${formatShortDate(stayStart)}${stayEnd && formatShortDate(stayEnd) !== formatShortDate(stayStart) ? ` – ${formatShortDate(stayEnd)}` : ''}${schedule ? `, ${schedule.time}` : ''}${isExtended ? ` · ${stayNights} nights` : ''}`
                     : 'Showing availability for today — pick your dates in step 1 to check your stay.'}
             </p>
+            {isExtended && (
+                <p className="accomodation-schedule-note">
+                    Prices below are <strong>per night</strong>. Your {stayNights}-night stay is
+                    charged {stayNights}× the rate shown, and a unit only appears here if it is
+                    free for every night of it.
+                </p>
+            )}
             {!rateGroup && (
                 <p className="accomodation-schedule-note">
                     Select a stay schedule above to see pricing and the units available for it.
@@ -176,7 +190,18 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
                                         never read "save ₱0". */}
                                     {promoSaving > 0 && (
                                         <span className="accomodation-card-promo-hint">
-                                            Save ₱{promoSaving.toLocaleString('en-PH')} today
+                                            Save ₱{(promoSaving * stayNights).toLocaleString('en-PH')} today
+                                        </span>
+                                    )}
+                                    {/* The card price is per night. On a longer
+                                        stay that is not the number the guest is
+                                        deciding on, so the stay total goes right
+                                        under it rather than only in the summary
+                                        panel further down the page. */}
+                                    {isExtended && item.price != null && (
+                                        <span className="accomodation-card-nights">
+                                            ×&nbsp;{stayNights} nights ={' '}
+                                            <strong>₱{(item.price * stayNights).toLocaleString('en-PH')}</strong>
                                         </span>
                                     )}
                                     <span className={`accomodation-card-available ${unlimited || (availability && availability.available > 0) ? 'is-available' : ''}`}>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import './css/bookingCalendar.css'
+import { addDays, countNights, MAX_STAY_NIGHTS } from '../../data/extendedStay.js'
 
 const MONTH_NAMES = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -15,13 +16,13 @@ function isSameDay(a, b) {
     return a && b && a.getTime() === b.getTime()
 }
 
-// First Monday strictly after the given date — no stay may reach it,
-// since the resort is closed every Monday for maintenance.
-function nextMondayAfter(date) {
-    const d = startOfDay(date)
-    const daysUntilMonday = ((8 - d.getDay()) % 7) || 7
-    d.setDate(d.getDate() + daysUntilMonday)
-    return d
+// The first date past the end of the longest bookable stay. This is a
+// guardrail, not a product rule — a stay is as long as the guest wants one to
+// be, a week included — so it sits a generous month out. Maintenance Mondays
+// bound the ENDS of a stay rather than its length: they stay unselectable in
+// both panels while remaining highlighted inside a range the stay runs through.
+function stayLimitAfter(date) {
+    return addDays(date, MAX_STAY_NIGHTS + 1)
 }
 
 function formatDate(date) {
@@ -36,6 +37,25 @@ function CalendarPanel({ label, variant, selected, onSelect, minDate, maxDate, r
     const initialView = selected || minDate || today
     const [viewYear, setViewYear] = useState(initialView.getFullYear())
     const [viewMonth, setViewMonth] = useState(initialView.getMonth())
+
+    // Follow a selection that was made somewhere else. The nights stepper can
+    // set a check-out several days out — "5 nights" from Oct 28 lands in
+    // November — and a panel still showing October would look like the chip
+    // had done nothing.
+    //
+    // Adjusted during render rather than in an effect, which is React's own
+    // advice for state that has to follow a prop: an effect would paint the
+    // stale month first and then correct it. The guard is the last selection
+    // this ran for, so browsing ahead by hand afterwards is left alone.
+    const selectedTime = selected ? selected.getTime() : null
+    const [lastSelectedTime, setLastSelectedTime] = useState(selectedTime)
+    if (selectedTime !== lastSelectedTime) {
+        setLastSelectedTime(selectedTime)
+        if (selected) {
+            setViewYear(selected.getFullYear())
+            setViewMonth(selected.getMonth())
+        }
+    }
 
     const firstOfMonth = new Date(viewYear, viewMonth, 1)
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
@@ -179,40 +199,35 @@ function SameDayPanel({ checkIn }) {
     )
 }
 
-export default function BookingCalendar({ onChange, sameDayCheckout = false }) {
-    const [checkIn, setCheckIn] = useState(null)
-    const [checkOut, setCheckOut] = useState(null)
-
+// CONTROLLED. The dates used to live here as local state and be mirrored up to
+// the booking page through onChange, which was fine while this was the only
+// thing that could move them. The nights stepper (stayLength.jsx) sets a
+// check-out date too, and two copies of the same fact would have drifted the
+// moment either one wrote — so the booking page owns the pair and this renders
+// what it is given.
+export default function BookingCalendar({ checkIn = null, checkOut = null, onChange, sameDayCheckout = false }) {
     // Day Time schedule: check-out always happens on the check-in date
     const effectiveCheckOut = sameDayCheckout ? checkIn : checkOut
 
     function selectCheckIn(date) {
-        setCheckIn(date)
         if (sameDayCheckout) {
             onChange?.({ checkIn: date, checkOut: date })
             return
         }
-        // a check-out on or before the new check-in, or one that would
-        // cross the next Monday (maintenance day), no longer makes sense
-        const mondayLimit = nextMondayAfter(date)
-        const nextCheckOut =
-            checkOut &&
-            (date.getTime() >= checkOut.getTime() ||
-                checkOut.getTime() >= mondayLimit.getTime())
-                ? null
-                : checkOut
-        setCheckOut(nextCheckOut)
+        // Keep the check-out only if it still describes a stay from the new
+        // check-in: after it, and inside the guardrail. Moving the check-in
+        // forward past your check-out clears it, so the next click on the
+        // right-hand panel reads as the new end of the range.
+        const nights = checkOut ? countNights(date, checkOut) : 0
+        const nextCheckOut = nights >= 1 && nights <= MAX_STAY_NIGHTS ? checkOut : null
         onChange?.({ checkIn: date, checkOut: nextCheckOut })
     }
 
     function selectCheckOut(date) {
-        setCheckOut(date)
         onChange?.({ checkIn, checkOut: date })
     }
 
     function clearDates() {
-        setCheckIn(null)
-        setCheckOut(null)
         onChange?.({ checkIn: null, checkOut: null })
     }
 
@@ -236,17 +251,31 @@ export default function BookingCalendar({ onChange, sameDayCheckout = false }) {
                         selected={checkOut}
                         onSelect={selectCheckOut}
                         minDate={checkIn}
-                        maxDate={checkIn ? nextMondayAfter(checkIn) : null}
+                        maxDate={checkIn ? stayLimitAfter(checkIn) : null}
                         rangeStart={checkIn}
                         rangeEnd={checkOut}
                     />
                 )}
             </div>
 
+            {/* The range, stated as the guest built it. Two panels can be read
+                as two unrelated dates; this is the one line that says they are
+                a stay, and how long it is. */}
+            {!sameDayCheckout && checkIn && checkOut && (
+                <p className="cal-range-summary" aria-live="polite">
+                    <strong>{formatDate(checkIn)}</strong> &rarr; <strong>{formatDate(checkOut)}</strong>
+                    <span className="cal-range-nights">
+                        {countNights(checkIn, checkOut)} night
+                        {countNights(checkIn, checkOut) === 1 ? '' : 's'}
+                    </span>
+                </p>
+            )}
+
             <div className="cal-footer">
                 <p className="cal-note">
-                    Mondays are unavailable — maintenance day.
-                    Sunday check-ins are Day Time only.
+                    Stay as long as you like — pick your check-in, then your
+                    check-out. Mondays are maintenance day, so a stay can&rsquo;t
+                    start or end on one, but a longer stay runs straight through.
                 </p>
                 {(checkIn || checkOut) && (
                     <button type="button" className="cal-clear" onClick={clearDates}>
