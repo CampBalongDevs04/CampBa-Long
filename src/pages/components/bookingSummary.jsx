@@ -3,7 +3,10 @@ import '../components/css/bookingSummary.css'
 // is the one My Bookings will ask for on the next screen.
 import { DOWNPAYMENT_RATE } from '../../data/accommodationDB.js'
 import { ENTRANCE_PER_NIGHT } from '../../data/extendedStay.js'
-import { SENIOR_DISCOUNT_IN_SYSTEM, SENIOR_DISCOUNT_LABEL } from '../../data/entranceFee.js'
+import {
+    PWD_DISCOUNT_IN_SYSTEM, PWD_DISCOUNT_LABEL,
+    SENIOR_DISCOUNT_IN_SYSTEM, SENIOR_DISCOUNT_LABEL,
+} from '../../data/entranceFee.js'
 
 const RATE_LABEL = `${DOWNPAYMENT_RATE * 100}%`
 
@@ -48,7 +51,7 @@ function SummaryRow({ label, value, placeholder }){
 // multiplication matters to a guest reading the column — a three-night stay
 // showing ₱6,750 against a ₱2,250 card — the row shows the arithmetic rather
 // than just the product.
-export default function BookingSummary({ checkIn, checkOut, schedule, quote, guest, pax, kids, seniors }){
+export default function BookingSummary({ checkIn, checkOut, schedule, quote, guest, pax, kids, seniors, pwd }){
     const {
         nights = 1,
         lengthSet = false,
@@ -156,6 +159,20 @@ export default function BookingSummary({ checkIn, checkOut, schedule, quote, gue
                             ? SENIOR_DISCOUNT_IN_SYSTEM
                                 ? `${seniors} — ${SENIOR_DISCOUNT_LABEL} off`
                                 : `${seniors} — discount claimed at the resort`
+                            : null
+                    }
+                    placeholder="None"
+                />
+                {/* PWD sits beside seniors because it is the same kind of fact:
+                    a declared count the front desk needs, not a number this
+                    page subtracts anything for. */}
+                <SummaryRow
+                    label="Persons with disability"
+                    value={
+                        pwd > 0
+                            ? PWD_DISCOUNT_IN_SYSTEM
+                                ? `${pwd} — ${PWD_DISCOUNT_LABEL} off`
+                                : `${pwd} — discount claimed at the resort`
                             : null
                     }
                     placeholder="None"

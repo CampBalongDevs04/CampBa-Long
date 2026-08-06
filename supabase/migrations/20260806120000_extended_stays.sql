@@ -34,13 +34,11 @@
 --       were each deriving it in their own arithmetic; now there is one answer,
 --       and it is the one the price was multiplied by.
 --
---    2. A guard that a stay cannot START or FINISH on the resort's maintenance
---       day. The booking page refuses it (Mondays are unselectable in both
---       calendar panels) but nothing stopped a direct write.
---
---       Note what this deliberately does NOT forbid: a Monday INSIDE the stay.
---       A guest already on-site stays through maintenance day, which is the
---       only way a week-long booking can exist — seven nights always cover one.
+--    2. A guard that a stay cannot span the resort's maintenance day. The
+--       booking page has always refused it (the calendar stops at the Sunday
+--       before the next Monday) but nothing stopped a direct write, and an
+--       extended stay is exactly the shape of booking that would sail through
+--       a Monday unnoticed.
 --
 --  Both are additive. To drop:
 --
@@ -48,7 +46,7 @@
 --      alter table public.booking_groups drop constraint if exists booking_groups_avoids_maintenance_day;
 --      alter table public.bookings       drop column if exists nights;
 --      alter table public.booking_groups drop column if exists nights;
---      drop function if exists public.stay_ends_on_maintenance_day(date, date);
+--      drop function if exists public.stay_touches_maintenance_day(date, date);
 -- ============================================================================
 
 
@@ -79,19 +77,13 @@ comment on column public.booking_groups.nights is
 
 -- ================================================= maintenance day guard
 
--- The resort closes every Monday, and that bounds the ENDS of a stay, not its
--- length. Nobody arrives or departs on a maintenance day — that is what the
--- closure is for, turnover and cleaning — but a guest already on-site stays
--- through it. That distinction is what makes a week-long booking possible at
--- all: any seven-night stay necessarily covers a Monday.
---
---     check-in  may not be a Monday
---     check-out may not be a Monday
---     every day in between may be anything
+-- The resort closes every Monday. A stay may not be open on one — not on its
+-- check-in day, not on its check-out day, and (the case extended stays
+-- introduce) not on any day in between.
 --
 -- IMMUTABLE and free of table reads, which is what makes it legal inside a
 -- CHECK constraint. isodow 1 is Monday.
-create or replace function public.stay_ends_on_maintenance_day(
+create or replace function public.stay_touches_maintenance_day(
     p_check_in  date,
     p_check_out date
 )
@@ -100,24 +92,29 @@ language sql
 immutable
 set search_path = public
 as $$
-    select extract(isodow from p_check_in) = 1
-        or extract(isodow from coalesce(p_check_out, p_check_in)) = 1;
+    select exists (
+        select 1
+        from generate_series(
+            p_check_in,
+            greatest(coalesce(p_check_out, p_check_in), p_check_in),
+            interval '1 day'
+        ) as d
+        where extract(isodow from d) = 1
+    );
 $$;
 
-comment on function public.stay_ends_on_maintenance_day(date, date) is
-    'True when a stay would start or finish on a Monday, the resort''s '
-    'maintenance day. Days INSIDE the stay are unrestricted — a long stay runs '
-    'straight through one. The SQL twin of isMaintenanceDay() in '
-    'data/extendedStay.js.';
+comment on function public.stay_touches_maintenance_day(date, date) is
+    'True when the inclusive date range covers a Monday, the resort''s '
+    'maintenance day. The SQL twin of maxNightsFrom() in data/extendedStay.js.';
 
-grant execute on function public.stay_ends_on_maintenance_day(date, date) to anon, authenticated;
+grant execute on function public.stay_touches_maintenance_day(date, date) to anon, authenticated;
 
 -- NOT VALID on purpose: the constraint binds every insert and update from here
 -- on, but installing it does not scan what is already in the table. Bookings
 -- taken before this rule was enforced in the database are history, and a
 -- constraint that refused to install because of one of them would take the
--- whole migration down with it. No such row is expected — Mondays have never
--- been selectable in either calendar panel — so this is a guard against the
+-- whole migration down with it. No such row is expected — the booking page has
+-- always stopped at the Sunday before a Monday — so this is a guard against the
 -- unexpected rather than a known amnesty. The cancelled escape is what lets one
 -- be cancelled if it does turn up, instead of being frozen by its own dates.
 --
@@ -129,7 +126,7 @@ alter table public.bookings
     add constraint bookings_avoids_maintenance_day
     check (
         status = 'cancelled'
-        or not public.stay_ends_on_maintenance_day(check_in_date, check_out_date)
+        or not public.stay_touches_maintenance_day(check_in_date, check_out_date)
     ) not valid;
 
 alter table public.booking_groups
@@ -138,5 +135,5 @@ alter table public.booking_groups
     add constraint booking_groups_avoids_maintenance_day
     check (
         status = 'cancelled'
-        or not public.stay_ends_on_maintenance_day(check_in_date, check_out_date)
+        or not public.stay_touches_maintenance_day(check_in_date, check_out_date)
     ) not valid;

@@ -119,6 +119,7 @@ function buildReceipt(booking, statusLabel, savedAt){
         booking.pax ? `${booking.pax} pax` : null,
         booking.kids > 0 ? `${booking.kids} kid${booking.kids > 1 ? 's' : ''}` : null,
         booking.seniors > 0 ? `${booking.seniors} senior${booking.seniors > 1 ? 's' : ''}` : null,
+        booking.pwd > 0 ? `${booking.pwd} PWD` : null,
     ].filter(Boolean).join(' • ') || 'Not provided'
 
     const checkInTime = formatClock(booking.startsAt)
@@ -209,10 +210,18 @@ function buildReceipt(booking, statusLabel, savedAt){
     const notes = [
         'Present this receipt at check-in. The remaining balance above is settled'
             + ' on-site.'
-            + (booking.seniors > 0
-                ? ` This booking declares ${booking.seniors} senior citizen`
-                    + `${booking.seniors > 1 ? 's' : ''} — the senior discount is applied at the`
-                    + ' resort against a valid Senior Citizen ID, off the balance above.'
+            + (booking.seniors > 0 || booking.pwd > 0
+                ? ' This booking declares '
+                    + [
+                        booking.seniors > 0
+                            ? `${booking.seniors} senior citizen${booking.seniors > 1 ? 's' : ''}`
+                            : null,
+                        booking.pwd > 0
+                            ? `${booking.pwd} person${booking.pwd > 1 ? 's' : ''} with disability`
+                            : null,
+                    ].filter(Boolean).join(' and ')
+                    + ' — that discount is applied at the resort against a valid ID,'
+                    + ' off the balance above.'
                 : ''),
     ]
     if (paid > 0 && paid < downPayment){

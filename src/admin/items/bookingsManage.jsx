@@ -58,7 +58,7 @@ function formatRange(booking) {
 // Who is in the party, for the Guests column: total pax, then the two counts
 // that change what happens at the desk.
 //
-// The SENIOR count is the reason this column exists. The senior discount is no
+// The SENIOR and PWD counts are the reason this column exists. The senior discount is no
 // longer applied by the system — the resort gives it in person against a Senior
 // Citizen ID (see SENIOR_DISCOUNT_RATE in data/entranceFee.js) — so whoever is
 // settling the balance has to be able to see how many seniors the booking
@@ -70,6 +70,7 @@ function guestsLabel(booking) {
     if (!booking.pax) return '—'
     const extras = [
         booking.seniors > 0 ? `${booking.seniors} senior${booking.seniors > 1 ? 's' : ''}` : null,
+        booking.pwd > 0 ? `${booking.pwd} PWD` : null,
         booking.kids > 0 ? `${booking.kids} kid${booking.kids > 1 ? 's' : ''}` : null,
     ].filter(Boolean)
     return extras.length ? `${booking.pax} pax · ${extras.join(', ')}` : `${booking.pax} pax`

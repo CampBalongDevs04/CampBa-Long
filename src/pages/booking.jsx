@@ -10,6 +10,7 @@ import { getAccomodationOptions, isFreeEntranceEligible } from '../data/accomoda
 import PaxInput from './components/paxInput'
 import KidsCount from './components/kidscount'
 import SeniorCount from './components/seniorCount'
+import PwdCount from './components/pwdCount'
 import { computeStayQuote } from '../data/extendedStay.js'
 import Terms from './components/terms'
 import BookingSummary from './components/bookingSummary'
@@ -73,6 +74,7 @@ export default function Booking(){
     const [pax, setPax] = useState(null)
     const [kids, setKids] = useState(0)
     const [seniors, setSeniors] = useState(0)
+    const [pwd, setPwd] = useState(0)
     const [guest, setGuest] = useState({ fullName: '', mobile: '', email: '' })
     const [agreed, setAgreed] = useState(false)
     const [attemptedConfirm, setAttemptedConfirm] = useState(false)
@@ -193,15 +195,20 @@ export default function Booking(){
         setBookingError(null)
     }
 
-    // Seniors and kids are a subset of the total guests (pax). If the guest
-    // count drops below the specials already picked, trim them to fit —
-    // seniors are kept first, then kids fill whatever room is left.
+    // Seniors, PWD guests and kids are all subsets of the total guests (pax),
+    // and the three together can never exceed it. If the guest count drops
+    // below the specials already picked, trim them to fit in that order —
+    // seniors keep their places first, then PWD, then kids take what is left.
+    // The order only decides who survives a shrinking party; it carries no
+    // money, since none of the three is discounted by this system today.
     function handlePaxChange(nextPax){
         setPax(nextPax)
         const cap = nextPax ?? 0
         const nextSeniors = Math.min(seniors, cap)
-        const nextKids = Math.min(kids, cap - nextSeniors)
+        const nextPwd = Math.min(pwd, cap - nextSeniors)
+        const nextKids = Math.min(kids, cap - nextSeniors - nextPwd)
         if (nextSeniors !== seniors) setSeniors(nextSeniors)
+        if (nextPwd !== pwd) setPwd(nextPwd)
         if (nextKids !== kids) setKids(nextKids)
     }
 
@@ -303,6 +310,7 @@ export default function Booking(){
                 pax,
                 kids,
                 seniors,
+                pwd,
                 entrance: entranceBreakdown,
                 // The rate for the WHOLE stay — the card's nightly rate times
                 // the nights being booked. `bookings.price` has always been
@@ -374,6 +382,7 @@ export default function Booking(){
             pax,
             kids,
             seniors,
+            pwd,
             entrance: entranceBreakdown,
         })
 
@@ -530,18 +539,28 @@ export default function Booking(){
                                     rateGroup={rateGroup}
                                 />
 
+                                {/* Each ceiling is the party minus the other
+                                    two, so the three declared counts can never
+                                    add up to more people than are coming. */}
                                 <KidsCount
                                     kids={kids}
                                     onKidsChange={setKids}
                                     disabled={!pax}
-                                    max={(pax ?? 0) - seniors}
+                                    max={(pax ?? 0) - seniors - pwd}
                                 />
 
                                 <SeniorCount
                                     seniors={seniors}
                                     onSeniorsChange={setSeniors}
                                     disabled={!pax}
-                                    max={(pax ?? 0) - kids}
+                                    max={(pax ?? 0) - kids - pwd}
+                                />
+
+                                <PwdCount
+                                    pwd={pwd}
+                                    onPwdChange={setPwd}
+                                    disabled={!pax}
+                                    max={(pax ?? 0) - kids - seniors}
                                 />
                             </div>
                         </section>
@@ -601,6 +620,7 @@ export default function Booking(){
                         pax={pax}
                         kids={kids}
                         seniors={seniors}
+                        pwd={pwd}
                     />
                 </div>
             </div>

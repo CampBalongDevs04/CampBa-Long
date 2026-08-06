@@ -55,7 +55,15 @@ This is deliberate. Everything `computeEntranceFee()` already decides —
 * kids 7 & below are exempt,
 * up to **2 non-kid heads** ride free (the rate card's resort inclusion; not on
   Tent Pitching, Cottage or Pavilion),
-* remaining senior heads get **20% off**
+* senior heads are charged the **full rate** — see the note below
+
+> **The system no longer discounts seniors.** The resort gives that discount at
+> the front desk, against the Senior Citizen ID the guest presents on arrival, so
+> quoting a reduced figure online would promise something this system is not the
+> one granting — and would double it if the desk then applied its own. The senior
+> **count** still travels on the booking, the receipt and the admin list, because
+> the desk cannot give a discount it cannot see. `SENIOR_DISCOUNT_RATE` is `0`;
+> set it back above zero and every screen resumes showing and charging one.
 
 — is decided **once, for one night, by the code that has always decided it**,
 and the result is multiplied. So the perks scale *with* the stay: a party that
@@ -93,19 +101,19 @@ Over 3 nights, one full-fare head owes **₱350 × 3 = ₱1,050**.
 | 4 guests × ₱1,050 | ₱4,200.00 |
 | − free entrance, 1 kid (7 & below) × ₱1,050 | − ₱1,050.00 |
 | − free entrance, 2 pax resort inclusion × ₱1,050 | − ₱2,100.00 |
-| − senior discount, 20% × 1 remaining senior head × ₱1,050 | − ₱210.00 |
-| **Entrance subtotal** (₱280 for one night, × 3) | **₱840.00** |
+| **Entrance subtotal** (₱350 for one night, × 3) | **₱1,050.00** |
 
-Only one head is actually paying: the kid is free, the 2-pax inclusion covers
-both regular heads, and the senior pays ₱1,050 − ₱210 = ₱840.
+Only one head is actually paying: the kid is free and the 2-pax inclusion covers
+both regular heads, leaving the senior — charged the full ₱1,050 here, with the
+senior discount taken off at the resort against their ID.
 
 ### What the guest pays
 
 | | |
 |---|---|
-| Stay subtotal | ₱6,750.00 + ₱840.00 = **₱7,590.00** |
-| Down payment (50%, sent within 10 minutes of reserving) | **₱3,795.00** |
-| Balance on-site at check-in | ₱3,795.00 |
+| Stay subtotal | ₱6,750.00 + ₱1,050.00 = **₱7,800.00** |
+| Down payment (50%, sent within 10 minutes of reserving) | **₱3,900.00** |
+| Balance on-site at check-in | ₱3,900.00, less any senior discount the desk applies |
 
 The same stay stretched to a week (Aug 6 → Aug 13, 3 pax, no kids or seniors)
 runs straight through Monday Aug 10 and comes to ₱2,250 × 7 = ₱15,750 plus
@@ -168,13 +176,14 @@ Every money field on a booking row is a **whole-stay** figure:
 | Column | For the 4-pax example above |
 |---|---|
 | `price` | `6750` — the nightly rate already multiplied by the nights |
-| `entrance_total` | `840` |
+| `entrance_total` | `1050` |
 | `entrance_per_head` | `1050` — **what one full-fare head owes for the STAY**, not per night |
 | `entrance_free_applied` | `3` — a head **count**, never scaled |
 | `entrance_free_savings` | `3150` = 3 heads × ₱1,050 |
-| `entrance_senior_discount` | `210` |
-| `downpayment` | `3795.00` — generated, never written |
+| `entrance_senior_discount` | `0` — the resort's to give, not this system's |
+| `downpayment` | `3900.00` — generated, never written |
 | `nights` | `3` — generated from the dates |
+| `seniors` | `1` — kept so the front desk can apply the discount in person |
 
 `entrance_per_head` being a whole-stay figure is the part worth remembering. It
 is what keeps the stored breakdown self-consistent: `splitFreeEntrance()` in

@@ -48,6 +48,22 @@ export const SENIOR_DISCOUNT_IN_SYSTEM = SENIOR_DISCOUNT_RATE > 0
 // by construction.
 export const SENIOR_DISCOUNT_LABEL = `${Math.round(SENIOR_DISCOUNT_RATE * 100)}%`
 
+// PERSONS WITH DISABILITY
+// -----------------------
+// Same story as seniors, and deliberately the same three constants rather than
+// a shared "special guest" abstraction: the two are separate entitlements with
+// separate IDs, and the resort may well want one of them back in the system
+// without the other. Zero here means a PWD head is charged the full entrance
+// rate and the discount is given at the front desk against a PWD ID.
+//
+// `pwd` is carried on the booking, the receipt and the admin list for exactly
+// the reason the senior count is — the desk cannot give a discount it cannot
+// see. Nothing in computeEntranceFee() reads it, because at rate 0 a PWD head
+// and a regular head cost the same; wire it in there the day the rate changes.
+export const PWD_DISCOUNT_RATE = 0
+export const PWD_DISCOUNT_IN_SYSTEM = PWD_DISCOUNT_RATE > 0
+export const PWD_DISCOUNT_LABEL = `${Math.round(PWD_DISCOUNT_RATE * 100)}%`
+
 // ON "FREE ENTRANCE FOR 2 PAX"
 // -----------------------------
 // This perk used to be advertised in INCLUSIONS and subtracted here ON TOP OF

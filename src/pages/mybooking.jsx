@@ -192,6 +192,9 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, 
                         {booking.seniors > 0 && (
                             <p className="field-sub">{booking.seniors} senior citizens — discount claimed at the resort, bring a valid ID</p>
                         )}
+                        {booking.pwd > 0 && (
+                            <p className="field-sub">{booking.pwd} PWD guests — discount claimed at the resort, bring a valid PWD ID</p>
+                        )}
                     </div>
                 </div>
 
@@ -443,6 +446,9 @@ function GroupBookingCard({ group, onCancel, onDelete, onSaveReceipt, payNow }){
                             the day, not today's. */}
                         {group.seniors > 0 && (
                             <p className="field-sub">{group.seniors} senior citizens — discount claimed at the resort, bring a valid ID</p>
+                        )}
+                        {group.pwd > 0 && (
+                            <p className="field-sub">{group.pwd} PWD guests — discount claimed at the resort, bring a valid PWD ID</p>
                         )}
                     </div>
                 </div>
