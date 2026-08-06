@@ -21,7 +21,7 @@ const contactDetails = [
     {
         icon: phoneSvg,
         label: 'Phone',
-        lines: ['+63 9xxx xxx xxx']
+        lines: ['+63 9622 331 708']
     },
     {
         icon: emailSvg,

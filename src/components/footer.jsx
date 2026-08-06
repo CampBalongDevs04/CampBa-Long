@@ -25,8 +25,8 @@ const FooterOther = [
 
 const GetInTouch = [
     {
-        contact: "09xxxxxxxx",
-        Email: "CampbalongExample@gmail.com",
+        contact: "09622331708",
+        Email: "campbalongnaturefarm@gmail.com",
         socials: [
             { label: "Facebook", href: "https://facebook.com/campbalong" },
             { label: "Instagram", href: "https://instagram.com/campbalong" },

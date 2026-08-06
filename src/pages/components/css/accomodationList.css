@@ -294,3 +294,29 @@
     font-weight: 600;
     font-style: normal;
 }
+
+/* Nothing of THIS card is booked or even cancelled — a sibling card sharing
+   the same physical slots (Small Tent / Big Tent / Tent Pitching) just used
+   up what was left, in this guest's own cart. A dark wash over the whole
+   card, rather than the paler fully-booked fade, reads as "someone's holding
+   this" vs. "gone" — accurate, since it's the guest's own other pick holding
+   it, one qty change away from freeing back up. */
+.accomodation-card.pool-locked{
+    cursor: not-allowed;
+}
+
+.accomodation-card.pool-locked::after{
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: 12px;
+    background: rgba(10, 15, 10, 0.55);
+    pointer-events: none;
+}
+
+.accomodation-card.pool-locked .accomodation-card-available{
+    color: #e8e2d0;
+    font-weight: 600;
+    font-style: normal;
+}

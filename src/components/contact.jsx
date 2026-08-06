@@ -101,7 +101,7 @@ export default function Contact(){
                             </div>
                             <div className="contact-detail-text">
                                 <p className="contact-detail-label">Phone</p>
-                                <p className="contact-detail-info">+63 9xxxxxxxxxx</p>
+                                <p className="contact-detail-info">+63 9622331708</p>
                             </div>
                         </div>
 
@@ -111,7 +111,7 @@ export default function Contact(){
                             </div>
                             <div className="contact-detail-text">
                                 <p className="contact-detail-label">Email</p>
-                                <p className="contact-detail-info">campBalongExample@gmail.com</p>
+                                <p className="contact-detail-info">campbalongnaturefarm@gmail.com</p>
                             </div>
                         </div>
 

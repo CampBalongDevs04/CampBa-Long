@@ -138,8 +138,8 @@ export const ACCOMMODATION_TYPES = [
     { id: 'small', name: 'A-House Small', prefix: 'AHS', total: 3, image: null, poolId: null },
     { id: 'medium', name: 'A-House Medium', prefix: 'AHM', total: 2, image: null, poolId: null },
     { id: 'family', name: 'A-House Family', prefix: 'AHF', total: 1, image: null, poolId: null },
-    { id: 'tent-small', name: 'Small Tent', prefix: 'TENTS', total: 4, image: null, poolId: 'tent-small' },
-    { id: 'tent-large', name: 'Big Tent', prefix: 'TENTL', total: 4, image: null, poolId: 'tent-small' },
+    { id: 'tent-small', name: 'Small Tent', prefix: 'TENTS', total: 3, image: null, poolId: 'tent-small' },
+    { id: 'tent-large', name: 'Big Tent', prefix: 'TENTL', total: 1, image: null, poolId: 'tent-small' },
     { id: 'tent-pitching', name: 'Tent Pitching', prefix: 'PITCH', total: 4, image: null, poolId: 'tent-small' },
     { id: 'cottage', name: 'Cottage', prefix: 'COT', total: 2, image: null, poolId: null },
     { id: 'pavilion', name: 'Pavillion', prefix: 'PAV', total: 1, image: null, poolId: null },
@@ -1175,10 +1175,35 @@ function fetchAvailability(checkIn, checkOut, scheduleKey) {
             for (const row of data) {
                 const key = cacheKey(row.type_id, from, to, scheduleKey)
                 const previous = availabilityCache.get(key)
-                if (previous?.available !== row.available || previous?.total !== row.total) {
+                // Small Tent, Big Tent and Tent Pitching share one 4-slot pool
+                // (see 20260803120000_shared_tent_pool.sql), so `available`
+                // straight off the RPC is how many of the WHOLE pool are free
+                // — up to 4, even for Big Tent, which only ever has 1 unit of
+                // its own. `poolAvailable` keeps that raw pool-wide number
+                // (identical across every type sharing a pool; simply equal
+                // to `available` for a type with no pool of its own) so a
+                // screen with more than one pool member on it at once — the
+                // booking cart — can tell that adding a Tent Pitching to the
+                // cart used up the slot a Big Tent card was about to claim,
+                // something the per-type numbers alone can't say. `available`
+                // itself is capped at the type's own total so a card never
+                // claims more units than the resort actually has of it, while
+                // still going to 0 on all three once the shared pool itself
+                // is exhausted.
+                const available = Math.min(row.available, row.total)
+                if (
+                    previous?.available !== available ||
+                    previous?.total !== row.total ||
+                    previous?.poolAvailable !== row.available
+                ) {
                     changed = true
                 }
-                availabilityCache.set(key, { available: row.available, total: row.total, fetchedAt })
+                availabilityCache.set(key, {
+                    available,
+                    total: row.total,
+                    poolAvailable: row.available,
+                    fetchedAt,
+                })
             }
             // Only re-render when a number actually moved; a routine
             // revalidation that confirms the current view should be invisible.

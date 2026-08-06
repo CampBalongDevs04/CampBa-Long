@@ -7,6 +7,7 @@ import {
     formatShortDate,
     useAccommodationDB,
     getSchedule,
+    findAccommodationType,
 } from '../../data/accommodationDB.js'
 import { getAccomodationOptions } from '../../data/accomodationOptions.js'
 
@@ -30,6 +31,20 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
     const cartCount = (id) => cart?.[id] ?? 0
     const hasSelection = Object.values(cart ?? {}).some((qty) => qty > 0)
 
+    // Small Tent, Big Tent and Tent Pitching are three cards drawing on the
+    // same 4 physical slots (see accommodationDB.js's `poolAvailable`). The
+    // server doesn't know what's sitting unsubmitted in THIS cart, so a guest
+    // could add 1 Big Tent and 1 Tent Pitching back to back — each card looks
+    // fine on its own — and only find out the resort ran out of ground when
+    // the booking is submitted and refused. Tallying what the cart already
+    // holds per pool, up front, is what lets each card refuse the add itself.
+    const poolCartTotals = list.reduce((totals, entry) => {
+        const poolId = findAccommodationType(entry.id)?.poolId
+        if (!poolId) return totals
+        totals[poolId] = (totals[poolId] ?? 0) + cartCount(entry.id)
+        return totals
+    }, {})
+
     const scrollByCard = (direction) => {
         const track = trackRef.current
         if (!track) return
@@ -49,6 +64,14 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
     // would leave the track exactly where that schedule left it, showing
     // some card other than the new list's first — with no visual hint that
     // there's anything to the left.
+    //
+    // ONLY on a schedule switch, not on every +/- click: `hasSelection` used
+    // to be a dependency too, so ticking a card's qty up from 0 (or the last
+    // one back down to 0) re-ran this and yanked the carousel to centre on
+    // it, or snapped it back to the first card, while the guest was still
+    // clicking. Reading `hasSelection` inside without listing it is
+    // deliberate — this render's value is what the effect closure captures,
+    // which is what "at the moment rateGroup changes" means.
     //
     // The TRACK is scrolled, not the card — scrollIntoView() walks every
     // scrollable ancestor including the page itself, so centring a card that
@@ -74,7 +97,8 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
             // card rather than wherever the previous schedule left the track.
             track.scrollLeft = 0
         }
-    }, [hasSelection, rateGroup])
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- see the note above the effect
+    }, [rateGroup])
 
     return(
         <div className="accomodation-list">
@@ -132,13 +156,29 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
                         // never 3. Unlimited (tent pitching) and "no schedule
                         // picked yet" (availability still null) both leave the
                         // + button enabled; there's simply no ceiling to check yet.
-                        const maxQty = unlimited || availability == null ? null : availability.available
-                        const atMax = maxQty != null && qty >= maxQty
-                        const canAdd = !isFullyBooked && !atMax
+                        const ownRemaining = unlimited || availability == null ? null : availability.total - qty
+                        const atOwnMax = ownRemaining != null && ownRemaining <= 0
+
+                        // The pool-wide check on top of the per-card one above:
+                        // how many of the shared slots are left once every pool
+                        // member's cart quantity — not just this card's — is
+                        // taken out of the raw pool count.
+                        const poolId = unlimited ? null : findAccommodationType(item.id)?.poolId
+                        const poolRemaining =
+                            poolId && availability?.poolAvailable != null
+                                ? availability.poolAvailable - (poolCartTotals[poolId] ?? 0)
+                                : null
+                        const atPoolMax = poolRemaining != null && poolRemaining <= 0
+                        const canAdd = !isFullyBooked && !atOwnMax && !atPoolMax
+                        // Nothing of THIS card is in the cart, but a sibling
+                        // card (same pool) already claimed every slot left —
+                        // greyed out so the guest doesn't try this one too and
+                        // only find out it's gone at checkout.
+                        const poolLocked = !isFullyBooked && qty === 0 && atPoolMax
 
                         return (
                             <div
-                                className={`accomodation-card ${qty > 0 ? 'selected' : ''} ${isFullyBooked ? 'fully-booked' : ''}`}
+                                className={`accomodation-card ${qty > 0 ? 'selected' : ''} ${isFullyBooked ? 'fully-booked' : ''} ${poolLocked ? 'pool-locked' : ''}`}
                                 key={item.id}
                             >
                                 {qty > 0 && (
@@ -204,14 +244,24 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
                                             <strong>₱{(item.price * stayNights).toLocaleString('en-PH')}</strong>
                                         </span>
                                     )}
-                                    <span className={`accomodation-card-available ${unlimited || (availability && availability.available > 0) ? 'is-available' : ''}`}>
+                                    <span className={`accomodation-card-available ${unlimited || (availability && availability.available > 0 && !poolLocked) ? 'is-available' : ''}`}>
                                         {unlimited
                                             ? 'Available'
                                             : availability === null
                                                 ? 'Availability TBA'
                                                 : isFullyBooked
                                                     ? `Fully booked${nextAvailable ? ` · free ${formatShortDate(nextAvailable)}` : ''}`
-                                                    : `${availability.available} of ${availability.total} available`}
+                                                    : poolLocked
+                                                        ? 'Taken by your other pick'
+                                                        : poolId
+                                                            // The three tent cards share one physical pool, so
+                                                            // "3 of 3 available" on this card alone doesn't say
+                                                            // there's really only 1 patch of ground left once the
+                                                            // other two tent cards are counted in — this is that
+                                                            // shared number, the same across all three tent cards,
+                                                            // and it drops as soon as any of them lands in the cart.
+                                                            ? `${availability.available} of ${availability.total} available · ${Math.max(0, poolRemaining ?? availability.poolAvailable ?? 0)} slot${Math.max(0, poolRemaining ?? availability.poolAvailable ?? 0) === 1 ? '' : 's'} left`
+                                                            : `${availability.available} of ${availability.total} available`}
                                     </span>
                                 </div>
                                 <div className="accomodation-card-qty">
