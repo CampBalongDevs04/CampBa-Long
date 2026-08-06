@@ -18,6 +18,7 @@ import {
     groupUnitCounts,
 } from '../data/accommodationDB.js'
 import { splitFreeEntrance } from '../data/entranceFee.js'
+import { countNights } from '../data/extendedStay.js'
 
 function formatDate(iso){
     if (!iso) return '—'
@@ -73,13 +74,28 @@ function spaOrderTotal(booking){
     return (booking.spaOrders ?? []).reduce((sum, order) => sum + order.total, 0)
 }
 
+// How many nights this booking was BILLED for — the same count the booking page
+// multiplied the rates by, recovered from the two dates the row stores.
+function stayNights(booking){
+    if (booking.sameDayCheckout) return 1
+    return Math.max(1, countNights(booking.checkIn, booking.checkOut))
+}
+
 function stayLabel(booking){
     if (booking.sameDayCheckout) return '1 day use'
     if (!booking.checkIn || !booking.checkOut) return 'Stay length TBA'
-    const nights = Math.max(1, Math.round(
-        (new Date(booking.checkOut) - new Date(booking.checkIn)) / 86400000
-    ))
+    const nights = stayNights(booking)
     return `${nights} night${nights > 1 ? 's' : ''} stay`
+}
+
+// `entrance.perHead` is stored as what one full-fare head owes FOR THE WHOLE
+// STAY (the nightly rate already multiplied by the nights — see
+// data/extendedStay.js). On a one-night booking that is the nightly rate and
+// needs no explaining; on a longer one, "₱1,050/head" only makes sense with
+// the nights it covers said next to it.
+function perHeadLabel(booking, formatted){
+    const nights = stayNights(booking)
+    return nights > 1 ? `${formatted}/head for ${nights} nights` : `${formatted}/head`
 }
 
 function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, payNow }){
@@ -166,8 +182,15 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, 
                         {booking.kids > 0 && (
                             <p className="field-sub">{booking.kids} kids (7 &amp; below, no entrance fee)</p>
                         )}
+                        {/* No percentage on the line below, on purpose. This card
+                            shows a booking that was priced when it was made, and
+                            the senior rate can change afterwards — quoting today's
+                            rate against an older booking would describe it
+                            wrongly. What that booking actually got is the peso
+                            figure in the entrance breakdown further down, which is
+                            stored on the row itself. */}
                         {booking.seniors > 0 && (
-                            <p className="field-sub">{booking.seniors} senior citizens (10% off, ID required)</p>
+                            <p className="field-sub">{booking.seniors} senior citizens — discount claimed at the resort, bring a valid ID</p>
                         )}
                     </div>
                 </div>
@@ -215,7 +238,7 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, 
                                 <p className="field-label">Entrance Fee</p>
                                 <p className="field-value">{formatPeso(booking.entrance.total)}</p>
                                 <p className="field-sub">
-                                    {formatPeso(booking.entrance.perHead)}/head, half prepaid
+                                    {perHeadLabel(booking, formatPeso(booking.entrance.perHead))}, half prepaid
                                     {kidsApplied > 0
                                         ? ` • free entrance (${kidsApplied} pax, kids 7 & below) −${formatPeso(kidsFree)}`
                                         : ''}
@@ -415,8 +438,11 @@ function GroupBookingCard({ group, onCancel, onDelete, onSaveReceipt, payNow }){
                         {group.kids > 0 && (
                             <p className="field-sub">{group.kids} kids (7 &amp; below, no entrance fee)</p>
                         )}
+                        {/* Same reasoning as the single-booking card: the rate
+                            that priced this reservation is whatever it was on
+                            the day, not today's. */}
                         {group.seniors > 0 && (
-                            <p className="field-sub">{group.seniors} senior citizens (10% off, ID required)</p>
+                            <p className="field-sub">{group.seniors} senior citizens — discount claimed at the resort, bring a valid ID</p>
                         )}
                     </div>
                 </div>
@@ -473,7 +499,7 @@ function GroupBookingCard({ group, onCancel, onDelete, onSaveReceipt, payNow }){
                                 <p className="field-label">Entrance Fee</p>
                                 <p className="field-value">{formatPeso(group.entrance.total)}</p>
                                 <p className="field-sub">
-                                    {formatPeso(group.entrance.perHead)}/head, half prepaid
+                                    {perHeadLabel(group, formatPeso(group.entrance.perHead))}, half prepaid
                                     {kidsApplied > 0
                                         ? ` • free entrance (${kidsApplied} pax, kids 7 & below) −${formatPeso(kidsFree)}`
                                         : ''}

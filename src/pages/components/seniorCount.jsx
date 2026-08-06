@@ -1,11 +1,16 @@
 import { useState } from 'react'
 import './css/seniorCount.css'
+import { SENIOR_DISCOUNT_IN_SYSTEM, SENIOR_DISCOUNT_LABEL } from '../../data/entranceFee.js'
 
 const MIN_SENIORS = 0
 const MAX_SENIORS = 20
 
-// Senior citizens get 10% off the per-head entrance fee. This only tracks a
-// headcount; the discount is applied where the entrance fee is totalled.
+// A headcount, and — while the discount is given at the resort rather than by
+// this system — ONLY a headcount. It still matters just as much: the front desk
+// applies the discount against this number, so a guest who does not declare
+// their seniors here has nothing for staff to work from. The note below says
+// which of the two worlds we are in by reading the constant, so the promise
+// made to the guest always matches what the totals actually do.
 // Button-only stepper (no typing) to keep the value clean.
 //
 // Seniors are a subset of the total guests, so callers pass:
@@ -65,9 +70,16 @@ export default function SeniorCount({ seniors, onSeniorsChange, disabled = false
                     {disabled ? (
                         <>Set the <strong>number of guests</strong> first — seniors are counted within your guest total.</>
                     ) : (
-                        <>Senior citizens get <strong>10% off</strong> the entrance fee. Please
-                        present a <strong>Senior Citizen ID</strong> or other valid ID upon
-                        check-in for validation.</>
+                        SENIOR_DISCOUNT_IN_SYSTEM ? (
+                            <>Senior citizens get <strong>{SENIOR_DISCOUNT_LABEL} off</strong> the entrance fee. Please
+                            present a <strong>Senior Citizen ID</strong> or other valid ID upon
+                            check-in for validation.</>
+                        ) : (
+                            <>The senior discount is <strong>given at the resort</strong>, so the total
+                            you see here is at the full rate. Tell us how many seniors are coming
+                            and present a <strong>Senior Citizen ID</strong> at check-in — it comes
+                            off the balance you settle on-site.</>
+                        )
                     )}
                 </span>
             </p>

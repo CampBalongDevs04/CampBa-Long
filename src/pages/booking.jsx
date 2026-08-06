@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import './components/css/booking.css'
 import BookingCalendar from './components/BookingCalendar'
+import StayLength from './components/stayLength'
 import TimeSelector from './components/timeSelector'
 import ScheduleNote from './components/scheduleNote'
 import AccomodationList from './components/accomodationList'
@@ -9,7 +10,7 @@ import { getAccomodationOptions, isFreeEntranceEligible } from '../data/accomoda
 import PaxInput from './components/paxInput'
 import KidsCount from './components/kidscount'
 import SeniorCount from './components/seniorCount'
-import { computeEntranceFee } from '../data/entranceFee.js'
+import { computeStayQuote } from '../data/extendedStay.js'
 import Terms from './components/terms'
 import BookingSummary from './components/bookingSummary'
 import HoldQueueNotice from './components/holdQueueNotice'
@@ -23,7 +24,8 @@ const steps = [
     {
         id: 'step-schedule',
         title: 'Dates & Schedule',
-        sub: 'Pick your check-in and check-out dates, then choose a stay schedule.',
+        sub: 'Pick your check-in date and stay schedule, then set how many nights'
+            + ' you are staying. Every night is charged at the same rate.',
     },
     {
         id: 'step-accommodation',
@@ -84,9 +86,11 @@ export default function Booking(){
     // rejoins the queue at the BACK, so it is only ever set from null.
     const [queueRequest, setQueueRequest] = useState(null)
 
-    const sameDayCheckout = selectedTime !== null && timeOptions[selectedTime].sameDay === true
-    const rateGroup = selectedTime !== null ? timeOptions[selectedTime].rateGroup : null
-    const scheduleKey = selectedTime !== null ? timeOptions[selectedTime].key : null
+    const schedule = selectedTime !== null ? timeOptions[selectedTime] : null
+    const sameDayCheckout = schedule?.sameDay === true
+    const rateGroup = schedule?.rateGroup ?? null
+    const scheduleKey = schedule?.key ?? null
+    const effectiveCheckOut = sameDayCheckout ? dates.checkIn : dates.checkOut
 
     // The cart, resolved against this schedule's prices/capacity. A stale id
     // (dropped by a schedule switch, or never valid) simply has no option and
@@ -105,6 +109,22 @@ export default function Booking(){
     const cartFreeEntranceEligible =
         cartLines.length > 0 && cartLines.every((line) => isFreeEntranceEligible(line.id))
 
+    // The whole stay's arithmetic, in one place: how many nights the dates
+    // come to, the unit rates multiplied across them, the entrance fees
+    // multiplied the same way, and what that makes the down payment. The
+    // summary renders this object and reserve() stores it, so a guest cannot
+    // be quoted one figure on this page and charged another on the next.
+    const quote = computeStayQuote({
+        schedule,
+        checkIn: dates.checkIn,
+        checkOut: effectiveCheckOut,
+        cartLines,
+        pax: pax ?? 0,
+        kids,
+        seniors,
+        freeEntranceEligible: cartFreeEntranceEligible,
+    })
+
     // Switching schedules can change which units are even offered (e.g.
     // Cottage is day-only, tents are overnight-only) — drop whatever in the
     // cart is no longer valid for the newly chosen schedule. Units can also
@@ -112,6 +132,20 @@ export default function Booking(){
     // dropped instead of just clearing the cards.
     function handleSelectTime(index){
         setSelectedTime(index)
+
+        // Coming FROM Day Time, check-out is sitting on the check-in date —
+        // that is what same-day means, and it is not a stay length an
+        // overnight schedule can be booked for. Drop it so the nights stepper
+        // asks the question rather than silently booking a zero-night stay.
+        if (timeOptions[index]?.sameDay !== true) {
+            setDates((current) => (
+                current.checkIn && current.checkOut
+                    && current.checkOut.getTime() <= current.checkIn.getTime()
+                    ? { ...current, checkOut: null }
+                    : current
+            ))
+        }
+
         const nextRateGroup = timeOptions[index]?.rateGroup ?? null
         const cartIds = Object.keys(cart).filter((id) => cart[id] > 0)
         if (cartIds.length === 0) return
@@ -171,23 +205,28 @@ export default function Booking(){
         if (nextKids !== kids) setKids(nextKids)
     }
 
+    // A Sunday check-in used to force Day Time, because the only overnight
+    // stay it could make ended on maintenance Monday. That is no longer the
+    // only one it can make: a stay may run straight through a Monday now, so a
+    // Sunday arrival is fine as long as it stays two nights and checks out on
+    // the Tuesday. The calendar refuses a Monday check-out on its own, so
+    // there is nothing left for this to override.
     function handleDatesChange(nextDates){
         setDates(nextDates)
-        // A Sunday check-in only allows the same-day Day Time schedule
-        // (Monday is maintenance day), so drop any overnight selection.
-        if (
-            nextDates.checkIn && nextDates.checkIn.getDay() === 0 &&
-            selectedTime !== null && timeOptions[selectedTime].sameDay !== true
-        ) {
-            setSelectedTime(null)
-        }
     }
+
+    // An overnight schedule needs a check-out STRICTLY after the check-in —
+    // one night at the very least. Same-day (Day Time) checks out on the
+    // check-in date by definition and has no length to set.
+    const stayLengthSet = sameDayCheckout
+        || (dates.checkIn != null && dates.checkOut != null
+            && dates.checkOut.getTime() > dates.checkIn.getTime())
 
     // One entry per step above — a step counts as done only once every
     // field it collects is filled in, so Reserve can be blocked until
     // all three are complete.
     const missingSteps = [
-        !(dates.checkIn && (sameDayCheckout || dates.checkOut) && selectedTime !== null)
+        !(dates.checkIn && stayLengthSet && selectedTime !== null)
             && 'Dates & Schedule',
         cartUnitCount === 0 && 'Accommodation',
         !(pax && guest.fullName.trim() && guest.mobile.trim() && guest.email.trim())
@@ -218,21 +257,19 @@ export default function Booking(){
 
         setSubmitting(true)
 
-        const schedule = selectedTime !== null ? timeOptions[selectedTime] : null
-        const checkOut = sameDayCheckout ? dates.checkIn : dates.checkOut
-        const entrance = computeEntranceFee({
-            perHead: schedule?.entranceFee ?? 0,
-            pax: pax ?? 0,
-            seniors,
-            kids,
-            freeEntranceEligible: cartFreeEntranceEligible,
-        })
+        const checkOut = effectiveCheckOut
+        // WHOLE-STAY figures, not one night's. `quote.entrance` is the party's
+        // nightly entrance multiplied across the nights, and `perHead` on it is
+        // therefore what one full-fare head owes for the stay — which is what
+        // keeps the stored breakdown internally consistent, since every screen
+        // that reads it back multiplies the head COUNTS by that per-head figure
+        // to recover the discounts (see splitFreeEntrance in entranceFee.js).
         const entranceBreakdown = {
-            perHead: entrance.perHead,
-            seniorDiscount: entrance.seniorDiscount,
-            freeApplied: entrance.freeApplied,
-            freeSavings: entrance.freeSavings,
-            total: entrance.total,
+            perHead: quote.entrance.perHead,
+            seniorDiscount: quote.entrance.seniorDiscount,
+            freeApplied: quote.entrance.freeApplied,
+            freeSavings: quote.entrance.freeSavings,
+            total: quote.entrance.total,
         }
 
         // No payment happens here any more, and that is the point: the units
@@ -267,7 +304,11 @@ export default function Booking(){
                 kids,
                 seniors,
                 entrance: entranceBreakdown,
-                price: unit?.price ?? null,
+                // The rate for the WHOLE stay — the card's nightly rate times
+                // the nights being booked. `bookings.price` has always been
+                // "what this unit costs for this booking", and a three-night
+                // stay costs three nights of it.
+                price: quote.lines[0]?.total ?? null,
             })
 
             setSubmitting(false)
@@ -316,8 +357,12 @@ export default function Booking(){
         // in one transaction and rolls the whole thing back the instant one
         // of them fails — see book_stay_group() — so there is nothing partial
         // to reconcile here, only a plain success or refusal.
-        const items = cartLines.flatMap((line) =>
-            Array.from({ length: line.qty }, () => ({ typeId: line.id, price: line.option.price }))
+        // One entry per physical unit, each priced for the whole stay
+        // (`perUnit` = the card's nightly rate × nights). book_stay_group()
+        // sums them into the group's unit_subtotal, so the group total picks
+        // up the extra nights without the SQL needing to know about them.
+        const items = quote.lines.flatMap((line) =>
+            Array.from({ length: line.qty }, () => ({ typeId: line.id, price: line.perUnit }))
         )
 
         const result = await createGroupBooking({
@@ -423,6 +468,8 @@ export default function Booking(){
                             <StepHeader index={0} />
                             <div className="booking-step-body">
                                 <BookingCalendar
+                                    checkIn={dates.checkIn}
+                                    checkOut={dates.checkOut}
                                     sameDayCheckout={sameDayCheckout}
                                     onChange={handleDatesChange}
                                 />
@@ -433,8 +480,23 @@ export default function Booking(){
                                     checkIn={dates.checkIn}
                                 />
 
+                                {/* Only an overnight schedule can run long, and
+                                    only once one is picked do we know what a
+                                    night costs — so this appears under the
+                                    schedule cards rather than beside the
+                                    calendar. It writes a check-out date, which
+                                    is the same fact the calendar collects. */}
+                                {schedule && !sameDayCheckout && (
+                                    <StayLength
+                                        checkIn={dates.checkIn}
+                                        checkOut={dates.checkOut}
+                                        schedule={schedule}
+                                        onChange={(checkOut) => handleDatesChange({ ...dates, checkOut })}
+                                    />
+                                )}
+
                                 <ScheduleNote
-                                    selectedOption={selectedTime !== null ? timeOptions[selectedTime] : null}
+                                    selectedOption={schedule}
                                     rateGroup={rateGroup}
                                 />
                             </div>
@@ -447,7 +509,8 @@ export default function Booking(){
                                     cart={cart}
                                     onQtyChange={handleCartQtyChange}
                                     checkIn={dates.checkIn}
-                                    checkOut={sameDayCheckout ? dates.checkIn : dates.checkOut}
+                                    checkOut={effectiveCheckOut}
+                                    nights={quote.nights}
                                     rateGroup={rateGroup}
                                     scheduleKey={scheduleKey}
                                     droppedUnitNote={droppedUnitNote}
@@ -531,9 +594,9 @@ export default function Booking(){
 
                     <BookingSummary
                         checkIn={dates.checkIn}
-                        checkOut={sameDayCheckout ? dates.checkIn : dates.checkOut}
-                        schedule={selectedTime !== null ? timeOptions[selectedTime] : null}
-                        cartLines={cartLines}
+                        checkOut={effectiveCheckOut}
+                        schedule={schedule}
+                        quote={quote}
                         guest={guest}
                         pax={pax}
                         kids={kids}

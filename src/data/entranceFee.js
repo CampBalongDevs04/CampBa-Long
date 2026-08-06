@@ -3,7 +3,8 @@
 // Seniors and kids are a SUBSET of the total guest count (pax), not extra
 // heads, so `pax` is the whole party and every head in it starts out charged:
 //   • Regular guests pay the full rate.
-//   • Senior citizens pay the rate minus a 10% discount (ID required on-site).
+//   • Senior citizens are charged the full rate HERE — their discount is
+//     given at the resort, not by this system. See SENIOR_DISCOUNT_RATE.
 //   • Kids 7 & below are exempt — always free, regardless of the perk below.
 //   • The rate card also waives entrance for up to 2 pax per booking ("free
 //     entrance for 2 pax"), on units where that inclusion applies — see
@@ -11,7 +12,41 @@
 //
 // A party of 4 with one kid on the Day rate is therefore 4 × ₱150 = ₱600, less
 // the kid's ₱150 → ₱450 (before the 2-pax perk further reduces it below).
-export const SENIOR_DISCOUNT_RATE = 0.1
+// THE SYSTEM NO LONGER APPLIES A SENIOR DISCOUNT.
+// -----------------------------------------------
+// The resort gives it at the front desk instead, against the ID the guest
+// presents on arrival — so quoting a discounted figure online would promise a
+// reduction this system is not the one making, and would double it if the desk
+// then applied its own. Zero here means the booking is quoted and stored at the
+// full rate, and the discount happens once, in person, off the remaining
+// balance.
+//
+// SENIORS ARE STILL COUNTED. `seniors` stays on the booking, on the receipt and
+// in the admin list — the desk cannot give a discount it cannot see, so the
+// count is exactly the part that still has to travel end to end. Only the
+// arithmetic went away.
+//
+// The rate is kept as a constant rather than deleted so the whole path stays
+// intact and correct: set it back to 0.2 and every screen resumes showing and
+// charging a discount, with no other edit. It also keeps historical bookings
+// honest — rows written while a discount WAS applied still carry their own
+// entrance_senior_discount, and every screen reads that stored figure rather
+// than recomputing from this constant.
+export const SENIOR_DISCOUNT_RATE = 0
+
+// True when the system itself takes something off for seniors. Screens use this
+// to decide between "20% off" and "claimed at the resort" rather than testing
+// the number themselves, so the copy and the arithmetic cannot disagree.
+export const SENIOR_DISCOUNT_IN_SYSTEM = SENIOR_DISCOUNT_RATE > 0
+
+// The rate as a percentage, for anything that shows it to a guest.
+//
+// It used to be typed out as "10%" in six different screens, which is how a
+// change to the rate turns into a hunt through the codebase — and how one
+// screen ends up quoting a discount the arithmetic no longer gives. Every
+// label reads this instead, so the number and the words about it move together
+// by construction.
+export const SENIOR_DISCOUNT_LABEL = `${Math.round(SENIOR_DISCOUNT_RATE * 100)}%`
 
 // ON "FREE ENTRANCE FOR 2 PAX"
 // -----------------------------
@@ -24,7 +59,7 @@ export const SENIOR_DISCOUNT_RATE = 0.1
 // already free on their own, so the 2-pax quota is only ever handed to
 // non-kid heads (regular first, since that's the bigger saving, then seniors
 // if the party has fewer than 2 non-kid heads). A senior head that gets the
-// perk is fully waived instead of just getting the 10% discount, so it's
+// perk is fully waived instead of just getting the senior discount, so it's
 // dropped from the senior count before the discount is calculated — otherwise
 // that head would be discounted twice.
 //
@@ -52,8 +87,10 @@ export function computeEntranceFee({
     const regularCount = Math.max(0, totalPax - seniorCount - kidsCount)
 
     // Up to 2 non-kid heads ride free. Regular heads are freed before senior
-    // heads (bigger saving for the guest); the senior heads that do get freed
-    // come out of seniorCount below so they aren't also given the 10% off.
+    // heads, and the senior heads that do get freed come out of seniorCount
+    // below so they aren't also discounted. With SENIOR_DISCOUNT_RATE at 0 the
+    // two kinds of head cost the same and the ordering changes no money — it is
+    // kept because it is the correct order the moment a discount comes back.
     const perkApplied = freeEntranceEligible ? Math.min(2, regularCount + seniorCount) : 0
     const perkFromRegular = Math.min(perkApplied, regularCount)
     const perkFromSenior = perkApplied - perkFromRegular
@@ -74,7 +111,7 @@ export function computeEntranceFee({
         paxTotal,
         regularCount,
         regularTotal: (regularCount - perkFromRegular) * rate,
-        // Only the still-paying seniors — the ones the 10% discount below
+        // Only the still-paying seniors — the ones the discount below
         // actually applies to.
         seniorCount: payingSeniorCount,
         seniorGross,

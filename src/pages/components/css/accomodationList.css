@@ -234,6 +234,18 @@
     color: #3DA35D;
 }
 
+/* What the per-night price above comes to for an extended stay. Only rendered
+   when the stay runs more than one night. */
+.accomodation-card-nights{
+    font-size: 11px;
+    color: var(--leaf);
+}
+
+.accomodation-card-nights strong{
+    font-weight: 700;
+    color: var(--forest);
+}
+
 .accomodation-card-available{
     font-size: 11px;
     font-style: italic;
