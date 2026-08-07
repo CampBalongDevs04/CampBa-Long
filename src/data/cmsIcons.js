@@ -39,6 +39,12 @@ import diningSvg from '../assets/svg/dining.svg'
 import timeSvg from '../assets/svg/time.svg'
 import parkingSvg from '../assets/svg/parking.svg'
 import transpoSvg from '../assets/svg/transpo.svg'
+import addressSvg from '../assets/svg/address.svg'
+import phoneSvg from '../assets/svg/phone.svg'
+import emailSvg from '../assets/svg/email.svg'
+import adminSvg from '../assets/svg/admin.svg'
+import carSvg from '../assets/svg/car.svg'
+import routeSvg from '../assets/svg/route.svg'
 
 // Drawn inline, so they inherit their colour from whatever circle they sit in.
 export const ICON_COMPONENTS = {
@@ -62,6 +68,15 @@ export const ICON_ASSETS = {
     time: timeSvg,
     parking: parkingSvg,
     transpo: transpoSvg,
+    // Added with the Location section, which is where all six of these were
+    // already being used — they were imported straight into location.jsx and
+    // so could not be named by a row until now.
+    address: addressSvg,
+    phone: phoneSvg,
+    email: emailSvg,
+    admin: adminSvg,
+    car: carSvg,
+    route: routeSvg,
 }
 
 // What the dashboard's icon picker is built from, so the menu of icons and the
@@ -85,6 +100,12 @@ export const CMS_ICON_OPTIONS = [
     { value: 'time', label: 'Clock — opening hours' },
     { value: 'parking', label: 'Parking — free parking' },
     { value: 'transpo', label: 'Transport — getting here' },
+    { value: 'address', label: 'Pin — the address' },
+    { value: 'phone', label: 'Phone — a number to ring' },
+    { value: 'email', label: 'Envelope — an email address' },
+    { value: 'admin', label: 'Desk — admin and office hours' },
+    { value: 'car', label: 'Car — arriving by car' },
+    { value: 'route', label: 'Route — the drive here' },
 ]
 
 // Whether a row resolves to anything at all. The dashboard uses it to say so
