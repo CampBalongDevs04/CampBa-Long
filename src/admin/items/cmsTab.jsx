@@ -3,9 +3,13 @@ import '../css/tab.css'
 
 // CMS is the section for the site's own copy — the words and pictures on the
 // public pages, as opposed to what the resort sells and who has booked it.
-// One tab per block of the home page, in the order a visitor scrolls past
-// them, so finding the right tab is the same as remembering where on the page
-// the thing sits.
+// Most tabs are one per block of the home page, in the order a visitor
+// scrolls past them, so finding the right tab is the same as remembering
+// where on the page the thing sits. Two tabs break that ordering because they
+// are not home-page blocks at all: Food Menu is the copy on a different page
+// (/menu — the food items under it are catalog data, edited in Food Menu the
+// dashboard SECTION, not here), and Footer is on every page. Both sit at the
+// end, after the home page's own tabs run out.
 const cmsTabs = [
     { id: 'hero', label: 'Hero Banner' },
     { id: 'welcome', label: 'Welcome Section' },
@@ -21,8 +25,9 @@ const cmsTabs = [
     // The words on the enquiry form, not what it does with them — the tab says
     // so on screen.
     { id: 'contact', label: 'Contact' },
-    // Last, because it is last on the page — and the only tab here that is not
-    // confined to the home page.
+    // The copy on /menu, not the food items under it — see the note above.
+    { id: 'menu-banner', label: 'Food Menu' },
+    // Last, because it is on every page rather than one of them.
     { id: 'footer', label: 'Footer' },
 ]
 

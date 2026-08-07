@@ -23,7 +23,10 @@
   content: '';
   position: absolute;
   inset: 0;
-  background-image: linear-gradient(90deg, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.16)), url('../assets/images/herobanner.png');
+  /* --foodmenu-hero-bg is set inline by foodmenu.jsx once staff upload a
+     replacement backdrop; the fallback here is the image the site shipped
+     with, so this rule alone is what a database-less build still renders. */
+  background-image: linear-gradient(90deg, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.16)), var(--foodmenu-hero-bg, url('../assets/images/herobanner.png'));
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
