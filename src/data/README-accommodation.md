@@ -60,8 +60,10 @@ insert into public.staff (user_id, full_name)
 select id, 'Their Name' from auth.users where email = 'them@example.com';
 ```
 
-They can now sign in at `/admindash2345`. An account that signs in without a
-staff row is rejected with "This account is not authorised for the dashboard."
+They can now sign in at the dashboard URL — whichever path `VITE_ADMIN_PATH`
+in `.env` is set to; it is deliberately not written down in the repo. An
+account that signs in without a staff row is rejected with "This account is
+not authorised for the dashboard."
 
 ## How the screens stay fresh
 

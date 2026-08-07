@@ -189,8 +189,8 @@ export function MyBookingSkeleton() {
 }
 
 /**
- * Fallback for the /admindash2345 route chunk. The first screen of
- * that route is the login gate, so this mirrors the login card.
+ * Fallback for the admin dashboard chunk. The first screen of that
+ * route is the login gate, so this mirrors the login card.
  * The public Header is a real (eagerly loaded) component, exactly
  * like the login screen renders it — zero shift when it swaps in.
  */

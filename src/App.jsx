@@ -4,6 +4,7 @@ import './App.css'
 import Header from './components/Header.jsx'
 import SetupNotice from './components/SetupNotice.jsx'
 import CrispChat from './components/CrispChat.jsx'
+import { useIsAdminPath } from './lib/adminRoute.js'
 import {
   HomeSkeleton,
   FoodMenuSkeleton,
@@ -19,8 +20,14 @@ const Home = lazy(() => import('./pages/home.jsx'))
 const FoodMenu = lazy(() => import('./pages/foodmenu.jsx'))
 const SpaService = lazy(() => import('./pages/spaService.jsx'))
 const MyBooking = lazy(() => import('./pages/mybooking.jsx'))
-const AdminDash = lazy(() => import('./admin/admindash2345.jsx'))
+// Named for what it is, not for where it lives: Vite names the chunk after the
+// file, so admindash2345.jsx put the secret path back in the Network tab.
+const AdminDash = lazy(() => import('./admin/dashboard.jsx'))
 const Booking = lazy(() => import('./pages/booking.jsx'))
+
+// Every path the public site answers on. Anything else is a candidate for the
+// admin URL, and only those pay for the digest check in useIsAdminPath.
+const PUBLIC_PATHS = new Set(['/', '/menu', '/spa', '/my-booking', '/booking'])
 
 
 // A new page starts at the top of that page.
@@ -47,11 +54,31 @@ function ScrollToTop() {
 
 function App() {
   const location = useLocation()
-  const isAdminPage = location.pathname.startsWith('/admindash2345')
+  // null while the digest is still being computed — see lib/adminRoute.js.
+  const isAdminPage = useIsAdminPath(
+    PUBLIC_PATHS.has(location.pathname) ? null : location.pathname,
+  )
+
+  // Staff-only, and the URL is meant to stay unguessable, so keep it out of
+  // the index even for a crawler that runs JavaScript. Scoped to this page:
+  // putting it in index.html would deindex the whole resort site.
+  useEffect(() => {
+    if (isAdminPage !== true) return
+    const tag = document.createElement('meta')
+    tag.name = 'robots'
+    tag.content = 'noindex, nofollow'
+    document.head.appendChild(tag)
+    return () => tag.remove()
+  }, [isAdminPage])
 
   // The two pages with a kiosk order tray in the bottom-right corner, which
   // is also where the chat launcher lands. See CrispChat.jsx.
   const hasKioskTray = ['/menu', '/spa'].includes(location.pathname)
+
+  // A path still being hashed shows nothing rather than the guest header: a
+  // frame of resort chrome across the top of the login screen looks broken,
+  // and it is one more thing that reacts differently to the right URL.
+  const isGuestPage = isAdminPage === false
 
   return (
     <>
@@ -59,10 +86,10 @@ function App() {
           configured site exactly one boolean check. */}
       <SetupNotice />
       <ScrollToTop />
-      {!isAdminPage && <Header />}
+      {isGuestPage && <Header />}
       {/* Guest-facing only. Staff on the dashboard have no use for a support
           bubble aimed at guests, and it would sit over the sidebar. */}
-      {!isAdminPage && <CrispChat reversed={hasKioskTray} />}
+      {isGuestPage && <CrispChat reversed={hasKioskTray} />}
       <Routes>
         <Route path="/" element={
           <Suspense fallback={<HomeSkeleton />}><Home /></Suspense>
@@ -79,8 +106,13 @@ function App() {
         <Route path="/booking" element={
           <Suspense fallback={<BookingPageSkeleton />}><Booking /></Suspense>
         } />
-        <Route path="/admindash2345" element={
-          <Suspense fallback={<AdminLoginSkeleton />}><AdminDash /></Suspense>
+        {/* The admin path is deliberately absent from this table. The catch-all
+            mounts the dashboard only once the digest matches; every other
+            unmatched path falls through to nothing, as it did before. */}
+        <Route path="*" element={
+          isAdminPage === true ? (
+            <Suspense fallback={<AdminLoginSkeleton />}><AdminDash /></Suspense>
+          ) : null
         } />
       </Routes>
 
