@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import '../../css/crud.css'
 import { uploadCatalogImage } from '../../../data/catalogImages.js'
+import { uploadSiteVideo, MAX_VIDEO_MB } from '../../../data/siteMedia.js'
 
 // The one form the dashboard's catalog editing opens in — food, spa and
 // accommodation all use it, so a save behaves the same in every section:
@@ -16,7 +17,7 @@ import { uploadCatalogImage } from '../../../data/catalogImages.js'
 //   { name, label, type, options, help, placeholder, disabled, rows }
 //
 // `type` is 'text' | 'url' | 'number' | 'textarea' | 'select' | 'checkbox'
-// | 'image' | 'gallery'.
+// | 'image' | 'gallery' | 'video'.
 //
 // `fields` may also be a FUNCTION of the current values, for the forms whose
 // shape depends on what has been picked so far — a coffee row needs a cup size
@@ -273,6 +274,106 @@ function GalleryField({ field, value, onChange, onUploading }) {
     )
 }
 
+// The same control as ImageField, for the one file the catalog bucket cannot
+// take — the home page's background clip. It goes to `site-media` instead (see
+// data/siteMedia.js), and the preview is a real <video> rather than a
+// thumbnail: whether a background loop works is a question about how it moves
+// and where it cuts, which a still frame cannot answer.
+function VideoField({ field, value, onChange, onUploading }) {
+    const { name, label, help, preview = null, folder = 'hero', disabled } = field
+    const inputRef = useRef(null)
+    const [busy, setBusy] = useState(false)
+    const [problem, setProblem] = useState('')
+
+    const shown = value || preview || null
+    // Only an uploaded clip can be taken off. The bundled one belongs to the
+    // build — "Remove" on it would clear a field that was never set.
+    const canRemove = Boolean(value)
+
+    const handlePick = async (e) => {
+        const file = e.target.files?.[0]
+        // Cleared so picking the SAME file again still fires a change, which is
+        // exactly what a staff member does after a failed upload.
+        e.target.value = ''
+        if (!file) return
+
+        setBusy(true)
+        setProblem('')
+        onUploading(name, true)
+
+        const result = await uploadSiteVideo(file, folder)
+
+        setBusy(false)
+        onUploading(name, false)
+
+        if (!result.ok) {
+            setProblem(result.message)
+            return
+        }
+
+        onChange(name, result.url)
+    }
+
+    return (
+        <div className="crud-field crud-image-field">
+            <label htmlFor={`crud-field-${name}`}>{label}</label>
+            <div className="crud-image-control">
+                <div className="crud-image-preview is-large is-video">
+                    {shown ? (
+                        // Muted and looping, the way it plays on the page.
+                        // Controls are there so staff can scrub to the cut.
+                        <video src={shown} muted loop playsInline controls preload="metadata" />
+                    ) : (
+                        <span className="crud-image-none">No video</span>
+                    )}
+                </div>
+                <div className="crud-image-actions">
+                    <input
+                        id={`crud-field-${name}`}
+                        ref={inputRef}
+                        type="file"
+                        accept="video/*"
+                        className="crud-image-input"
+                        disabled={disabled || busy}
+                        onChange={handlePick}
+                    />
+                    <div className="crud-image-buttons">
+                        <button
+                            type="button"
+                            className="crud-btn is-small is-primary"
+                            disabled={disabled || busy}
+                            onClick={() => inputRef.current?.click()}
+                        >
+                            {busy ? 'Uploading…' : shown ? 'Replace video' : 'Upload video'}
+                        </button>
+                        {canRemove && (
+                            <button
+                                type="button"
+                                className="crud-btn is-small is-danger"
+                                disabled={disabled || busy}
+                                onClick={() => onChange(name, '')}
+                            >
+                                Remove
+                            </button>
+                        )}
+                    </div>
+                    <p className="crud-field-help">
+                        {shown && !canRemove
+                            ? 'This one shipped with the site. Uploading replaces it.'
+                            : help || `MP4 or WebM, up to ${MAX_VIDEO_MB} MB.`}
+                    </p>
+                    {busy && (
+                        <p className="crud-field-help">
+                            A video takes a while on resort wifi — leave this open until it lands.
+                        </p>
+                    )}
+                </div>
+            </div>
+            {problem && <p className="crud-message is-error">{problem}</p>}
+        </div>
+    )
+}
+
 function Field({ field, value, onChange, onUploading }) {
     const { name, label, type = 'text', help, placeholder, options = [], disabled, rows } = field
     const id = `crud-field-${name}`
@@ -286,6 +387,12 @@ function Field({ field, value, onChange, onUploading }) {
     if (type === 'gallery') {
         return (
             <GalleryField field={field} value={value} onChange={onChange} onUploading={onUploading} />
+        )
+    }
+
+    if (type === 'video') {
+        return (
+            <VideoField field={field} value={value} onChange={onChange} onUploading={onUploading} />
         )
     }
 

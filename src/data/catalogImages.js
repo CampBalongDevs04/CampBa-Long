@@ -34,12 +34,16 @@ export const CATALOG_IMAGE_BUCKET = 'catalog-images'
 
 // Must stay in step with the bucket's own limits, which are the real boundary.
 const MAX_BYTES = 5 * 1024 * 1024
+// SVG is here for the CMS icons, which are line art rather than photographs —
+// see the tail of the welcome section migration for why widening the bucket to
+// take it is safe. Everything else on this list is a photo format.
 const FORMATS = {
     'image/jpeg': 'jpg',
     'image/png': 'png',
     'image/webp': 'webp',
     'image/avif': 'avif',
     'image/gif': 'gif',
+    'image/svg+xml': 'svg',
 }
 const BY_EXTENSION = {
     jpg: 'image/jpeg',
@@ -48,6 +52,7 @@ const BY_EXTENSION = {
     webp: 'image/webp',
     avif: 'image/avif',
     gif: 'image/gif',
+    svg: 'image/svg+xml',
 }
 
 // Some Android WebViews hand over a File with an empty `type`, so a legitimate
