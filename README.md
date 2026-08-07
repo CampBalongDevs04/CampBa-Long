@@ -222,7 +222,9 @@ camp's green with a shelter outline until it is given a photo.
 ## Editing what the site says
 
 The **CMS** section holds the site's own copy — the words and pictures on the
-public pages, as opposed to what the resort sells.
+public pages, as opposed to what the resort sells. Every block of the home page
+is in here, and so is the footer that ends every other page: there is no copy
+left hardcoded in the front end.
 
 | Tab | What can be edited |
 | --- | --- |
@@ -230,15 +232,23 @@ public pages, as opposed to what the resort sells.
 | Welcome Section | The block under it: the welcome heading and its paragraphs, the photo collage with its numbered list, and the four tiles of the green panel |
 | What We Offer | The amenity cards — photo, icon, heading, line — the photos and captions inside each card's "Discover More" window, and the chip row under them |
 | Accommodations | The section's heading and the line under it — **and nothing else**, see below |
+| Testimonials | The section's heading and line, and the guest reviews themselves: name, stars, what they wrote, and an optional line about their stay |
+| Location | The heading, the contact card beside the map — address, phone, email, hours — the "Get Directions" button, and the tiles under the map. **Not the map itself**, see below |
+| FAQ | The intro beside the accordion and its "Reach out" button, and every question and answer in it |
+| Contact | The heading, the column beside the enquiry form — paragraph, phone/email/hours rows, Admin Hours panel and its note — and what the form itself **says**, see below |
+| Footer | The bottom of **every** page: the resort blurb, both link lists, the phone and email, the copyright line, and the Terms & Conditions and Copyright Policy behind it |
 
 Each tab is one row of copy plus a table per list it contains — `home_hero` and
 `home_hero_features`; `welcome_section`, `welcome_highlights` and
 `welcome_tags`; `offer_section`, `offer_cards`, `offer_gallery_items` and
-`offer_tags`; `accommodation_section`. Rewording the front page is no longer a
-code change and a redeploy. Saved changes are live immediately, including for
-visitors already on the page.
+`offer_tags`; `accommodation_section`; `testimonial_section` and
+`testimonials`; `location_section`, `location_details` and `location_features`;
+`faq_section` and `faqs`; `contact_section` and `contact_details`;
+`footer_section`, `footer_links` and `footer_socials`. Rewording the site is no
+longer a code change and a redeploy. Saved changes are live immediately,
+including for visitors already on the page.
 
-Seven things are worth knowing:
+Twelve things are worth knowing:
 
 - **The headline is typed one line per line.** Where it breaks on screen is a
   layout choice, so the box takes the break exactly as typed. The gold closing
@@ -279,6 +289,51 @@ Seven things are worth knowing:
   with availability counted off real bookings. Putting any of that in the CMS
   as well would give one field two screens to be changed on and two answers
   when they disagreed. The tab says so on screen and links across to Units.
+- **Reviews are transcribed, not collected.** The Testimonials tab is where a
+  good review from Google or Facebook gets typed in; there is no form on the
+  site for a guest to post one, and the table is deliberately not writable by
+  the public. The rating takes halves — 4.5 draws four stars and a half. The
+  small line under a guest's name has never been filled in on any of the seven
+  reviews the site shipped with, so it is optional and blank leaves the name on
+  its own. Hiding every review takes the whole section off the home page rather
+  than leaving an empty band scrolling.
+- **The map is not CMS content.** The Location tab edits the heading, the
+  contact card, the "Get Directions" button and the tiles under the map, and
+  stops there. The embedded map stays in the code because it is not wording: it
+  is a URL carrying a place query, a latitude, a longitude and a zoom level, and
+  one character wrong in any of them fails silently — the frame shows the wrong
+  village, or nothing, and reads as a broken site rather than as a field
+  somebody needs to correct. The button beside it *is* editable, so where guests
+  are sent for directions can still be changed. The address on the card is typed
+  one line per line, like the hero's headline.
+- **The FAQ answers do not update themselves.** Several of them quote the
+  entrance fee, the cottage fee, the group limit and the check-in windows —
+  figures that are actually set in Units and the rate schedules. Nothing carries
+  a price change across to the wording, and nothing sensibly could: an answer is
+  a sentence somebody wrote, not a live figure. After changing a price, re-read
+  the FAQ. The tab says so on screen. An answer that has gone out of date can be
+  unticked rather than deleted, which takes it off the page and keeps the
+  wording for whoever rewrites it. One answer is one paragraph: the accordion
+  opens as a single collapsing block, so line breaks typed into an answer run
+  together on the page.
+- **The contact form's wording is editable; the form is not.** The four labels,
+  their grey hints and the button are copy and are edited in the Contact tab
+  (in their own form, so rewording the paragraph beside them cannot clear the
+  label off the Email box). What the form *does* is not: the field names are
+  what the email template reads, the input types are what open a phone keypad on
+  a phone, and `required` is what stops an empty enquiry. Where a message is
+  delivered is part of the email settings, not the wording. The phone number is
+  also written down on the Location card and in the footer — changing it in
+  Contact changes Contact only, which is deliberate, so update Location too if
+  they should match. The tab says both of these on screen.
+- **The footer is the one tab that is not just the home page.** It ends the
+  booking flow, the menu and My Booking too, so a change there is visible
+  everywhere at once. It also holds the two paragraphs on this site with legal
+  weight — the **Terms & Conditions** a guest agrees to by booking, and the
+  **Copyright Policy** — which are edited in their own form so that fixing a
+  heading cannot reach them. Emptying either removes its button rather than
+  opening a blank panel. The copyright line's year is read off the clock, not
+  stored, so there is nothing to update each January.
 
 The photos, icons, background and clip the site shipped with are bundled
 assets. They stay in the build and are what the pages show until something is

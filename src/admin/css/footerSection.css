@@ -1,0 +1,202 @@
+/* ============================================================================
+   CMS → Footer. The panel, a preview printed the way the footer is printed,
+   the two link lists, and a note about the two things worth knowing.
+   ========================================================================== */
+
+.ftr-cms-panel {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--cream, #F5F1E4);
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 10px 20px -14px rgba(10, 22, 14, 0.5);
+    font-family: 'Jost', sans-serif;
+    color: var(--forest-dark, #16291E);
+}
+
+/* ---------- Preview ---------- */
+/* Dark and in three columns, because that is what the footer is. A preview on
+   cream would answer a different question than "does this read against the
+   green", and the first column being twice the width of the others is exactly
+   why a long blurb looks fine there and a long menu label does not. */
+
+.ftr-cms-preview {
+    padding: 20px 22px;
+    background: #16291E;
+    border: 1px solid rgba(198, 161, 91, 0.3);
+    border-radius: 14px;
+    color: rgba(243, 245, 233, 0.75);
+}
+
+.ftr-cms-columns {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 24px;
+}
+
+.ftr-cms-name {
+    margin: 0 0 8px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #F3F5E9;
+}
+
+.ftr-cms-columns h5 {
+    margin: 0 0 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    color: #F3F5E9;
+}
+
+.ftr-cms-columns p {
+    margin: 0 0 8px;
+    font-size: 0.76rem;
+    line-height: 1.6;
+}
+
+.ftr-cms-eyebrow {
+    font-size: 0.72rem !important;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gold, #C6A15B) !important;
+}
+
+.ftr-cms-columns ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 0.76rem;
+    overflow-wrap: anywhere;
+}
+
+.ftr-cms-socials {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 10px !important;
+    font-weight: 600;
+    color: #F3F5E9;
+}
+
+.ftr-cms-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(198, 161, 91, 0.25);
+    font-size: 0.72rem;
+}
+
+.ftr-cms-legal {
+    display: flex;
+    gap: 16px;
+}
+
+.ftr-cms-legal span {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+/* ---------- Lists ---------- */
+
+.ftr-cms-subbar {
+    margin-top: 18px;
+}
+
+.ftr-cms-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ftr-cms-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    border-radius: 14px;
+    padding: 13px 18px;
+}
+
+.ftr-cms-copy {
+    flex: 1 1 220px;
+    min-width: 0;
+}
+
+.ftr-cms-copy h4 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 0 0 3px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+}
+
+/* The address in full, wrapped rather than clipped: a link is judged by where
+   it actually points, and a truncated one hides the half that matters. */
+.ftr-cms-copy p {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.74rem;
+    color: rgba(10, 22, 14, 0.6);
+}
+
+/* ---------- "Two things worth knowing" ---------- */
+
+.ftr-cms-note {
+    margin-top: 18px;
+    padding: 16px 18px;
+    background: rgba(198, 161, 91, 0.1);
+    border: 1px solid rgba(198, 161, 91, 0.4);
+    border-radius: 12px;
+}
+
+.ftr-cms-note h4 {
+    margin: 0 0 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.ftr-cms-note p {
+    margin: 0 0 8px;
+    max-width: 70ch;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: rgba(10, 22, 14, 0.65);
+}
+
+.ftr-cms-note p:last-child {
+    margin-bottom: 0;
+}
+
+@media (max-width: 860px) {
+    .ftr-cms-columns {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .ftr-cms-panel {
+        padding: 16px;
+    }
+
+    .ftr-cms-row {
+        flex-wrap: wrap;
+        align-items: flex-start;
+    }
+}

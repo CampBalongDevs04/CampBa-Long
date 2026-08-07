@@ -1,46 +1,13 @@
 import './css/testimonials.css'
 import LotusDividerIcon from './LotusDividerIcon'
+import { useTestimonials } from '../data/testimonialsSection.js'
 
-// Edit the real reviews here: change `star` (0-5, halves like 4.5 work too),
-// `comment`, `name`, and `stay`. Add or remove entries freely.
-const testimonials = [
-    {
-        name: "Jimmy Ong",
-        star: 4,
-        comment: "Escape the heat from the city and back to mother nature.🌿✨ Tucked away in the cool highlands of Liliw, it’s the perfect spot to reconnect with nature and recharge. Great and affordable for a quick getaway trip.",
-    },
-    {
-        name: "Hercel Iguid",
-        star: 5,
-        comment: "Very accomodating, friendly, helpful staff and owner. Ambience is 100%, you can relax and i appreciate the no smoking policy's And it's pet friendly, they are allowed to swim in the ilog.",
-    },
-    {
-        name: "Dona Joy Stefanie Terbio-Sacay",
-        star: 5,
-        comment: "Are we going back? Definitely YES!✅ We like the rules they implement to prevent damages, control too much crowd, maintaining the cleanliness and peace of the resort. KUDOS TO THE OWNER AND STAFF 🫶",
-    },
-    {
-        name: "Rigor Badiola",
-        star: 5,
-        comment: "The place is peaceful. Water doesn't smell chlorine. I like this place. I think it would be great if we stayed overnight."
-    },
-    {
-        name: "Mhelber Paredes",
-        star: 5,
-        comment: "Very accommodating ang personnel. Super dali lapitan at mura ng foods. Highly recommended for those who wants to destress themselves from the noises of the city. Truly a gem",
-    },
-    {
-        name: "Evangeline Jocsing",
-        star: 5,
-        comment: "I really enjoyed our bonding moments with friends in Camp Ba-long Nature farm.",
-    },
-    {
-        name: "Jason Dela Luna",
-        star: 5,
-        comment: "This place is a sanctuary. Smoking, vaping and playing loud music is not allowed. Afternoon and the temperature is not even 20 degrees, at night the temperature is somewhere 14 to 17 degrees celcious and morning is much colder 10 to 14 degrees perhaps. Water is freezing cold."
-    }
-    
-]
+// The heading and the reviews come from two rows' worth of Postgres, written in
+// the dashboard's CMS → Testimonials — see data/testimonialsSection.js. This
+// file used to hold the reviews as an array with a comment telling whoever
+// found it to edit them here, which made adding one a commit and a redeploy.
+// Until that table lands (and on a database that predates it) the store answers
+// with the seven reviews the site shipped with, so this block is never blank.
 
 function Star({ fill, id }) {
     // fill: 1 = full, 0.5 = half, 0 = empty
@@ -77,9 +44,12 @@ function StarRating({ rating, cardIndex }) {
     )
 }
 
+// The avatar is the guest's initials, not a photo — so a name typed with a
+// stray double space must not put `undefined` in the circle.
 function initialsOf(name) {
-    return name
+    return String(name ?? '')
         .split(' ')
+        .filter(Boolean)
         .map((part) => part[0])
         .slice(0, 2)
         .join('')
@@ -87,18 +57,24 @@ function initialsOf(name) {
 }
 
 export default function Testimonials() {
+    const { section, activeTestimonials } = useTestimonials()
+
+    // Gone entirely rather than left as an empty band, for the same reason the
+    // promo ticker is: staff who hid every review hid the section.
+    if (activeTestimonials.length === 0) return null
+
     return (
         <section className="testimonials-section" id="testimonials">
             <div className="testimonials-header">
                 <LotusDividerIcon />
-                <h1 className="testimonials-title">Testimonials</h1>
-                <p className="testimonials-sub">• What our guests say about Camp Ba-long •</p>
+                {section.title && <h1 className="testimonials-title">{section.title}</h1>}
+                {section.subtitle && <p className="testimonials-sub">{section.subtitle}</p>}
             </div>
 
             <div className="testimonials-marquee">
                 <div
                     className="testimonials-track"
-                    style={{ '--marquee-duration': `${testimonials.length * 9}s` }}
+                    style={{ '--marquee-duration': `${activeTestimonials.length * 9}s` }}
                 >
                     {/* The list is rendered twice so the loop is seamless; the
                         second copy is hidden from screen readers. */}
@@ -108,16 +84,16 @@ export default function Testimonials() {
                             key={copy}
                             aria-hidden={copy === 1 || undefined}
                         >
-                            {testimonials.map((t, index) => (
-                                <article className="testimonial-card" key={t.name}>
+                            {activeTestimonials.map((t, index) => (
+                                <article className="testimonial-card" key={t.id}>
                                     <span className="testimonial-quote-mark" aria-hidden="true">&ldquo;</span>
-                                    <StarRating rating={t.star} cardIndex={`${copy}-${index}`} />
+                                    <StarRating rating={t.rating} cardIndex={`${copy}-${index}`} />
                                     <p className="testimonial-comment">{t.comment}</p>
                                     <div className="testimonial-footer">
                                         <div className="testimonial-avatar">{initialsOf(t.name)}</div>
                                         <div className="testimonial-person">
                                             <span className="testimonial-name">{t.name}</span>
-                                            <span className="testimonial-stay">{t.stay}</span>
+                                            {t.stay && <span className="testimonial-stay">{t.stay}</span>}
                                         </div>
                                     </div>
                                 </article>

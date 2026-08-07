@@ -44,6 +44,11 @@ const HeroBanner = lazy(() => import('./items/heroBanner.jsx'))
 const WelcomeSection = lazy(() => import('./items/welcomeSection.jsx'))
 const OffersSection = lazy(() => import('./items/offersSection.jsx'))
 const AccommodationSection = lazy(() => import('./items/accommodationSection.jsx'))
+const TestimonialsSection = lazy(() => import('./items/testimonialsSection.jsx'))
+const LocationSection = lazy(() => import('./items/locationSection.jsx'))
+const FaqSection = lazy(() => import('./items/faqSection.jsx'))
+const ContactSection = lazy(() => import('./items/contactSection.jsx'))
+const FooterSection = lazy(() => import('./items/footerSection.jsx'))
 
 // Staff sign in with Supabase Auth, not a passcode baked into the bundle.
 // The session is what unlocks the bookings table: RLS grants `authenticated`
@@ -353,7 +358,7 @@ function AdminDash() {
                         <h1 className="admin-dash-title">CMS</h1>
                         <ClockDate />
                     </div>
-                    <Suspense fallback={<TabsSkeleton count={4} />}>
+                    <Suspense fallback={<TabsSkeleton count={9} />}>
                         <CmsTab active={activeCmsTab} onChange={setActiveCmsTab} />
                     </Suspense>
                     <Suspense fallback={<PanelSkeleton />}>
@@ -370,6 +375,11 @@ function AdminDash() {
                                 }}
                             />
                         )}
+                        {activeCmsTab === 'testimonials' && <TestimonialsSection />}
+                        {activeCmsTab === 'location' && <LocationSection />}
+                        {activeCmsTab === 'faq' && <FaqSection />}
+                        {activeCmsTab === 'contact' && <ContactSection />}
+                        {activeCmsTab === 'footer' && <FooterSection />}
                     </Suspense>
                 </div>
             ) : activeSection === 'export' ? (

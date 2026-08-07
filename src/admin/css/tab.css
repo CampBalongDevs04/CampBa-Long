@@ -48,6 +48,56 @@
     font-weight: 600;
 }
 
+/* ---------- Bars with more tabs than fit on one line ---------- */
+/* The CMS has nine, which needs about 1290px — wider than the dashboard's
+   content column ever gets. The bar already scrolled, but it hides its
+   scrollbar, so there was nothing on screen to say that "Contact" and "Footer"
+   were past the right edge. These arrows are that missing signal: the row stays
+   one line, and the two ends of it become reachable.
+   Opt-in, because every other bar here fits and would show two dead buttons. */
+.tab-scroller {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.tab-scroller .tab-bar {
+    /* The bar no longer owns the full width — the arrows sit beside it. */
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.tab-nav {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid rgba(198, 161, 91, 0.45);
+    background: var(--cream);
+    color: var(--forest-dark);
+    font-family: 'Jost', sans-serif;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 200ms ease, opacity 200ms ease;
+}
+
+.tab-nav:hover:not(:disabled) {
+    background: rgba(198, 161, 91, 0.22);
+}
+
+/* Kept in place rather than hidden at the ends of the row: an arrow that
+   disappears moves the bar under the pointer, and the tab a staff member was
+   aiming at shifts as they click. */
+.tab-nav:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 860px) {
     .tab-bar {
