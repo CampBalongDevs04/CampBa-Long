@@ -11,6 +11,7 @@ import {
     useAccommodationDB,
 } from '../data/accommodationDB.js';
 import { getAccomodationOptions } from '../data/accomodationOptions.js';
+import { useAccommodationSection } from '../data/accommodationSection.js';
 
 
 //---ACCOMMODATIONS---//
@@ -494,6 +495,8 @@ export default function Accommodations() {
     // once at import: an accommodation added in the dashboard arrives with the
     // catalog, after this module was first evaluated.
     useAccommodationDB();
+    // The section's own heading, which is CMS copy rather than catalog data.
+    const { section } = useAccommodationSection();
     const accommodations = buildCards();
     const cardCount = accommodations.length;
 
@@ -662,10 +665,12 @@ export default function Accommodations() {
             <LeafDeco className="bl" />
             <LeafDeco className="br" />
 
+            {/* The heading is CMS copy; everything below it is the catalog.
+                See data/accommodationSection.js for why those are separate. */}
             <div className="acc-header">
                 <LotusDividerIcon />
-                <h1 className="acc-title">Accommodations</h1>
-                <p className="acc-sub">• Find the perfect spot for your stay •</p>
+                {section.title && <h1 className="acc-title">{section.title}</h1>}
+                {section.subtitle && <p className="acc-sub">{section.subtitle}</p>}
             </div>
 
             <div className="acc-recommend-bar">

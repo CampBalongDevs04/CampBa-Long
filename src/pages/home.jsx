@@ -9,91 +9,137 @@ import { FAQDemo } from '../components/Usage.tsx'
 import Contact from '../components/contact.jsx'
 import Footer from '../components/footer.jsx'
 import { SkeletonImage } from '../components/skeletons/Skeleton.jsx'
-import CampBalong from '../assets/images/CampBalong.webp'
-import heroVideo from '../assets/video/campbalongVideo.mp4'
-import waterSvg from '../assets/svg/water.svg'
-import bedSvg from '../assets/svg/bed.svg'
-import diningSvg from '../assets/svg/dining.svg'
-import camSvg from '../assets/svg/cam.svg'
-// Image for the hero circle frame — drop the import in here when it's ready.
-const heroCircleImage = CampBalong
+import {
+    useHomeHero,
+    resolveHeroImage,
+    resolveHeroBackground,
+    resolveHeroVideo,
+    resolveHeroIcon,
+} from '../data/homeHero.js'
+
+// The hero's words, photo, background and clip come from one row in Postgres,
+// written in the dashboard's CMS → Hero Banner — see data/homeHero.js. Until
+// that row lands (and on a database that predates it) the store answers with
+// the copy the site shipped with, so the top of the front page is never blank
+// and never half-built.
+
+// Where a button goes decides what it is. A path is routed inside the app, so
+// it must be a <Link> — an <a href="/booking"> would work, but as a full page
+// load that throws away everything already fetched. An anchor scrolls to a
+// section on this page. Anything else is somewhere off the site.
+function HeroButton({ href, label, className, children }) {
+    if (!label) return null
+    const target = href || '#'
+
+    if (target.startsWith('/')) {
+        return (
+            <Link className={className} to={target}>
+                {children}
+                {label}
+            </Link>
+        )
+    }
+
+    const external = /^https?:\/\//i.test(target)
+    return (
+        <a
+            className={className}
+            href={target}
+            {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+        >
+            {children}
+            {label}
+        </a>
+    )
+}
 
 function Home() {
+    const { hero, activeFeatures } = useHomeHero()
+
+    const videoSrc = resolveHeroVideo(hero.videoUrl)
+    // Only set when staff have uploaded one: the stylesheet already paints the
+    // background the site shipped with, and an inline style that repeated it
+    // would make the CSS look dead the next time somebody reads it.
+    const backgroundStyle = hero.backgroundUrl
+        ? { backgroundImage: `url(${resolveHeroBackground(hero.backgroundUrl)})` }
+        : undefined
+
     return (
         <>
-            <div className="hero-banner" id="home">
-                <video
-                    className="hero-video"
-                    src={heroVideo}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    preload="auto"
-                    aria-hidden="true"
-                    onCanPlay={(e) => e.currentTarget.classList.add('is-ready')}
-                />
+            <div className="hero-banner" id="home" style={backgroundStyle}>
+                {hero.showVideo && (
+                    <video
+                        className="hero-video"
+                        // Keyed on the source so swapping the clip in the
+                        // dashboard remounts the element — React reuses a
+                        // <video> across a src change and keeps playing the old
+                        // one until something else forces a load.
+                        key={videoSrc}
+                        src={videoSrc}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="auto"
+                        aria-hidden="true"
+                        onCanPlay={(e) => e.currentTarget.classList.add('is-ready')}
+                    />
+                )}
                 <div className="hero-main">
                 <div className="hero-content">
                     <h1 className="hero-title">
-                        Book Your<br />
-                        Perfect Resort<br />
-                        <span className="hero-accent">Getaway</span>
+                        {hero.titleLines.map((line, index) => (
+                            <span key={`${line}-${index}`}>
+                                {line}<br />
+                            </span>
+                        ))}
+                        {hero.accentLine && <span className="hero-accent">{hero.accentLine}</span>}
                     </h1>
-                    <p className="hero-subtitle">Escape the everyday with comfortable accommodations, relaxing amenities, delicious dining, and unforgettable experiences—all in one destination. Reserve your stay in just a few clicks.</p>
+                    {hero.subtitle && <p className="hero-subtitle">{hero.subtitle}</p>}
                     <div className="hero-buttons">
-                        <Link className="hero-button" to="/booking">
+                        <HeroButton className="hero-button" href={hero.primaryHref} label={hero.primaryLabel}>
                             <svg viewBox="0 0 24 24" strokeWidth="1.8" aria-hidden="true">
                                 <rect x="3" y="5" width="18" height="16" rx="2"/>
                                 <path d="M3 10h18M8 3v4M16 3v4"/>
                             </svg>
-                            Book Now
-                        </Link>
-                        <a className="hero-button hero-button-outline" href="#accommodations">
+                        </HeroButton>
+                        <HeroButton
+                            className="hero-button hero-button-outline"
+                            href={hero.secondaryHref}
+                            label={hero.secondaryLabel}
+                        >
                             <svg viewBox="0 0 24 24" strokeWidth="1.8" aria-hidden="true">
                                 <path d="M13 4h3a2 2 0 0 1 2 2v14M2 20h3M13 20h9M10 12v.01"/>
                                 <path d="M13 4.56v16.16a1 1 0 0 1-1.24.97L5 20V5.56a2 2 0 0 1 1.51-1.94l4-1A2 2 0 0 1 13 4.56Z"/>
                             </svg>
-                            Explore Rooms
-                        </a>
+                        </HeroButton>
                     </div>
                 </div>
 
                 <div className="hero-image-circle">
-                    {heroCircleImage && <SkeletonImage src={heroCircleImage} alt="Camp Ba-long resort" />}
+                    <SkeletonImage src={resolveHeroImage(hero.imageUrl)} alt="Camp Ba-long resort" />
                 </div>
                 </div>
 
-                <div className="hero-features">
-                    <div className="hero-feature">
-                        <img src={bedSvg} alt="" aria-hidden="true" />
-                        <div>
-                            <h3>Comfortable Stays</h3>
-                            <p>Well-appointed rooms for a relaxing stay</p>
-                        </div>
+                {/* Gone entirely rather than left as an empty bar, for the same
+                    reason the promo ticker is: staff who removed every tile
+                    removed the strip. */}
+                {activeFeatures.length > 0 && (
+                    <div className="hero-features">
+                        {activeFeatures.map((feature) => {
+                            const icon = resolveHeroIcon(feature.iconKey, feature.iconUrl)
+                            return (
+                                <div className="hero-feature" key={feature.id}>
+                                    {icon && <img src={icon} alt="" aria-hidden="true" />}
+                                    <div>
+                                        <h3>{feature.title}</h3>
+                                        {feature.description && <p>{feature.description}</p>}
+                                    </div>
+                                </div>
+                            )
+                        })}
                     </div>
-                    <div className="hero-feature">
-                        <img src={waterSvg} alt="" aria-hidden="true" />
-                        <div>
-                            <h3>Relaxing Amenities</h3>
-                            <p>Pools, spa, and more for your comfort</p>
-                        </div>
-                    </div>
-                    <div className="hero-feature">
-                        <img src={diningSvg} alt="" aria-hidden="true" />
-                        <div>
-                            <h3>Delicious Dining</h3>
-                            <p>A variety of cuisines to satisfy you</p>
-                        </div>
-                    </div>
-                    <div className="hero-feature">
-                        <img src={camSvg} alt="" aria-hidden="true" />
-                        <div>
-                            <h3>Unforgettable Experiences</h3>
-                            <p>Activities and moments you'll cherish forever</p>
-                        </div>
-                    </div>
-                </div>
+                )}
             </div>
 
             <Offers />

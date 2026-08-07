@@ -1,0 +1,231 @@
+/* ============================================================================
+   CMS → Hero Banner. The panel, the live preview of the front page's top, and
+   the list of feature tiles under it.
+   ========================================================================== */
+
+.hero-cms-panel {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--cream, #F5F1E4);
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 10px 20px -14px rgba(10, 22, 14, 0.5);
+    font-family: 'Jost', sans-serif;
+    color: var(--forest-dark, #16291E);
+}
+
+/* ---------- Live preview ---------- */
+
+.hero-cms-preview {
+    margin-bottom: 22px;
+}
+
+/* The hero as the front page lays it out — copy on the left, circle on the
+   right, over the background image that is actually live. Deliberately a still:
+   this answers "what does it say right now", and a looping clip in the middle
+   of an editing screen answers a question nobody asked. */
+.hero-cms-stage {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 26px 24px;
+    border-radius: 14px;
+    overflow: hidden;
+    background-size: cover;
+    background-position: center;
+    border: 1px solid rgba(198, 161, 91, 0.35);
+}
+
+/* The same wash the hero itself puts over its background, for the same reason:
+   cream text on an arbitrary photo is otherwise a gamble. */
+.hero-cms-stage::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.58), rgba(0, 0, 0, 0.22));
+}
+
+.hero-cms-stage-copy,
+.hero-cms-circle {
+    position: relative;
+}
+
+.hero-cms-stage-copy {
+    flex: 1 1 320px;
+    min-width: 0;
+}
+
+.hero-cms-title {
+    margin: 0;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.9rem;
+    line-height: 1.02;
+    color: #F5F1E4;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.hero-cms-accent {
+    color: #C6A15B;
+}
+
+.hero-cms-subtitle {
+    margin: 10px 0 0;
+    max-width: 46ch;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: rgba(245, 241, 228, 0.9);
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.hero-cms-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+/* The button and where it goes, in one chip. A label with no working link is
+   the failure staff cannot see on the site itself — the button looks fine
+   there and simply does nothing. */
+.hero-cms-button {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 7px 15px;
+    border-radius: 20px;
+    background: #C6A15B;
+    border: 1px solid #C6A15B;
+    color: #16291E;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+}
+
+.hero-cms-button.is-outline {
+    background: rgba(22, 41, 30, 0.45);
+    border-color: rgba(245, 241, 228, 0.8);
+    color: #F5F1E4;
+}
+
+.hero-cms-button em {
+    font-style: normal;
+    font-weight: 400;
+    letter-spacing: 0.4px;
+    text-transform: none;
+    opacity: 0.72;
+}
+
+.hero-cms-circle {
+    flex: 0 0 auto;
+    width: 104px;
+    height: 104px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 4px solid var(--gold, #C6A15B);
+    background: rgba(22, 41, 30, 0.45);
+}
+
+.hero-cms-circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.hero-cms-media-note {
+    margin: 10px 0 0;
+    font-size: 0.76rem;
+    color: rgba(10, 22, 14, 0.62);
+}
+
+/* ---------- Feature strip ---------- */
+
+.hero-cms-subbar {
+    margin-top: 4px;
+}
+
+.hero-cms-features {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.hero-cms-feature {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    border-radius: 12px;
+}
+
+/* The icon in the dark circle it sits in on the page, so a pale upload that
+   will vanish against it is obvious here rather than after publishing. */
+.hero-cms-feature-icon {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    box-sizing: border-box;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(22, 41, 30, 0.9);
+    border: 1px solid rgba(217, 189, 132, 0.5);
+    color: rgba(245, 241, 228, 0.5);
+    font-size: 0.9rem;
+}
+
+.hero-cms-feature-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+.hero-cms-feature-copy {
+    flex: 1 1 200px;
+    min-width: 0;
+}
+
+.hero-cms-feature-copy h4 {
+    margin: 0 0 3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.hero-cms-feature-copy p {
+    margin: 0;
+    font-size: 0.78rem;
+    color: rgba(10, 22, 14, 0.58);
+}
+
+@media (max-width: 720px) {
+    .hero-cms-panel {
+        padding: 16px;
+    }
+
+    /* The circle is the first thing to go: the wording is what this screen is
+       for, and at this width the two side by side leave neither readable. */
+    .hero-cms-circle {
+        display: none;
+    }
+
+    .hero-cms-title {
+        font-size: 1.5rem;
+    }
+
+    .hero-cms-feature {
+        flex-wrap: wrap;
+    }
+}

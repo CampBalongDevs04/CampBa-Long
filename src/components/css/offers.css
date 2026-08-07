@@ -162,6 +162,15 @@
     stroke: var(--gold-soft);
     fill: none;
   }
+  /* An icon uploaded from the dashboard is a file, so it comes through an
+     <img> and cannot take its colour from here the way the inline ones above
+     do. The filter puts it in the same pale gold as its neighbours. */
+  .card-icon img{
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+  }
 
   .card-body{
     position: relative; /* anchor for .card-icon */
@@ -253,6 +262,14 @@
     height: 18px;
     stroke: var(--leaf);
     fill: none;
+  }
+  /* These chips sit on cream rather than on a dark medallion, so an uploaded
+     icon is left its own colour — inverting it here would turn it white and
+     make it disappear. */
+  .tags-row .tag-item img{
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
   }
 
   .Welcome-header{
@@ -428,6 +445,17 @@
     stroke: var(--cream);
     fill: none;
   }
+  /* An icon uploaded from the dashboard arrives as a file, so it comes through
+     an <img> and cannot take its colour from the stylesheet the way the
+     bundled inline SVGs above do. The filter is what puts it in the same cream
+     as its neighbours on this dark green medallion — the same treatment the
+     tag icons have always had. */
+  .story-list-icon img{
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+  }
   .story-list-item h3{
     position: relative;
     z-index: 1;
@@ -559,6 +587,15 @@
     object-fit: contain;
     filter: brightness(0) invert(1); /* renders the svg icons in white on the forest panel */
   }
+  /* Some of the icons staff can now pick are drawn inline rather than loaded
+     as files (see components/CmsIcon.jsx). Those take the cream directly and
+     need no filter. */
+  .tag-card .tag-icon svg{
+    width: 26px;
+    height: 26px;
+    stroke: var(--cream);
+    fill: none;
+  }
   .tag-card .tag-item h3{
     font-family: 'Cormorant Garamond', serif;
     font-weight: 700;
@@ -669,6 +706,12 @@
     stroke: var(--gold-soft);
     fill: none;
   }
+  .gallery-header .gallery-icon img{
+    width: 26px;
+    height: 26px;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+  }
   .gallery-header h3{
     font-family: 'Cormorant Garamond', serif;
     letter-spacing: 3px;
@@ -722,6 +765,20 @@
     letter-spacing: 1.5px;
     text-transform: uppercase;
     color: var(--forest-dark);
+  }
+  /* The line under a photo's title. Inside the figcaption because a <figure>
+     may only carry its caption as the first or last child — and dropped back
+     to body type so the title still reads as the title. */
+  .gallery-item-note{
+    display: block;
+    margin-top: 4px;
+    font-family: 'Jost', sans-serif;
+    font-weight: 400;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    letter-spacing: 0.2px;
+    text-transform: none;
+    color: #5b5b4c;
   }
 
   @media (max-width: 480px){

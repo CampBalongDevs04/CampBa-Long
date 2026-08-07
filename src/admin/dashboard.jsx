@@ -39,6 +39,11 @@ const AccommodationManage = lazy(() => import('./items/accommodationManage.jsx')
 const SpaService = lazy(() => import('./items/spaService-Tab.jsx'))
 const SpaServiceList = lazy(() => import('./items/spaServiceList.jsx'))
 const SpaServiceAvails = lazy(() => import('./items/SpaServiceAvails.jsx'))
+const CmsTab = lazy(() => import('./items/cmsTab.jsx'))
+const HeroBanner = lazy(() => import('./items/heroBanner.jsx'))
+const WelcomeSection = lazy(() => import('./items/welcomeSection.jsx'))
+const OffersSection = lazy(() => import('./items/offersSection.jsx'))
+const AccommodationSection = lazy(() => import('./items/accommodationSection.jsx'))
 
 // Staff sign in with Supabase Auth, not a passcode baked into the bundle.
 // The session is what unlocks the bookings table: RLS grants `authenticated`
@@ -75,6 +80,7 @@ function AdminDash() {
   const [activeServiceTab, setActiveServiceTab] = useState('all')
   const [activeFoodTab, setActiveFoodTab] = useState('all')
   const [activeSpaTab, setActiveSpaTab] = useState('services')
+  const [activeCmsTab, setActiveCmsTab] = useState('hero')
   // Units opens on the day board — the question staff ask most is "who is in
   // which unit today", not "what does a Teepee cost".
   const [activeUnitTab, setActiveUnitTab] = useState('availability')
@@ -327,6 +333,43 @@ function AdminDash() {
                     <Suspense fallback={<TableSkeleton rows={4} cols={4} />}>
                         {activeSpaTab === 'services' && <SpaServiceList />}
                         {activeSpaTab === 'avail' && <SpaServiceAvails />}
+                    </Suspense>
+                </div>
+            ) : activeSection === 'cms' ? (
+                <div className="admin-dash-content">
+                    <button
+                        type="button"
+                        className="admin-dash-back"
+                        onClick={() => setActiveSection('overview')}
+                    >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12" />
+                            <path d="M12 19l-7-7 7-7" />
+                        </svg>
+                        Back to Overview
+                    </button>
+                    <div className="admin-dash-heading">
+                        <p className="admin-dash-eyebrow">Camp Ba-long</p>
+                        <h1 className="admin-dash-title">CMS</h1>
+                        <ClockDate />
+                    </div>
+                    <Suspense fallback={<TabsSkeleton count={4} />}>
+                        <CmsTab active={activeCmsTab} onChange={setActiveCmsTab} />
+                    </Suspense>
+                    <Suspense fallback={<PanelSkeleton />}>
+                        {activeCmsTab === 'hero' && <HeroBanner />}
+                        {activeCmsTab === 'welcome' && <WelcomeSection />}
+                        {activeCmsTab === 'offers' && <OffersSection />}
+                        {activeCmsTab === 'accommodations' && (
+                            // The cards are edited in Units, so the tab that
+                            // does not edit them offers a way to get there.
+                            <AccommodationSection
+                                onGoToUnits={() => {
+                                    setActiveUnitTab('manage')
+                                    setActiveSection('units')
+                                }}
+                            />
+                        )}
                     </Suspense>
                 </div>
             ) : activeSection === 'export' ? (
