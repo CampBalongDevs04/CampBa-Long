@@ -6,6 +6,11 @@ import {
     maxNightsFrom,
     minNightsFrom,
 } from '../../data/extendedStay.js'
+import {
+    describeMaintenanceDayNames,
+    useMaintenanceDays,
+    WEEKDAY_NAMES,
+} from '../../data/maintenanceDays.js'
 
 // THE CALENDAR IS THE RANGE PICKER
 // --------------------------------
@@ -40,15 +45,18 @@ function formatDate(date){
 }
 
 export default function StayLength({ checkIn, checkOut, schedule, onChange }){
+    // Subscribed so the floor, the ceiling and the note below all move together
+    // when staff change the closure — every one of them is derived from it.
+    const { days } = useMaintenanceDays()
     const nights = countNights(checkIn, checkOut)
     const floor = minNightsFrom(checkIn)
     const ceiling = maxNightsFrom(checkIn)
     const disabled = !checkIn
 
     // `direction` is which way the guest is moving, handed down to
-    // checkOutForNights() so a value that lands on a maintenance Monday is
-    // nudged the way they were already going — pressing "−" never bounces the
-    // number back up.
+    // checkOutForNights() so a value that lands on a maintenance day is nudged
+    // the way they were already going — pressing "−" never bounces the number
+    // back up.
     const setNights = (value, direction = 1) => {
         if (disabled) return
         const next = checkOutForNights(checkIn, value, direction)
@@ -57,9 +65,12 @@ export default function StayLength({ checkIn, checkOut, schedule, onChange }){
         onChange?.(next)
     }
 
-    // A Sunday arrival cannot check out on the Monday, so its shortest stay is
-    // two nights. Worth saying rather than leaving "−" mysteriously dead.
+    // An arrival the day before a closure cannot check out into it, so its
+    // shortest stay is longer than one night — two with Monday closed, three
+    // with Monday and Tuesday. Worth saying rather than leaving "−"
+    // mysteriously dead.
     const atFloor = nights > 0 && nights <= floor
+    const arrivalDay = checkIn ? WEEKDAY_NAMES[checkIn.getDay()] : ''
 
     return (
         <div className={`stay-length${disabled ? ' stay-length-disabled' : ''}`}>
@@ -103,11 +114,11 @@ export default function StayLength({ checkIn, checkOut, schedule, onChange }){
             <div className="stay-length-choices">
                 {QUICK_PICKS.map(({ nights: value, label }) => {
                     // Offered only when it delivers exactly what it says. A
-                    // one-night stay from a Sunday would check out on
-                    // maintenance Monday, so checkOutForNights() nudges it to
-                    // two — correct behaviour for the stepper, but a chip
-                    // reading "1 night" that books two is a small lie. It is
-                    // dropped from the row instead.
+                    // one-night stay from a Sunday would check out on a closed
+                    // Monday, so checkOutForNights() nudges it to two —
+                    // correct behaviour for the stepper, but a chip reading
+                    // "1 night" that books two is a small lie. It is dropped
+                    // from the row instead.
                     const target = checkIn ? checkOutForNights(checkIn, value, 1) : null
                     if (!target || !isSelectableCheckOut(checkIn, target)) return null
                     if (countNights(checkIn, target) !== value) return null
@@ -140,7 +151,8 @@ export default function StayLength({ checkIn, checkOut, schedule, onChange }){
                             Checking out <strong>{formatDate(checkOut)}</strong>
                             {schedule ? ` at ${schedule.time.split(' - ')[1]}` : ''}.
                             {atFloor && floor > 1
-                                ? ' A Sunday check-in stays at least 2 nights — Monday is maintenance day, so no one checks out on it.'
+                                ? ` A ${arrivalDay} check-in stays at least ${floor} nights`
+                                  + ` — nobody checks out on ${describeMaintenanceDayNames(days)}.`
                                 : ''}
                         </>
                     )}

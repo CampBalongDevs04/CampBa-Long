@@ -37,6 +37,7 @@ const FoodList = lazy(() => import('./items/foodList.jsx'))
 const AccommodationCount = lazy(() => import('./items/accommodationCount.jsx'))
 const AccommodationTab = lazy(() => import('./items/accommodationTab.jsx'))
 const AccommodationManage = lazy(() => import('./items/accommodationManage.jsx'))
+const MaintenanceDays = lazy(() => import('./items/maintenanceDays.jsx'))
 const SpaService = lazy(() => import('./items/spaService-Tab.jsx'))
 const SpaServiceList = lazy(() => import('./items/spaServiceList.jsx'))
 const SpaServiceAvails = lazy(() => import('./items/SpaServiceAvails.jsx'))
@@ -79,6 +80,7 @@ const SECTION_LABELS = {
   units: 'Units',
   menu: 'Food Menu',
   spa: 'Spa',
+  maintenance: 'Maintenance',
   cms: 'CMS',
   export: 'Export Reports',
 }
@@ -357,6 +359,28 @@ function AdminDash() {
                     <Suspense fallback={<TableSkeleton rows={4} cols={4} />}>
                         {activeSpaTab === 'services' && <SpaServiceList />}
                         {activeSpaTab === 'avail' && <SpaServiceAvails />}
+                    </Suspense>
+                </div>
+            ) : activeSection === 'maintenance' ? (
+                <div className="admin-dash-content">
+                    <button
+                        type="button"
+                        className="admin-dash-back"
+                        onClick={() => setActiveSection('overview')}
+                    >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12" />
+                            <path d="M12 19l-7-7 7-7" />
+                        </svg>
+                        Back to Overview
+                    </button>
+                    <div className="admin-dash-heading">
+                        <p className="admin-dash-eyebrow">Camp Ba-long</p>
+                        <h1 className="admin-dash-title">Maintenance</h1>
+                        <ClockDate />
+                    </div>
+                    <Suspense fallback={<PanelSkeleton />}>
+                        <MaintenanceDays />
                     </Suspense>
                 </div>
             ) : activeSection === 'cms' ? (

@@ -1,0 +1,341 @@
+/* ============================================================================
+   Dashboard → Maintenance. The weekly closure, editable three ways that all
+   write the same day set: a from/to range, per-day chips, and a month calendar
+   whose cells toggle.
+
+   Muted text here sits a little darker than the crud.css defaults. The dark
+   green content area behind this card makes low-contrast greys hard going, and
+   this screen is mostly explanatory copy.
+
+   Takes its buttons, messages and toolbar from crud.css like every other
+   editing screen — only the controls that are specific to picking weekdays are
+   here.
+   ========================================================================== */
+
+/* The dashboard's content area is dark forest green (.admin-dash-section,
+   #1d3025), so a panel MUST lay its own light card down before printing dark
+   text — otherwise the whole thing renders near-invisible at about 1.1:1
+   contrast. Same card as .spa-cms-panel and the other editors. */
+.mtn-panel {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--cream, #F5F1E4);
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 10px 20px -14px rgba(10, 22, 14, 0.5);
+    font-family: 'Jost', sans-serif;
+    color: var(--forest-dark, #16291E);
+}
+
+/* ---------- What is live right now ---------- */
+/* The saved value, kept in front of staff while they edit a draft — otherwise
+   the only way to know what guests are being shown is to remember it. */
+.mtn-live {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    border: 1px solid rgba(198, 161, 91, 0.45);
+    border-radius: 12px;
+    background: #fff;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+}
+
+.mtn-live-label {
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: rgba(10, 22, 14, 0.68);
+}
+
+.mtn-live-value {
+    font-size: 1rem;
+}
+
+/* Only the first letter. `capitalize` would reach every word and print
+   "Monday To Tuesday"; the day names are already cased correctly, and the
+   phrases that are not day names ("no maintenance day") just need a capital to
+   start the line. */
+.mtn-live-value::first-letter {
+    text-transform: uppercase;
+}
+
+.mtn-live-pending {
+    font-size: 0.78rem;
+    color: #8A5A12;
+    background: rgba(198, 161, 91, 0.18);
+    border-radius: 999px;
+    padding: 3px 10px;
+}
+
+/* ---------- Sections ---------- */
+.mtn-section {
+    border-top: 1px solid rgba(198, 161, 91, 0.3);
+    padding-top: 16px;
+    margin-bottom: 18px;
+}
+
+.mtn-section-title {
+    margin: 0 0 4px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+}
+
+.mtn-section-note {
+    margin: 0 0 12px;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: rgba(10, 22, 14, 0.72);
+    max-width: 62ch;
+}
+
+.mtn-custom-note {
+    margin: 10px 0 0;
+}
+
+/* ---------- From / to ---------- */
+.mtn-range {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.mtn-range-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.mtn-range-field > span {
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: rgba(10, 22, 14, 0.7);
+}
+
+.mtn-range-field select {
+    min-width: 148px;
+    border: 1px solid rgba(198, 161, 91, 0.45);
+    border-radius: 10px;
+    background: #fff;
+    padding: 9px 12px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.88rem;
+    color: var(--forest-dark, #16291E);
+}
+
+.mtn-range-field select:focus {
+    outline: 2px solid rgba(198, 161, 91, 0.55);
+    outline-offset: 1px;
+}
+
+.mtn-range-arrow {
+    padding-bottom: 10px;
+    font-size: 1rem;
+    color: rgba(10, 22, 14, 0.45);
+}
+
+/* ---------- Day chips ---------- */
+.mtn-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.mtn-chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    border: 1px solid rgba(198, 161, 91, 0.55);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--forest-dark, #16291E);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.8rem;
+    padding: 8px 15px;
+    cursor: pointer;
+    transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.mtn-chip:hover:not(:disabled) {
+    background: rgba(198, 161, 91, 0.16);
+}
+
+.mtn-chip.is-on {
+    background: var(--forest, #1E3A2B);
+    border-color: var(--forest, #1E3A2B);
+    color: #F5F1E4;
+}
+
+.mtn-chip:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.mtn-chip-short {
+    font-weight: 600;
+    letter-spacing: 0.6px;
+}
+
+.mtn-chip-full {
+    font-size: 0.74rem;
+    opacity: 0.75;
+}
+
+/* ---------- Month preview ---------- */
+.mtn-preview {
+    width: min(360px, 100%);
+    border: 1px solid rgba(198, 161, 91, 0.45);
+    border-radius: 14px;
+    background: #fff;
+    padding: 14px;
+    box-sizing: border-box;
+}
+
+.mtn-preview-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.mtn-preview-month {
+    font-size: 0.86rem;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+}
+
+.mtn-preview-nav {
+    border: 1px solid rgba(198, 161, 91, 0.5);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--forest-dark, #16291E);
+    font-size: 1rem;
+    line-height: 1;
+    padding: 3px 10px;
+    cursor: pointer;
+}
+
+.mtn-preview-nav:hover {
+    background: rgba(198, 161, 91, 0.16);
+}
+
+.mtn-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+}
+
+/* Both rows are buttons — the grid is the primary control, not a picture. The
+   browser's default button chrome is stripped so it still reads as a calendar. */
+.mtn-preview-weekday,
+.mtn-preview-day {
+    font-family: 'Jost', sans-serif;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+
+.mtn-preview-weekday:disabled,
+.mtn-preview-day:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.mtn-preview-weekday:focus-visible,
+.mtn-preview-day:focus-visible {
+    outline: 2px solid var(--forest, #1E3A2B);
+    outline-offset: 1px;
+}
+
+.mtn-preview-weekday {
+    padding: 5px 0;
+    border-radius: 6px;
+    text-align: center;
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: rgba(10, 22, 14, 0.62);
+}
+
+.mtn-preview-weekday:hover:not(:disabled),
+.mtn-preview-day:hover:not(:disabled) {
+    border-color: rgba(198, 161, 91, 0.75);
+    background-color: rgba(198, 161, 91, 0.14);
+}
+
+/* The column heading is shaded too, so the weekly pattern reads at a glance
+   rather than having to be inferred from the dates below it. */
+.mtn-preview-weekday.is-closed {
+    color: #8A5A12;
+    background: rgba(198, 161, 91, 0.22);
+}
+
+.mtn-preview-day {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    color: var(--forest-dark, #16291E);
+}
+
+.mtn-preview-day.is-blank {
+    visibility: hidden;
+}
+
+/* Diagonal hatching rather than a flat fill: "closed" is a different kind of
+   state from "selected", and a solid block here would read as a chosen range. */
+.mtn-preview-day.is-closed {
+    color: #8A5A12;
+    font-weight: 600;
+    background-color: rgba(198, 161, 91, 0.18);
+    background-image: repeating-linear-gradient(
+        -45deg,
+        rgba(198, 161, 91, 0.42) 0,
+        rgba(198, 161, 91, 0.42) 2px,
+        transparent 2px,
+        transparent 6px
+    );
+}
+
+.mtn-preview-day.is-today {
+    outline: 2px solid var(--forest, #1E3A2B);
+    outline-offset: -2px;
+}
+
+/* ---------- Footnote ---------- */
+.mtn-footnote {
+    margin: 0;
+    border-top: 1px solid rgba(198, 161, 91, 0.3);
+    padding-top: 14px;
+    font-size: 0.76rem;
+    line-height: 1.55;
+    color: rgba(10, 22, 14, 0.7);
+    max-width: 68ch;
+}
+
+@media (max-width: 560px) {
+    .mtn-range-arrow {
+        display: none;
+    }
+
+    .mtn-range-field {
+        flex: 1 1 100%;
+    }
+
+    .mtn-chip-full {
+        display: none;
+    }
+}

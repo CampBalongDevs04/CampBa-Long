@@ -13,15 +13,21 @@
 // rates, while the two overnight schedules share the same "overnight" rates
 // and unit list.
 import { STAY_SCHEDULES } from '../../data/accommodationDB.js'
+import { minNightsFrom } from '../../data/extendedStay.js'
+import { describeMaintenanceDays, useMaintenanceDays } from '../../data/maintenanceDays.js'
 
 // Every schedule is offered on every check-in date. A Sunday arrival used to be
 // Day-Time-only, because the one overnight stay it could make checked out on
-// maintenance Monday — but a stay can run through a Monday now, so a Sunday
-// arrival simply stays until the Tuesday. The calendar is what refuses a Monday
-// check-out, which is the rule that actually needs enforcing.
+// maintenance Monday — but a stay can run through a closure now, so a Sunday
+// arrival simply stays until the Tuesday. The calendar is what refuses a
+// check-out on a closed day, which is the rule that actually needs enforcing.
 export default function TimeSelector({ selectedTime, onSelectTime, checkIn }){
-    // Only Sunday arrivals have a shortest stay of two nights rather than one.
-    const sundayCheckIn = checkIn != null && checkIn.getDay() === 0
+    const { days } = useMaintenanceDays()
+    // Which arrivals have a shortest stay longer than one night depends on
+    // where the closure falls, so it is asked rather than assumed: with Monday
+    // closed it is Sunday arrivals, with Monday and Tuesday closed it is
+    // Saturday and Sunday arrivals too.
+    const floor = checkIn != null ? minNightsFrom(checkIn) : 1
 
     return(
         <div className="booking-time-selector">
@@ -47,11 +53,11 @@ export default function TimeSelector({ selectedTime, onSelectTime, checkIn }){
                 ))}
             </div>
 
-            {sundayCheckIn && (
-                <p className="time-sunday-note" role="note">
-                    Staying overnight from a Sunday? Your stay runs at least until
-                    Tuesday — the resort is closed every Monday for maintenance, so
-                    nobody checks out on one.
+            {floor > 1 && (
+                <p className="time-closure-note" role="note">
+                    Staying overnight from this date? Your stay runs at least {floor} nights
+                    — the resort is closed {describeMaintenanceDays(days)} for maintenance,
+                    so nobody checks out on one.
                 </p>
             )}
         </div>
