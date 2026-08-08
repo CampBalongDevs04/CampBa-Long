@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react'
 import '../css/spaCms.css'
 import '../css/crud.css'
 import CrudModal from './crud/CrudModal.jsx'
-import { useSpaHero, loadSpaHero, saveSpaHero, saveSpaHeroMedia } from '../../data/spaHero.js'
+import {
+    useSpaHero,
+    loadSpaHero,
+    saveSpaHero,
+    saveSpaHeroMedia,
+    resolveSpaHeroBackground,
+    importBundledSpaHeroBackground,
+} from '../../data/spaHero.js'
 
 // CMS → Spa Service → Banner. The top of /spa: the headline, the line under
 // it, the button and the blurred backdrop (data/spaHero.js).
@@ -14,13 +21,13 @@ import { useSpaHero, loadSpaHero, saveSpaHero, saveSpaHeroMedia } from '../../da
 // banner in this CMS: fixing a typo in a headline should not put a staff
 // member one stray click away from clearing a photo.
 //
-// THE BACKDROP PREVIEW
-// --------------------
-// Unlike the menu banner, the photo the site ships with is painted by
-// spaService.css rather than imported into JS, so the dashboard cannot show it
-// — there is no URL to point an <img> at. Until staff upload one the stage
-// below is a flat tint and says so. Once they do, it shows the real thing,
-// which is the case where being able to see it actually matters.
+// THE BACKDROP
+// ------------
+// Until it is imported, the backdrop is a file inside the build rather than a
+// photo on the row: the stage below can show it, because spaHero.js imports it
+// for exactly that, but there is nothing to replace or remove because there is
+// nothing stored. Importing copies it into the resort's own storage and puts
+// its URL on the row, after which it behaves like any other uploaded photo.
 
 function contentFields() {
     return [
@@ -58,13 +65,14 @@ function contentFields() {
     ]
 }
 
-function mediaFields() {
+function mediaFields(values) {
     return [
         {
             name: 'backgroundUrl',
             label: 'Background image',
             type: 'image',
             folder: 'spa',
+            preview: resolveSpaHeroBackground(values.backgroundUrl),
             help: 'The blurred backdrop behind the whole banner. Use a wide photo. '
                 + 'Removing it puts the photo the site shipped with back. '
                 + 'JPG, PNG or WebP, up to 5 MB.',
@@ -77,10 +85,25 @@ export default function SpaHeroBanner() {
 
     const [editingContent, setEditingContent] = useState(null)
     const [editingMedia, setEditingMedia] = useState(null)
+    // The import writes straight to storage and the row with no form in
+    // between, so its progress and its refusals have nowhere else to be shown.
+    const [importing, setImporting] = useState(false)
+    const [importError, setImportError] = useState('')
 
     useEffect(() => {
         loadSpaHero()
     }, [])
+
+    const usingShipped = !hero.backgroundUrl
+
+    const handleImport = async () => {
+        if (importing) return
+        setImportError('')
+        setImporting(true)
+        const result = await importBundledSpaHeroBackground()
+        setImporting(false)
+        if (!result.ok) setImportError(result.message)
+    }
 
     return (
         <div className="spa-cms-panel">
@@ -123,8 +146,8 @@ export default function SpaHeroBanner() {
                 there. Staff should not have to open the site in another tab to
                 check what they just changed. */}
             <div
-                className={`spa-cms-stage${hero.backgroundUrl ? '' : ' is-shipped-bg'}`}
-                style={hero.backgroundUrl ? { backgroundImage: `url(${hero.backgroundUrl})` } : undefined}
+                className="spa-cms-stage"
+                style={{ backgroundImage: `url(${resolveSpaHeroBackground(hero.backgroundUrl)})` }}
             >
                 <div className="spa-cms-stage-copy">
                     <h4 className="spa-cms-title">
@@ -145,11 +168,34 @@ export default function SpaHeroBanner() {
                 </div>
             </div>
 
-            {!hero.backgroundUrl && (
+            {/* The backdrop came with the site, so it is a file in the build
+                rather than a photo on the row — visible above, but with nothing
+                stored there is nothing to replace or remove. Importing is what
+                makes it an ordinary editable photo. */}
+            {usingShipped ? (
+                <div className="spa-cms-import">
+                    <p className="crud-bar-note">
+                        This backdrop came with the site, so it is not stored in the database
+                        yet. Import it and it becomes an ordinary photo you can replace or
+                        remove — it is also re-saved smaller, which this one badly needs.
+                    </p>
+                    <button
+                        type="button"
+                        className="crud-btn is-primary is-small"
+                        disabled={importing}
+                        onClick={handleImport}
+                    >
+                        {importing ? 'Importing…' : 'Import this photo'}
+                    </button>
+                </div>
+            ) : (
                 <p className="crud-bar-note spa-cms-bg-note">
-                    The backdrop is the photo the site shipped with. Upload one to see it here.
+                    Stored in the database. Replace or remove it under Photo — removing puts the
+                    backdrop the site shipped with back.
                 </p>
             )}
+
+            {importError && <p className="crud-message is-error">{importError}</p>}
 
             {!loaded && <p className="crud-empty">Loading the spa banner…</p>}
 

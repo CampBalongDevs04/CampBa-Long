@@ -141,3 +141,85 @@ export async function uploadCatalogImage(file, folder = 'catalog') {
     const { data } = supabase.storage.from(CATALOG_IMAGE_BUCKET).getPublicUrl(path)
     return { ok: true, url: data.publicUrl, path }
 }
+
+
+// ================================ moving a bundled photo into the bucket
+
+// The longest edge a re-encoded photo keeps by default. A ceiling, not a
+// target: a photo already smaller than this keeps its own size.
+const DEFAULT_MAX_EDGE = 1600
+// Comfortably under MAX_BYTES so a re-encode that lands slightly larger than
+// predicted still fits.
+const REENCODE_MAX_BYTES = 4 * 1024 * 1024
+
+// Shrink and re-encode an image so the bucket will take it.
+//
+// This exists because the photos bundled with the front end are print-sized.
+// The spa gallery's six come to 26 MB between them and one is 12.1 MB — more
+// than twice the bucket's limit — so copying a shipped photo into storage
+// cannot be a straight copy; the upload is refused outright.
+//
+// Re-encoding is less a workaround for that limit than the thing that should
+// have happened to these files already: they are full-size PNGs displayed a
+// few hundred pixels wide, so every visitor downloads megabytes to look at
+// something small. A WebP capped at `maxEdge` is visually identical in place
+// and a fraction of the weight.
+export async function shrinkImageForUpload(blob, name, maxEdge = DEFAULT_MAX_EDGE) {
+    const bitmap = await createImageBitmap(blob)
+    const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height))
+    const width = Math.round(bitmap.width * scale)
+    const height = Math.round(bitmap.height * scale)
+
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, width, height)
+    bitmap.close?.()
+
+    // Quality is stepped down rather than fixed, so an unusually detailed photo
+    // still lands under the limit instead of failing at the bucket.
+    for (const quality of [0.85, 0.7, 0.55]) {
+        const encoded = await new Promise((resolve) =>
+            canvas.toBlob(resolve, 'image/webp', quality),
+        )
+        // A browser without WebP encoding answers null; JPEG is the floor every
+        // canvas can write, and the bucket takes it.
+        if (!encoded) break
+        if (encoded.size <= REENCODE_MAX_BYTES) {
+            return new File([encoded], `${name}.webp`, { type: 'image/webp' })
+        }
+    }
+
+    const jpeg = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.75))
+    if (!jpeg) throw new Error('This browser could not re-encode the photo.')
+    return new File([jpeg], `${name}.jpg`, { type: 'image/jpeg' })
+}
+
+// Copy one photo that shipped inside the build into the resort's own storage.
+//
+// WHY THIS IS NEEDED AT ALL
+// -------------------------
+// A photo bundled with the front end looks like content but is not: there is
+// no URL a database row could hold, because Vite hashes the filename at build
+// time. So the dashboard has nothing to list and nothing to replace — staff
+// see an upload button and no photo, and the only way to change one is to find
+// the original file and upload it by hand. This is that hand work, done once
+// and by the machine.
+//
+// `source` is whatever Vite resolved the import to, which is a path on this
+// site in both dev and a built bundle, so the fetch is same-origin.
+export async function uploadBundledImage(source, { name, folder = 'catalog', maxEdge } = {}) {
+    if (!isSupabaseConfigured) return { ok: false, message: SUPABASE_SETUP_MESSAGE }
+
+    let file
+    try {
+        const response = await fetch(source)
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        file = await shrinkImageForUpload(await response.blob(), name, maxEdge)
+    } catch (problem) {
+        console.error('Could not prepare a bundled photo:', problem)
+        return { ok: false, message: 'Could not read that photo from the site. Try again.' }
+    }
+
+    return uploadCatalogImage(file, folder)
+}

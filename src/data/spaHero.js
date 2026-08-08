@@ -19,13 +19,17 @@
 //
 //  THE BACKDROP
 //  ------------
-//  There is no `resolveSpaHeroBackground` here, unlike menuHero.js. The photo
-//  the site ships with is painted by spaService.css rather than imported into
-//  JS, so null means "leave the stylesheet alone" and the page only sets an
-//  inline background once staff have uploaded one — the same reasoning
-//  home.jsx already uses for the home hero's backdrop. Importing the bundled
-//  file here just to hand it straight back would make the CSS look dead the
-//  next time somebody reads it.
+//  background_url is null until staff put a photo there, and null means "leave
+//  the stylesheet alone" — spaService.css paints the shipped backdrop through
+//  a --spa-hero-bg fallback, so the page sets an inline value only once there
+//  is an uploaded one to set. That is the same arrangement home.jsx uses for
+//  the home hero.
+//
+//  The bundled file is still imported below, for two jobs that both need a URL
+//  the CSS alone cannot give: the dashboard's preview, which would otherwise
+//  have to show a placeholder where the live backdrop should be, and
+//  importBundledSpaHeroBackground, which copies it into storage so it stops
+//  being a build artefact and becomes an ordinary editable photo.
 // ============================================================================
 
 import { useSyncExternalStore } from 'react'
@@ -35,9 +39,21 @@ import {
     describeSupabaseError,
     SUPABASE_SETUP_MESSAGE,
 } from '../lib/supabaseClient.js'
+import { uploadBundledImage } from './catalogImages.js'
+
+import bundledBackground from '../assets/images/spa-hero-benner.png'
 
 const ROW_ID = 'spa'
 const CHANNEL = 'spa-hero-changes'
+
+// The backdrop the site ships with. Exported so the dashboard can show what is
+// actually on the page rather than a stand-in for it.
+export const SPA_HERO_BUNDLED_BACKGROUND = bundledBackground
+
+// Wider than the gallery's cap: this one spans the full width of the page,
+// behind a blur, so it is the one photo here that a narrow ceiling would
+// visibly soften on a large screen.
+const BACKGROUND_MAX_EDGE = 2000
 
 // Word for word what the front end used to have written into it.
 export const SPA_HERO_FALLBACK = {
@@ -204,6 +220,30 @@ export async function saveSpaHeroMedia(draft) {
 
     await loadSpaHero()
     return { ok: true }
+}
+
+
+// What a guest is actually shown. Null means the row has no photo of its own
+// and the stylesheet's is live — which is a URL the dashboard needs in order to
+// preview the banner honestly, even though the page itself never asks.
+export function resolveSpaHeroBackground(backgroundUrl = null) {
+    return backgroundUrl || SPA_HERO_BUNDLED_BACKGROUND
+}
+
+// Copy the shipped backdrop into the resort's own storage and save it on the
+// row. See uploadBundledImage in data/catalogImages.js for why a bundled photo
+// has to be moved before it can be managed, and why it is re-encoded on the
+// way — this one is a 1.16 MB PNG behind a blur, which is most of a megabyte
+// spent on something no visitor can see sharply.
+export async function importBundledSpaHeroBackground() {
+    const result = await uploadBundledImage(SPA_HERO_BUNDLED_BACKGROUND, {
+        name: 'spa-hero-background',
+        folder: 'spa',
+        maxEdge: BACKGROUND_MAX_EDGE,
+    })
+    if (!result.ok) return { ok: false, message: `${result.message} Nothing was changed.` }
+
+    return saveSpaHeroMedia({ backgroundUrl: result.url })
 }
 
 

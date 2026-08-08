@@ -8,6 +8,7 @@ import {
     saveSpaGallery,
     saveSpaGalleryPhotos,
     resolveSpaGalleryPhotos,
+    importBundledSpaGallery,
 } from '../../data/spaGallery.js'
 
 // CMS → Spa Service → Gallery. The "Relax. Refresh. Rejuvenate." heading on
@@ -51,8 +52,8 @@ function photoFields() {
             folder: 'spa',
             max: 12,
             help: 'The decorative strip under the heading — not the treatment cards, which are '
-                + 'edited in the Spa section. Uploading replaces the whole strip; removing them '
-                + 'all puts the six the site shipped with back.',
+                + 'edited in the Spa section. Reorder with the arrows; the order here is the '
+                + 'order on the page. Removing them all puts the six the site shipped with back.',
         },
     ]
 }
@@ -62,6 +63,10 @@ export default function SpaGallerySection() {
 
     const [editingContent, setEditingContent] = useState(null)
     const [editingPhotos, setEditingPhotos] = useState(null)
+    // The import writes straight to storage and the row with no form in
+    // between, so its progress and its refusals have nowhere else to be shown.
+    const [importing, setImporting] = useState(null)
+    const [importError, setImportError] = useState('')
 
     useEffect(() => {
         loadSpaGallery()
@@ -69,6 +74,15 @@ export default function SpaGallerySection() {
 
     const shownPhotos = resolveSpaGalleryPhotos(gallery.photos)
     const usingShipped = gallery.photos.length === 0
+
+    const handleImport = async () => {
+        if (importing) return
+        setImportError('')
+        setImporting({ done: 0, total: shownPhotos.length })
+        const result = await importBundledSpaGallery(setImporting)
+        setImporting(null)
+        if (!result.ok) setImportError(result.message)
+    }
 
     return (
         <div className="spa-cms-panel">
@@ -113,12 +127,40 @@ export default function SpaGallerySection() {
                         <img src={photo} alt="" key={`${photo}-${index}`} />
                     ))}
                 </div>
-                <p className="crud-bar-note">
-                    {usingShipped
-                        ? `The ${shownPhotos.length} photos the site shipped with. Uploading replaces all of them.`
-                        : `${shownPhotos.length} uploaded ${shownPhotos.length === 1 ? 'photo' : 'photos'}. `
-                          + 'Removing them all puts the shipped set back.'}
-                </p>
+
+                {/* The six the site shipped with are files inside the build, not
+                    entries — so there is nothing for Photos to list, reorder or
+                    remove, and swapping one of them would mean re-uploading all
+                    six by hand. Importing does that once, here, and afterwards
+                    they behave like any other uploaded photo. */}
+                {usingShipped ? (
+                    <div className="spa-cms-import">
+                        <p className="crud-bar-note">
+                            These {shownPhotos.length} came with the site, so they are not stored
+                            in the database yet — which is why Photos only offers an upload.
+                            Import them and each one becomes editable on its own: reorder it,
+                            remove it, or replace just the third and leave the rest.
+                        </p>
+                        <button
+                            type="button"
+                            className="crud-btn is-primary is-small"
+                            disabled={Boolean(importing)}
+                            onClick={handleImport}
+                        >
+                            {importing
+                                ? `Importing ${Math.min(importing.done + 1, importing.total)} of ${importing.total}…`
+                                : `Import these ${shownPhotos.length} photos`}
+                        </button>
+                    </div>
+                ) : (
+                    <p className="crud-bar-note">
+                        {shownPhotos.length} {shownPhotos.length === 1 ? 'photo' : 'photos'}, stored
+                        in the database. Edit them under Photos. Removing them all puts the
+                        set the site shipped with back.
+                    </p>
+                )}
+
+                {importError && <p className="crud-message is-error">{importError}</p>}
             </div>
 
             {!loaded && <p className="crud-empty">Loading the gallery…</p>}

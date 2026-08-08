@@ -17,10 +17,14 @@
 //
 //  THE PHOTO
 //  ---------
-//  There is no resolve* helper here. The photo the site ships with is painted
-//  by spaService.css (.spa-image), so null means "leave the stylesheet alone"
-//  and the page only sets an inline background once staff have uploaded one —
-//  the same reasoning as data/spaHero.js.
+//  image_url is null until staff put a photo there, and null means "leave the
+//  stylesheet alone" — spaService.css paints the shipped photo on .spa-image
+//  and the page sets an inline background only once there is an uploaded one.
+//
+//  The bundled file is still imported below for the same two jobs as the
+//  banner's backdrop: the dashboard's preview needs a URL to show the live
+//  photo rather than a stand-in, and importBundledSpaReserveImage copies it
+//  into storage so it becomes an ordinary editable photo.
 // ============================================================================
 
 import { useSyncExternalStore } from 'react'
@@ -30,9 +34,16 @@ import {
     describeSupabaseError,
     SUPABASE_SETUP_MESSAGE,
 } from '../lib/supabaseClient.js'
+import { uploadBundledImage } from './catalogImages.js'
+
+import bundledPhoto from '../assets/images/spa-items.png'
 
 const ROW_ID = 'spa'
 const CHANNEL = 'spa-reserve-changes'
+
+// The photo the site ships with. Exported so the dashboard can show what is
+// actually on the page rather than a stand-in for it.
+export const SPA_RESERVE_BUNDLED_IMAGE = bundledPhoto
 
 // Word for word what the front end used to have written into it.
 export const SPA_RESERVE_FALLBACK = {
@@ -333,6 +344,27 @@ export async function moveSpaReserveStep(id, direction) {
 
     await loadSpaReserve()
     return { ok: true }
+}
+
+
+// What a guest is actually shown. Null means the row has no photo of its own
+// and the stylesheet's is live — which is a URL the dashboard needs in order to
+// preview the panel honestly, even though the page itself never asks.
+export function resolveSpaReserveImage(imageUrl = null) {
+    return imageUrl || SPA_RESERVE_BUNDLED_IMAGE
+}
+
+// Copy the shipped photo into the resort's own storage and save it on the row.
+// See uploadBundledImage in data/catalogImages.js for why a bundled photo has
+// to be moved before it can be managed.
+export async function importBundledSpaReserveImage() {
+    const result = await uploadBundledImage(SPA_RESERVE_BUNDLED_IMAGE, {
+        name: 'spa-reserve-photo',
+        folder: 'spa',
+    })
+    if (!result.ok) return { ok: false, message: `${result.message} Nothing was changed.` }
+
+    return saveSpaReserveMedia({ imageUrl: result.url })
 }
 
 

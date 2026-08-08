@@ -10,6 +10,8 @@ import {
     saveSpaReserveStep,
     deleteSpaReserveStep,
     moveSpaReserveStep,
+    resolveSpaReserveImage,
+    importBundledSpaReserveImage,
 } from '../../data/spaReserve.js'
 
 // CMS → Spa Service → How to Reserve. The panel below the banner on /spa that
@@ -40,13 +42,14 @@ function panelFields() {
     ]
 }
 
-function mediaFields() {
+function mediaFields(values) {
     return [
         {
             name: 'imageUrl',
             label: 'Photo',
             type: 'image',
             folder: 'spa',
+            preview: resolveSpaReserveImage(values.imageUrl),
             help: 'The tall photo beside the numbered steps. Removing it puts the photo the '
                 + 'site shipped with back. JPG, PNG or WebP, up to 5 MB.',
         },
@@ -78,15 +81,27 @@ export default function SpaReserveSection() {
     const [editingPanel, setEditingPanel] = useState(null)
     const [editingMedia, setEditingMedia] = useState(null)
     const [editingStep, setEditingStep] = useState(null)
-    // Reordering writes straight to the database with no form in between, so
-    // its refusals have nowhere else to be shown.
+    // Reordering and importing both write straight to the database with no form
+    // in between, so their refusals have nowhere else to be shown.
     const [moveError, setMoveError] = useState('')
+    const [importing, setImporting] = useState(false)
+    const [importError, setImportError] = useState('')
 
     useEffect(() => {
         loadSpaReserve()
     }, [])
 
     const orderedSteps = [...steps].sort((a, b) => a.sortOrder - b.sortOrder)
+    const usingShipped = !panel.imageUrl
+
+    const handleImport = async () => {
+        if (importing) return
+        setImportError('')
+        setImporting(true)
+        const result = await importBundledSpaReserveImage()
+        setImporting(false)
+        if (!result.ok) setImportError(result.message)
+    }
 
     const handleMoveStep = async (id, direction) => {
         setMoveError('')
@@ -130,21 +145,41 @@ export default function SpaReserveSection() {
             {error && <p className="crud-message is-error">{error}</p>}
 
             <div className="spa-cms-howto-preview">
-                <div className={`spa-cms-howto-photo${panel.imageUrl ? '' : ' is-shipped-bg'}`}>
-                    {panel.imageUrl ? (
-                        <img src={panel.imageUrl} alt="" />
-                    ) : (
-                        // No URL to point an <img> at — the shipped photo is
-                        // painted by spaService.css. Saying so beats an empty
-                        // grey box that reads as a missing file.
-                        <span>Shipped photo</span>
-                    )}
+                <div className="spa-cms-howto-photo">
+                    <img src={resolveSpaReserveImage(panel.imageUrl)} alt="" />
                 </div>
                 <div className="spa-cms-howto-copy">
                     <h4>{panel.heading}</h4>
                     {panel.stepsTitle && <p className="spa-cms-howto-sub">{panel.stepsTitle}</p>}
                 </div>
             </div>
+
+            {/* Came with the site, so it is a file in the build rather than a
+                photo on the row — visible above, but with nothing stored there
+                is nothing to replace or remove. */}
+            {usingShipped ? (
+                <div className="spa-cms-import">
+                    <p className="crud-bar-note">
+                        This photo came with the site, so it is not stored in the database yet.
+                        Import it and it becomes an ordinary photo you can replace or remove.
+                    </p>
+                    <button
+                        type="button"
+                        className="crud-btn is-primary is-small"
+                        disabled={importing}
+                        onClick={handleImport}
+                    >
+                        {importing ? 'Importing…' : 'Import this photo'}
+                    </button>
+                </div>
+            ) : (
+                <p className="crud-bar-note spa-cms-bg-note">
+                    Stored in the database. Replace or remove it under Photo — removing puts the
+                    photo the site shipped with back.
+                </p>
+            )}
+
+            {importError && <p className="crud-message is-error">{importError}</p>}
 
             <div className="crud-bar spa-cms-subbar">
                 <div>

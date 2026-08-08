@@ -48,14 +48,6 @@
     background: linear-gradient(90deg, rgba(0, 0, 0, 0.58), rgba(0, 0, 0, 0.22));
 }
 
-/* No uploaded backdrop yet. The photo the site ships with is painted by
-   spaService.css and Vite hashes its filename at build time, so there is no
-   URL the dashboard could point at — a flat tint that clearly is not a photo
-   beats a broken image, and the note under the stage says which it is. */
-.spa-cms-stage.is-shipped-bg {
-    background-image: linear-gradient(120deg, #1d3527, #2f4d38);
-}
-
 .spa-cms-stage-copy {
     position: relative;
     flex: 1 1 auto;
@@ -136,21 +128,6 @@
     height: 100%;
     object-fit: cover;
     display: block;
-}
-
-/* Same reasoning as .spa-cms-stage.is-shipped-bg — there is no URL for the
-   photo the site ships with, so the frame says so rather than sitting empty. */
-.spa-cms-howto-photo.is-shipped-bg {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6px;
-    text-align: center;
-    background: linear-gradient(140deg, #1d3527, #2f4d38);
-    color: rgba(245, 241, 228, 0.85);
-    font-size: 0.55rem;
-    letter-spacing: 0.6px;
-    text-transform: uppercase;
 }
 
 .spa-cms-howto-copy {
@@ -258,6 +235,27 @@
     border-radius: 8px;
     border: 1px solid rgba(198, 161, 91, 0.35);
     display: block;
+}
+
+/* The one-press "make this a real photo" offer, shared by all three tabs that
+   have one. Boxed rather than loose, because it explains a state — this photo
+   came with the site and is not editable yet — and that explanation is longer
+   than the note it becomes once imported. */
+.spa-cms-import {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px dashed rgba(198, 161, 91, 0.55);
+    border-radius: 10px;
+    background: rgba(198, 161, 91, 0.08);
+}
+
+.spa-cms-import .crud-bar-note {
+    flex: 1 1 320px;
+    min-width: 0;
 }
 
 /* ---------- Hilot preview ---------- */

@@ -30,6 +30,7 @@ import {
     describeSupabaseError,
     SUPABASE_SETUP_MESSAGE,
 } from '../lib/supabaseClient.js'
+import { uploadBundledImage } from './catalogImages.js'
 
 import bundled1 from '../assets/images/massage1.png'
 import bundled2 from '../assets/images/massage2.png'
@@ -114,10 +115,11 @@ export async function loadSpaGallery() {
 // What a guest is actually shown, resolved in one place so the spa page and
 // the dashboard's preview never disagree about which photos are live.
 //
-// Uploading even one photo replaces the whole strip rather than topping it up.
-// The alternative — bundled photos filling the gaps behind uploaded ones —
-// leaves staff with a set they cannot fully control from the dashboard, since
-// a bundled photo has no row to remove.
+// An empty column means the six the site shipped with. Mixing the two — bundled
+// photos filling the gaps behind uploaded ones — is deliberately not a state
+// this can be in: a bundled photo has no entry to reorder or remove, so a mixed
+// strip would be one staff could see but only half control. importBundledSpaGallery
+// below is how the six stop being bundled and start being editable.
 export function resolveSpaGalleryPhotos(photos = []) {
     return photos.length > 0 ? photos : SPA_GALLERY_BUNDLED
 }
@@ -190,6 +192,68 @@ export async function saveSpaGalleryPhotos(draft) {
 
     await loadSpaGallery()
     return { ok: true }
+}
+
+
+// Copy the six photos the site shipped with into the resort's own storage, and
+// save them as the gallery's real entries.
+//
+// WHY THIS EXISTS
+// ---------------
+// Until it runs, the strip on /spa is six files bundled into the build. They
+// look like content but they are not: there is no entry behind them, so the
+// dashboard has nothing to list, nothing to reorder and nothing to remove — a
+// staff member opening Photos sees an upload button and no photos, and the only
+// way to change ONE of the six is to re-upload all six by hand.
+//
+// This is that hand work, done once and by the machine. Afterwards every photo
+// in the strip is an ordinary uploaded entry: reorder it, remove it, add a
+// seventh, replace the third and leave the rest alone.
+//
+// WHY IT IS A BUTTON AND NOT AUTOMATIC
+// ------------------------------------
+// It writes — six uploads and a row update — and a page load should not do that
+// on a staff member's behalf without being asked. It is also not something they
+// would want undone silently: once imported, the strip stops tracking whatever
+// the next build bundles, which is the whole point but is still a change worth
+// choosing.
+//
+// A PARTIAL IMPORT SAVES NOTHING
+// ------------------------------
+// If the fourth upload fails, the three that landed are not saved. Saving them
+// would swap a six-photo strip for a three-photo one as the result of an error,
+// which is a worse page than the one staff started with. The strip is left
+// exactly as it was and the failure is reported, so a retry is one press away.
+// The orphaned uploads sit unreferenced in the bucket; they cost nothing and a
+// retry does not compound them, because each upload gets a fresh random name.
+//
+// Each photo is shrunk and re-encoded on the way — see uploadBundledImage and
+// shrinkImageForUpload in data/catalogImages.js for why that is not optional.
+export async function importBundledSpaGallery(onProgress) {
+    if (!isSupabaseConfigured) return { ok: false, message: SUPABASE_SETUP_MESSAGE }
+
+    const total = SPA_GALLERY_BUNDLED.length
+    const uploaded = []
+
+    for (const [index, source] of SPA_GALLERY_BUNDLED.entries()) {
+        onProgress?.({ done: index, total })
+
+        const result = await uploadBundledImage(source, {
+            name: `spa-gallery-${index + 1}`,
+            folder: 'spa',
+        })
+        if (!result.ok) {
+            return {
+                ok: false,
+                message: `Photo ${index + 1} of ${total} did not import: ${result.message} `
+                    + 'Nothing was changed.',
+            }
+        }
+        uploaded.push(result.url)
+    }
+
+    onProgress?.({ done: total, total })
+    return saveSpaGalleryPhotos({ photos: uploaded })
 }
 
 
