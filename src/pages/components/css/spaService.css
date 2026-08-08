@@ -37,7 +37,13 @@ html{
     content: '';
     position: absolute;
     inset: 0;
-    background-image: linear-gradient(90deg, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.16)), url('../../../assets/images/spa-hero-benner.png');
+    /* The photo the site shipped with is the default; CMS → Spa Service →
+       Banner overrides it by setting --spa-hero-bg on the banner. The
+       variable rather than an inline background-image because the gradient
+       above it belongs to the stylesheet, and an inline value would have to
+       restate it to avoid wiping it. */
+    background-image: linear-gradient(90deg, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.16)),
+        var(--spa-hero-bg, url('../../../assets/images/spa-hero-benner.png'));
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;

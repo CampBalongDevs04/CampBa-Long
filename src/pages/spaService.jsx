@@ -5,54 +5,58 @@ import Footer from '../components/footer'
 import LotusDividerIcon from '../components/LotusDividerIcon'
 import { useBookings } from '../data/useBookings.js'
 import { SkeletonImage } from '../components/skeletons/Skeleton.jsx'
-import massage1 from '../assets/images/massage1.png'
-import massage2 from '../assets/images/massage2.png'
-import massage3 from '../assets/images/massage3.png'
-import massage4 from '../assets/images/massage4.png'
-import massage5 from '../assets/images/massage5.png'
-import massage6 from '../assets/images/massage6.png'
 // The treatments and their prices live in Postgres (spa_services) — see
-// data/menuDB.js. Only the mood gallery above is decoration authored here.
+// data/menuDB.js — and are edited in the dashboard's Spa section.
 import { useSpaServices } from '../data/menuDB.js'
+// Everything on this page that is words and decorative pictures rather than
+// treatments now comes from its own row in Postgres, edited in the
+// dashboard's CMS → Spa Service. It was all hardcoded here until then, so
+// changing a heading was a code change and a redeploy.
+import { useSpaHero } from '../data/spaHero.js'
+import { useSpaReserve } from '../data/spaReserve.js'
+import { useSpaGallery, resolveSpaGalleryPhotos } from '../data/spaGallery.js'
+import { useSpaHilot } from '../data/spaHilot.js'
 
-const instructions = [
-    {
-        title: 'How to Order',
-        descriptions: ['Reserve your stay first — you can book a treatment before paying.',
-            'Browse the Spa Service',
-            'Input How Many Pax',
-            'Review and Confirm your Service',
-            'The treatment joins your down payment, which you settle from My Bookings.'
-        ]
+// Where a button goes decides what it is, the same three-way split the home
+// and menu pages already make. The one difference: an anchor is scrolled to
+// rather than jumped to, because that is what this button did when its
+// destination was hardcoded and a CMS field should not have quietly changed
+// how it feels to press.
+function SpaHeroButton({ href, label, className, children }) {
+    if (!label) return null
+    const target = href || '#how-to-reserve'
+
+    if (target.startsWith('/')) {
+        return (
+            <Link className={className} to={target}>
+                {children}
+                {label}
+            </Link>
+        )
     }
 
-]
-const service =[
-    {
-        image: massage1,
-    },
-    {
-        image: massage2,
-    },
-    {
-        image: massage3,
-    },
-    {
-        image: massage4,
-    },
-    {
-        image: massage5,
-    },
-    {
-        image: massage6,
-    },
-]
+    if (target.startsWith('#')) {
+        return (
+            <button
+                type="button"
+                className={className}
+                onClick={() =>
+                    document.getElementById(target.slice(1))?.scrollIntoView({ behavior: 'smooth' })
+                }
+            >
+                {children}
+                {label}
+            </button>
+        )
+    }
 
-const hilotInclusions = [
-    'Checking Vital Signs (BP, BT)',
-    'Blue Salabat Tea',
-    'Banana Leaves Natural Ionizer',
-]
+    return (
+        <a className={className} href={target} target="_blank" rel="noopener noreferrer">
+            {children}
+            {label}
+        </a>
+    )
+}
 
 
 // Kiosk-style order tray. Module-level (same pattern as bookingsStore in
@@ -333,11 +337,16 @@ function SpaCheckoutPanel({ cart, status, onIncrease, onDecrease, onRemove, onPl
 
 function SpaService() {
     const sectionsRef = useRef(null)
-    const howToReserveRef = useRef(null)
     const [orderItem, setOrderItem] = useState(null)
     const { findOrderableBooking, addSpaOrderToBooking } = useBookings()
     // The treatment list, straight from spa_services.
     const hilotServices = useSpaServices()
+    // The page's own copy and decorative photos, straight from the CMS.
+    const { hero } = useSpaHero()
+    const { panel: reserve, activeSteps: reserveSteps } = useSpaReserve()
+    const { gallery } = useSpaGallery()
+    const { hilot, activeInclusions } = useSpaHilot()
+    const galleryPhotos = resolveSpaGalleryPhotos(gallery.photos)
     const { cart, addToCart: addLineToCart, adjustQuantity, removeLine, clearCart } = useSpaCart()
     const [checkoutStatus, setCheckoutStatus] = useState('idle') // idle | blocked | success
 
@@ -373,13 +382,20 @@ function SpaService() {
         return () => clearTimeout(timer)
     }, [checkoutStatus])
 
-    const scrollToHowToReserve = () => {
-        howToReserveRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }
-
+    // Both lists this watches arrive from the database AFTER the first paint —
+    // the treatment cards always did, and the gallery photos do now that they
+    // are CMS content rather than six imports. So it re-runs whenever either
+    // list changes, not once on mount.
+    //
+    // Running once was already wrong: .hilot-card starts at opacity 0 and only
+    // .is-visible brings it back, so cards that mounted after the single pass
+    // were never observed and never became visible at all. Re-observing an
+    // element that already carries the class is harmless — it is unobserved
+    // again the moment it intersects — so there is nothing to reconcile here
+    // beyond letting the effect run again.
     useEffect(() => {
         const items = sectionsRef.current?.querySelectorAll('.spa-service-item, .hilot-card')
-        if (!items || items.length === 0) return
+        if (!items || items.length === 0) return undefined
 
         const observer = new IntersectionObserver(
             (entries) => {
@@ -394,55 +410,78 @@ function SpaService() {
         )
         items.forEach((item) => observer.observe(item))
         return () => observer.disconnect()
-    }, [])
+    }, [galleryPhotos, hilotServices])
 
     return (
 
         <main className="page spa-service-page" ref={sectionsRef}>
-            <div className="spa-hero-banner" id = "spaService">
+            {/* The backdrop is only set inline once staff have uploaded one.
+                The stylesheet already paints the photo the site shipped with,
+                and an inline style that repeated it would make the CSS look
+                dead the next time somebody reads it — the same reasoning
+                home.jsx uses for the home hero. */}
+            <div
+                className="spa-hero-banner"
+                id="spaService"
+                style={hero.backgroundUrl ? { '--spa-hero-bg': `url(${hero.backgroundUrl})` } : undefined}
+            >
                 <div className="spa-hero-content">
                     <h1 className="spa-title">
-                        Reserve Your Moment of<br />
-                        Relaxation.<br />
+                        {hero.titleLines.map((line, index) => (
+                            <span key={`${line}-${index}`}>{line}<br /></span>
+                        ))}
                     </h1>
-                    <p className="spa-subtitle">Book your next spa session and indulge in a world of tranquility and rejuvenation.</p>
+                    {hero.subtitle && <p className="spa-subtitle">{hero.subtitle}</p>}
                     <div className="spa-hero-buttons">
-                        <button type="button" className="spa-hero-button" onClick={scrollToHowToReserve}>
+                        <SpaHeroButton
+                            className="spa-hero-button"
+                            href={hero.buttonHref}
+                            label={hero.buttonLabel}
+                        >
                             <svg viewBox="0 0 24 24" strokeWidth="1.8" aria-hidden="true">
                                 <rect x="3" y="5" width="18" height="16" rx="2"/>
                                 <path d="M3 10h18M8 3v4M16 3v4"/>
                             </svg>
-                            Book Now
-                        </button>
+                        </SpaHeroButton>
                     </div>
                 </div>
             </div>
-            <section className="spa-how-to-reserve" ref={howToReserveRef}>
-                
+            {/* The id is what the banner button's "#how-to-reserve" scrolls to,
+                so a staff member can point the button here from the dashboard. */}
+            <section className="spa-how-to-reserve" id="how-to-reserve">
+
                 <div className="spa-how-to-header">
                     <LotusDividerIcon />
                     <h1 className = "spa-header-title">
-                        How to book Spa Service
+                        {reserve.heading}
                     </h1>
                 </div>
-            
+
             <div className ="Spa-instruction-container">
 
-                <div className ="spa-image">
+                <div
+                    className ="spa-image"
+                    style={reserve.imageUrl ? { backgroundImage: `url(${reserve.imageUrl})` } : undefined}
+                >
 
                 </div>
 
                 <div className ="spa-instruction">
-                    {instructions.map((instruction) => (
-                        <div className="spa-instruction-item" key={instruction.title}>
-                            <h2 className="spa-instruction-title">{instruction.title}</h2>
+                    <div className="spa-instruction-item">
+                        {reserve.stepsTitle && (
+                            <h2 className="spa-instruction-title">{reserve.stepsTitle}</h2>
+                        )}
+                        {/* Gone entirely rather than left as an empty list, the
+                            same as every other CMS list on the site: staff who
+                            deleted every step deleted the list. */}
+                        {reserveSteps.length > 0 && (
                             <ol className="spa-instruction-steps">
-                                {instruction.descriptions.map((step) => (
-                                    <li key={step}>{step}</li>
+                                {reserveSteps.map((step) => (
+                                    <li key={step.id}>{step.step}</li>
                                 ))}
                             </ol>
-                        </div>
-                    ))}
+                        )}
+                    </div>
                 </div>
             </div>
             </section>
@@ -451,21 +490,23 @@ function SpaService() {
                 <div className="spa-service-header">
                     <LotusDividerIcon />
                     <h1 className="spa-service-title">
-                    Relax. Refresh. Rejuvenate.
+                    {gallery.heading}
                     </h1>
 
-                    <p className="spa-service-subtitle">
-                    Indulge in luxurious spa treatments designed to restore your body, calm your mind, and renew your spirit. Book your appointment in just a few clicks.
-                    </p>
+                    {gallery.subtitle && (
+                        <p className="spa-service-subtitle">
+                        {gallery.subtitle}
+                        </p>
+                    )}
                 </div>
                 <div className="spa-service-images">
-                    {service.map((item, index) => (
+                    {galleryPhotos.map((photo, index) => (
                         <div
                             className="spa-service-item"
-                            key={item.image}
+                            key={`${photo}-${index}`}
                             style={{ transitionDelay: `${(index % 3) * 120}ms` }}
                         >
-                            <SkeletonImage src={item.image} alt={`Spa massage service ${index + 1}`} loading="lazy" />
+                            <SkeletonImage src={photo} alt={`Spa massage service ${index + 1}`} loading="lazy" />
                         </div>
                     ))}
                 </div>
@@ -475,11 +516,13 @@ function SpaService() {
                 <div className="spa-hilot-glow" aria-hidden="true"></div>
                 <div className="spa-hilot-header">
                     <LotusDividerIcon />
-                    <span className="spa-hilot-eyebrow">Our Services</span>
-                    <h1 className="spa-hilot-title">Hilot Wellness Spa</h1>
-                    <p className="spa-hilot-subtitle">
-                        Time-honored Filipino healing rituals paired with modern comfort. Choose the treatment that speaks to what your body needs today.
-                    </p>
+                    {hilot.eyebrow && <span className="spa-hilot-eyebrow">{hilot.eyebrow}</span>}
+                    <h1 className="spa-hilot-title">{hilot.title}</h1>
+                    {hilot.subtitle && (
+                        <p className="spa-hilot-subtitle">
+                            {hilot.subtitle}
+                        </p>
+                    )}
                 </div>
 
                 <div className="spa-hilot-grid">
@@ -520,19 +563,26 @@ function SpaService() {
                     ))}
                 </div>
 
-                <div className="hilot-inclusions">
-                    <span className="hilot-inclusions-label">Free Exclusive Inclusions</span>
-                    <ul className="hilot-inclusions-list">
-                        {hilotInclusions.map((item) => (
-                            <li key={item}>
-                                <svg viewBox="0 0 24 24" strokeWidth="2" aria-hidden="true">
-                                    <path d="M4 12l5 5L20 6" />
-                                </svg>
-                                {item}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
+                {/* Gone entirely rather than left as a bare label, the same as
+                    the reserve steps above: staff who deleted every inclusion
+                    deleted the strip. */}
+                {activeInclusions.length > 0 && (
+                    <div className="hilot-inclusions">
+                        {hilot.inclusionsLabel && (
+                            <span className="hilot-inclusions-label">{hilot.inclusionsLabel}</span>
+                        )}
+                        <ul className="hilot-inclusions-list">
+                            {activeInclusions.map((row) => (
+                                <li key={row.id}>
+                                    <svg viewBox="0 0 24 24" strokeWidth="2" aria-hidden="true">
+                                        <path d="M4 12l5 5L20 6" />
+                                    </svg>
+                                    {row.item}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
             </section>
 
             <Footer />
