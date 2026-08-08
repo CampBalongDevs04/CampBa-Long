@@ -48,6 +48,7 @@ const TestimonialsSection = lazy(() => import('./items/testimonialsSection.jsx')
 const LocationSection = lazy(() => import('./items/locationSection.jsx'))
 const FaqSection = lazy(() => import('./items/faqSection.jsx'))
 const ContactSection = lazy(() => import('./items/contactSection.jsx'))
+const MenuBanner = lazy(() => import('./items/menuBanner.jsx'))
 const FooterSection = lazy(() => import('./items/footerSection.jsx'))
 
 // Staff sign in with Supabase Auth, not a passcode baked into the bundle.
@@ -358,7 +359,7 @@ function AdminDash() {
                         <h1 className="admin-dash-title">CMS</h1>
                         <ClockDate />
                     </div>
-                    <Suspense fallback={<TabsSkeleton count={9} />}>
+                    <Suspense fallback={<TabsSkeleton count={10} />}>
                         <CmsTab active={activeCmsTab} onChange={setActiveCmsTab} />
                     </Suspense>
                     <Suspense fallback={<PanelSkeleton />}>
@@ -379,6 +380,7 @@ function AdminDash() {
                         {activeCmsTab === 'location' && <LocationSection />}
                         {activeCmsTab === 'faq' && <FaqSection />}
                         {activeCmsTab === 'contact' && <ContactSection />}
+                        {activeCmsTab === 'menu-banner' && <MenuBanner />}
                         {activeCmsTab === 'footer' && <FooterSection />}
                     </Suspense>
                 </div>

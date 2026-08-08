@@ -1,0 +1,277 @@
+/* ============================================================================
+   CMS → Food Menu → Banner. The panel and the live preview of the top of
+   /menu. Adapted from heroBanner.css — same job, a different page, and no
+   feature strip because the menu banner doesn't have one.
+   ========================================================================== */
+
+.menu-hero-cms-panel {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--cream, #F5F1E4);
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 10px 20px -14px rgba(10, 22, 14, 0.5);
+    font-family: 'Jost', sans-serif;
+    color: var(--forest-dark, #16291E);
+}
+
+.menu-hero-cms-preview {
+    margin-bottom: 4px;
+}
+
+/* The banner as /menu lays it out — copy on the left, circle on the right,
+   over the background image that is actually live. Deliberately a still, the
+   same reasoning as hero-cms-stage: this answers "what does it say right
+   now". */
+.menu-hero-cms-stage {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 26px 24px;
+    border-radius: 14px;
+    overflow: hidden;
+    background-size: cover;
+    background-position: center;
+    border: 1px solid rgba(198, 161, 91, 0.35);
+}
+
+.menu-hero-cms-stage::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.58), rgba(0, 0, 0, 0.22));
+}
+
+.menu-hero-cms-stage-copy,
+.menu-hero-cms-circle {
+    position: relative;
+}
+
+.menu-hero-cms-stage-copy {
+    flex: 1 1 320px;
+    min-width: 0;
+}
+
+.menu-hero-cms-title {
+    margin: 0;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.9rem;
+    line-height: 1.02;
+    color: #F5F1E4;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.menu-hero-cms-subtitle {
+    margin: 10px 0 0;
+    max-width: 46ch;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: rgba(245, 241, 228, 0.9);
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.menu-hero-cms-button {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 7px 15px;
+    border-radius: 20px;
+    background: #C6A15B;
+    border: 1px solid #C6A15B;
+    color: #16291E;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+}
+
+/* The button and where it goes, in one chip — the same reasoning as
+   hero-cms-button em: a label with no working link is a failure staff cannot
+   see on the site itself. */
+.menu-hero-cms-button em {
+    font-style: normal;
+    font-weight: 400;
+    letter-spacing: 0.4px;
+    text-transform: none;
+    opacity: 0.72;
+}
+
+.menu-hero-cms-circle {
+    flex: 0 0 auto;
+    width: 104px;
+    height: 104px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 4px solid var(--gold, #C6A15B);
+    background: rgba(22, 41, 30, 0.45);
+}
+
+.menu-hero-cms-circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* ---------- How to Order & Section titles ---------- */
+
+.menu-hero-cms-subbar {
+    margin-top: 4px;
+}
+
+.menu-hero-cms-howto-preview {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 16px;
+    margin-bottom: 4px;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    border-radius: 12px;
+}
+
+.menu-hero-cms-howto-photo {
+    flex: 0 0 auto;
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(22, 41, 30, 0.08);
+}
+
+.menu-hero-cms-howto-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.menu-hero-cms-howto-copy {
+    min-width: 0;
+}
+
+.menu-hero-cms-howto-copy h4 {
+    margin: 0 0 3px;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.menu-hero-cms-howto-note {
+    margin: 0;
+    font-size: 0.78rem;
+    color: rgba(10, 22, 14, 0.62);
+}
+
+.menu-hero-cms-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.menu-hero-cms-step {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    border-radius: 12px;
+}
+
+.menu-hero-cms-step-index {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(22, 41, 30, 0.9);
+    border: 1px solid rgba(217, 189, 132, 0.5);
+    color: #F5F1E4;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.menu-hero-cms-step-text {
+    flex: 1 1 200px;
+    min-width: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+}
+
+.menu-hero-cms-titles-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.menu-hero-cms-title-chip {
+    display: inline-flex;
+    flex-direction: column;
+    padding: 8px 14px;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    border-radius: 10px;
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.5px;
+}
+
+.menu-hero-cms-title-chip em {
+    font-family: 'Jost', sans-serif;
+    font-style: normal;
+    font-weight: 400;
+    font-size: 0.68rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #C6A15B;
+}
+
+/* The MENU banner's own thumbnail, sitting in the same row of chips as the
+   headings so a glance at this row shows everything that section owns. */
+.menu-hero-cms-title-chip-photo {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Jost', sans-serif;
+    font-weight: 600;
+    font-size: 0.72rem;
+    letter-spacing: 0.5px;
+    text-transform: none;
+}
+
+.menu-hero-cms-title-chip-photo img {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    object-fit: cover;
+    display: block;
+}
+
+@media (max-width: 720px) {
+    .menu-hero-cms-panel {
+        padding: 16px;
+    }
+
+    .menu-hero-cms-circle {
+        display: none;
+    }
+
+    .menu-hero-cms-title {
+        font-size: 1.5rem;
+    }
+
+    .menu-hero-cms-step {
+        flex-wrap: wrap;
+    }
+}
