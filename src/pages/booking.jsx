@@ -11,7 +11,7 @@ import PaxInput from './components/paxInput'
 import KidsCount from './components/kidscount'
 import SeniorCount from './components/seniorCount'
 import PwdCount from './components/pwdCount'
-import { computeStayQuote } from '../data/extendedStay.js'
+import { computeStayQuote, minNightsFrom } from '../data/extendedStay.js'
 import Terms from './components/terms'
 import BookingSummary from './components/bookingSummary'
 import HoldQueueNotice from './components/holdQueueNotice'
@@ -212,14 +212,29 @@ export default function Booking(){
         if (nextKids !== kids) setKids(nextKids)
     }
 
-    // A Sunday check-in used to force Day Time, because the only overnight
-    // stay it could make ended on maintenance Monday. That is no longer the
-    // only one it can make: a stay may run straight through a Monday now, so a
-    // Sunday arrival is fine as long as it stays two nights and checks out on
-    // the Tuesday. The calendar refuses a Monday check-out on its own, so
-    // there is nothing left for this to override.
+    // A check-in whose very next day is a closure forces Day Time — the
+    // overnight schedules check out the next day at minimum, which a closure
+    // there rules out (see TimeSelector, which greys those cards out for such
+    // a date). An overnight schedule already picked before the check-in moved
+    // to one of these dates is dropped here, so a disabled card can never sit
+    // there still "selected" underneath.
     function handleDatesChange(nextDates){
         setDates(nextDates)
+
+        // "Clear dates" comes through here as a check-in of null. The
+        // schedule has to clear with it — Day Time left selected would keep
+        // sameDayCheckout true, and the calendar would carry on rendering the
+        // "Same Day Check Out" placeholder in place of the check-out panel it
+        // should have gone back to.
+        if (nextDates.checkIn == null) {
+            setSelectedTime(null)
+            return
+        }
+
+        if (selectedTime !== null && schedule?.sameDay !== true
+            && minNightsFrom(nextDates.checkIn) > 1) {
+            setSelectedTime(null)
+        }
     }
 
     // An overnight schedule needs a check-out STRICTLY after the check-in —

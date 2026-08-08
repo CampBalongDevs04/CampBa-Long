@@ -19,8 +19,24 @@
     background: #2E2E2E;
     border-right: 1px solid #444444;
     box-shadow: 6px 0 18px rgba(15, 15, 15, 0.25);
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #4A4A4A #2E2E2E;
     transition: width 250ms ease;
+}
+
+.admin-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.admin-sidebar::-webkit-scrollbar-track {
+    background: #2E2E2E;
+}
+
+.admin-sidebar::-webkit-scrollbar-thumb {
+    background: #4A4A4A;
+    border-radius: 3px;
 }
 
 .admin-sidebar.expanded {
