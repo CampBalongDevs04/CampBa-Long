@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import './css/bookingCalendar.css'
-import { addDays, countNights, MAX_STAY_NIGHTS } from '../../data/extendedStay.js'
+import {
+    addDays,
+    countNights,
+    isMaintenanceDay,
+    MAX_STAY_NIGHTS,
+} from '../../data/extendedStay.js'
+import { describeMaintenanceDays, useMaintenanceDays } from '../../data/maintenanceDays.js'
 
 const MONTH_NAMES = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -18,11 +24,23 @@ function isSameDay(a, b) {
 
 // The first date past the end of the longest bookable stay. This is a
 // guardrail, not a product rule — a stay is as long as the guest wants one to
-// be, a week included — so it sits a generous month out. Maintenance Mondays
+// be, a week included — so it sits a generous month out. Maintenance days
 // bound the ENDS of a stay rather than its length: they stay unselectable in
 // both panels while remaining highlighted inside a range the stay runs through.
 function stayLimitAfter(date) {
     return addDays(date, MAX_STAY_NIGHTS + 1)
+}
+
+// 'Mondays are maintenance day', or 'Monday to Tuesday are maintenance days'.
+// The closure is a setting now (data/maintenanceDays.js), so the tooltip on a
+// greyed cell and the note under the calendar both have to be built rather
+// than written — and they are built from one place so they cannot disagree.
+function closureLabel(days) {
+    if (days.length === 0) return ''
+    const subject = describeMaintenanceDays(days)
+    return days.length === 1
+        ? `${subject} are maintenance day`
+        : `${subject} are maintenance days`
 }
 
 function formatDate(date) {
@@ -32,7 +50,7 @@ function formatDate(date) {
     })
 }
 
-function CalendarPanel({ label, variant, selected, onSelect, minDate, maxDate, rangeStart, rangeEnd }) {
+function CalendarPanel({ label, variant, selected, onSelect, minDate, maxDate, rangeStart, rangeEnd, closure }) {
     const today = startOfDay(new Date())
     const initialView = selected || minDate || today
     const [viewYear, setViewYear] = useState(initialView.getFullYear())
@@ -90,16 +108,17 @@ function CalendarPanel({ label, variant, selected, onSelect, minDate, maxDate, r
     for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(viewYear, viewMonth, day)
         const isPast = date.getTime() < today.getTime()
-        const isMonday = date.getDay() === 1
+        // Whichever days the resort has closed, not a hardcoded Monday.
+        const isClosed = isMaintenanceDay(date)
         const isBeforeMin = minDate && date.getTime() <= minDate.getTime()
         const isPastMax = maxDate && date.getTime() >= maxDate.getTime()
-        const isDisabled = isPast || isMonday || isBeforeMin || isPastMax
+        const isDisabled = isPast || isClosed || isBeforeMin || isPastMax
         const isSelected = isSameDay(date, selected)
         const isInRange = rangeStart && rangeEnd &&
             date.getTime() > rangeStart.getTime() && date.getTime() < rangeEnd.getTime()
 
         const classNames = ['cal-cell', 'cal-day']
-        if (isMonday) classNames.push('cal-maintenance')
+        if (isClosed) classNames.push('cal-maintenance')
         if (isDisabled) classNames.push('cal-disabled')
         if (isSelected) classNames.push('cal-selected')
         if (isInRange) classNames.push('cal-in-range')
@@ -110,13 +129,16 @@ function CalendarPanel({ label, variant, selected, onSelect, minDate, maxDate, r
                 key={day}
                 type="button"
                 className={classNames.join(' ')}
-                disabled={isDisabled && !isMonday}
+                // A closed day stays focusable so its tooltip is reachable —
+                // "why can't I pick this?" is worth answering, where a past
+                // date needs no explanation.
+                disabled={isDisabled && !isClosed}
                 aria-disabled={isDisabled}
                 onClick={() => { if (!isDisabled) onSelect(date) }}
-                data-hint={isMonday ? 'Mondays are maintenance day' : undefined}
+                data-hint={isClosed ? closure : undefined}
                 aria-label={
-                    isMonday
-                        ? `${formatDate(date)} — unavailable, Mondays are maintenance day`
+                    isClosed
+                        ? `${formatDate(date)} — unavailable, ${closure}`
                         : formatDate(date)
                 }
             >
@@ -206,6 +228,12 @@ function SameDayPanel({ checkIn }) {
 // moment either one wrote — so the booking page owns the pair and this renders
 // what it is given.
 export default function BookingCalendar({ checkIn = null, checkOut = null, onChange, sameDayCheckout = false }) {
+    // Subscribed rather than read once: staff can change the closure from the
+    // dashboard while this calendar is open, and the cells have to regrey
+    // themselves rather than keep offering a date the database now refuses.
+    const { days } = useMaintenanceDays()
+    const closure = closureLabel(days)
+
     // Day Time schedule: check-out always happens on the check-in date
     const effectiveCheckOut = sameDayCheckout ? checkIn : checkOut
 
@@ -241,6 +269,7 @@ export default function BookingCalendar({ checkIn = null, checkOut = null, onCha
                     onSelect={selectCheckIn}
                     rangeStart={checkIn}
                     rangeEnd={effectiveCheckOut}
+                    closure={closure}
                 />
                 {sameDayCheckout ? (
                     <SameDayPanel checkIn={checkIn} />
@@ -254,6 +283,7 @@ export default function BookingCalendar({ checkIn = null, checkOut = null, onCha
                         maxDate={checkIn ? stayLimitAfter(checkIn) : null}
                         rangeStart={checkIn}
                         rangeEnd={checkOut}
+                        closure={closure}
                     />
                 )}
             </div>
@@ -272,10 +302,16 @@ export default function BookingCalendar({ checkIn = null, checkOut = null, onCha
             )}
 
             <div className="cal-footer">
+                {/* With nothing closed there is no rule to explain, and a
+                    sentence about maintenance days would be describing
+                    something the calendar is not doing. */}
                 <p className="cal-note">
                     Stay as long as you like — pick your check-in, then your
-                    check-out. Mondays are maintenance day, so a stay can&rsquo;t
-                    start or end on one, but a longer stay runs straight through.
+                    check-out.
+                    {closure && (
+                        <> {closure}, so a stay can&rsquo;t start or end on one,
+                        but a longer stay runs straight through.</>
+                    )}
                 </p>
                 {(checkIn || checkOut) && (
                     <button type="button" className="cal-clear" onClick={clearDates}>

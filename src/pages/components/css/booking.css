@@ -258,7 +258,10 @@ html{
     border-color: var(--gold-soft);
     box-shadow: none;
 }
-.time-sunday-note{
+/* Shown when the arrival date's shortest possible stay runs past a closure.
+   Was .time-sunday-note back when the closure was always Monday and so the
+   arrival was always a Sunday; the days are a setting now. */
+.time-closure-note{
     margin: 12px 0 0;
     font-size: 13px;
     font-style: italic;
