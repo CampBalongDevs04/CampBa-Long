@@ -1,0 +1,174 @@
+/* ============================================================================
+   CMS → the page picker, the top of CMS's two rows of tabs.
+
+   Cards rather than the pill bar the section tabs use (tab.css). The two rows
+   sit one above the other; if both were pill bars they would read as one bar
+   that had wrapped onto a second line, and nothing on screen would say that
+   pressing the top row rewrites the bottom one.
+   ========================================================================== */
+
+.cms-page-picker {
+    display: grid;
+    /* Auto-fit rather than a fixed five: the dashboard's content column is
+       narrower with the sidebar expanded, and a fixed count would either
+       overflow it or leave the cards stranded wide on a big screen. */
+    grid-template-columns: repeat(auto-fit, minmax(178px, 1fr));
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 14px;
+}
+
+.cms-page-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 13px 15px;
+    text-align: left;
+    background: var(--cream, #F5F1E4);
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    border-radius: 14px;
+    color: var(--forest-dark, #16291E);
+    font-family: 'Jost', sans-serif;
+    cursor: pointer;
+    box-shadow: 0 10px 20px -16px rgba(10, 22, 14, 0.5);
+    transition: background 200ms ease, border-color 200ms ease, color 200ms ease,
+        transform 200ms ease;
+}
+
+.cms-page-card:hover,
+.cms-page-card:focus-visible {
+    background: rgba(198, 161, 91, 0.18);
+    border-color: rgba(198, 161, 91, 0.6);
+    transform: translateY(-1px);
+}
+
+.cms-page-card.active {
+    background: var(--forest-dark, #16291E);
+    border-color: var(--forest-dark, #16291E);
+    color: var(--cream, #F5F1E4);
+}
+
+.cms-page-icon {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: rgba(198, 161, 91, 0.22);
+    color: inherit;
+}
+
+.cms-page-card.active .cms-page-icon {
+    background: rgba(217, 189, 132, 0.24);
+    color: var(--gold, #C6A15B);
+}
+
+.cms-page-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.cms-page-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* The page's own address. The fastest confirmation that the card about to be
+   opened is the page the staff member meant. */
+.cms-page-path {
+    font-size: 0.7rem;
+    letter-spacing: 0.3px;
+    color: rgba(10, 22, 14, 0.55);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cms-page-card.active .cms-page-path {
+    color: rgba(245, 241, 228, 0.7);
+}
+
+/* Says "there is nothing behind this card yet" before it is pressed rather
+   than after. Pinned to the corner so it never pushes the name around. */
+.cms-page-badge {
+    position: absolute;
+    top: 7px;
+    right: 9px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(198, 161, 91, 0.22);
+    border: 1px solid rgba(198, 161, 91, 0.45);
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: rgba(10, 22, 14, 0.6);
+}
+
+.cms-page-card.active .cms-page-badge {
+    background: rgba(217, 189, 132, 0.2);
+    color: rgba(245, 241, 228, 0.75);
+}
+
+/* ---------- The panel a page with no editors shows instead ---------- */
+
+.cms-empty-panel {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--cream, #F5F1E4);
+    border: 1px dashed rgba(198, 161, 91, 0.55);
+    border-radius: 18px;
+    padding: 34px 26px;
+    text-align: center;
+    font-family: 'Jost', sans-serif;
+    color: var(--forest-dark, #16291E);
+}
+
+.cms-empty-title {
+    margin: 0 0 8px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.35rem;
+    font-weight: 700;
+}
+
+.cms-empty-text {
+    margin: 0 auto;
+    max-width: 60ch;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: rgba(10, 22, 14, 0.62);
+}
+
+.cms-empty-text + .cms-empty-text {
+    margin-top: 10px;
+}
+
+.cms-empty-file {
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    padding: 1px 6px;
+    border-radius: 5px;
+    background: rgba(198, 161, 91, 0.2);
+    color: var(--forest-dark, #16291E);
+}
+
+@media (max-width: 720px) {
+    .cms-page-picker {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+
+    .cms-empty-panel {
+        padding: 26px 18px;
+    }
+}

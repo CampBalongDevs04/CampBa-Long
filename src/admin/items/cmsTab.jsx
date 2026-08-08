@@ -1,48 +1,29 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import '../css/tab.css'
+import { findCmsPage, firstSectionOf } from './cmsPages.js'
 
-// CMS is the section for the site's own copy — the words and pictures on the
-// public pages, as opposed to what the resort sells and who has booked it.
-// Most tabs are one per block of the home page, in the order a visitor
-// scrolls past them, so finding the right tab is the same as remembering
-// where on the page the thing sits. Two tabs break that ordering because they
-// are not home-page blocks at all: Food Menu is the copy on a different page
-// (/menu — the food items under it are catalog data, edited in Food Menu the
-// dashboard SECTION, not here), and Footer is on every page. Both sit at the
-// end, after the home page's own tabs run out.
-const cmsTabs = [
-    { id: 'hero', label: 'Hero Banner' },
-    { id: 'welcome', label: 'Welcome Section' },
-    { id: 'offers', label: 'What We Offer' },
-    // Heading only — the cards come from the accommodation catalog, which is
-    // edited in Units. The tab says so on screen.
-    { id: 'accommodations', label: 'Accommodations' },
-    { id: 'testimonials', label: 'Testimonials' },
-    // Heading, contact card and the tiles under the map — not the map itself,
-    // which is coordinates rather than copy. The tab says so on screen.
-    { id: 'location', label: 'Location' },
-    { id: 'faq', label: 'FAQ' },
-    // The words on the enquiry form, not what it does with them — the tab says
-    // so on screen.
-    { id: 'contact', label: 'Contact' },
-    // The copy on /menu, not the food items under it — see the note above.
-    { id: 'menu-banner', label: 'Food Menu' },
-    // Last, because it is on every page rather than one of them.
-    { id: 'footer', label: 'Footer' },
-]
-
-// Nine tabs need about 1290px and the dashboard's content column never gets
-// that wide, so the row scrolls. It has always been able to — the bar is
-// `overflow-x: auto` — but it hides its scrollbar, so the tabs past the right
-// edge were indistinguishable from tabs that did not exist. These two arrows
-// are that missing signal, and they keep the bar on one line.
+// CMS's bottom row: which section of the page picked above. The list comes
+// from cmsPages.js, which is also what the picker (cmsPageTab.jsx) renders —
+// see the header there for why CMS is two rows rather than one.
+//
+// The row used to be every editable thing on the site at once, home-page
+// blocks and /menu and the footer in one line of ten. Splitting by page means
+// the longest this ever gets is the home page's eight, and the other pages are
+// three or one.
+//
+// Eight tabs still need about 1090px and the dashboard's content column does
+// not always get that wide, so the row scrolls. It has always been able to —
+// the bar is `overflow-x: auto` — but it hides its scrollbar, so the tabs past
+// the right edge were indistinguishable from tabs that did not exist. These
+// two arrows are that missing signal, and they keep the bar on one line.
 //
 // A "next" alone would strand a staff member at the end of the row with no way
 // back, so it comes with its mirror image. Both are disabled at their end of
 // the row rather than hidden, so the bar does not resize under the pointer
 // mid-click.
-export default function CmsTab({ active, onChange }) {
-    const [internalActive, setInternalActive] = useState('hero')
+export default function CmsTab({ page = 'home', active, onChange }) {
+    const sections = findCmsPage(page).sections
+    const [internalActive, setInternalActive] = useState(() => firstSectionOf(page))
     const current = active ?? internalActive
     const barRef = useRef(null)
     const [reach, setReach] = useState({ prev: false, next: false })
@@ -80,15 +61,15 @@ export default function CmsTab({ active, onChange }) {
     }, [measure])
 
     // Whichever tab is open is brought into view. It matters on the way back:
-    // the dashboard remembers which CMS tab was last open, so returning to CMS
-    // with "Footer" selected would otherwise show a row scrolled to the start
-    // with no highlighted tab anywhere on it.
+    // the dashboard remembers which section was last open on each page, so
+    // returning to the home page with "Contact" selected would otherwise show a
+    // row scrolled to the start with no highlighted tab anywhere on it.
     useEffect(() => {
         barRef.current
             ?.querySelector('.tab-item.active')
             ?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
         measure()
-    }, [current, measure])
+    }, [current, page, measure])
 
     // Most of a screenful, so a press always leaves one familiar tab in view to
     // read the new position against.
@@ -109,6 +90,10 @@ export default function CmsTab({ active, onChange }) {
         measure()
     }
 
+    // A page with nothing to edit has no row at all. An empty bar would be a
+    // gold pill of blank space above the panel that explains the emptiness.
+    if (sections.length === 0) return null
+
     return (
         <div className="tab-scroller">
             <button
@@ -124,11 +109,11 @@ export default function CmsTab({ active, onChange }) {
             <div
                 className="tab-bar"
                 role="tablist"
-                aria-label="CMS view"
+                aria-label="Section to edit"
                 ref={barRef}
                 onScroll={measure}
             >
-                {cmsTabs.map(({ id, label }) => (
+                {sections.map(({ id, label }) => (
                     <button
                         key={id}
                         type="button"

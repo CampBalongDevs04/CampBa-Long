@@ -14,6 +14,7 @@ import {
     ListSkeleton,
     TableSkeleton,
 } from '../components/skeletons/Skeleton.jsx'
+import { DEFAULT_CMS_PAGE, firstSectionOf } from './items/cmsPages.js'
 
 // Dashboard widgets are lazy chunks: the login screen stays light, and
 // each area shows a matching skeleton while its widget code loads.
@@ -39,7 +40,9 @@ const AccommodationManage = lazy(() => import('./items/accommodationManage.jsx')
 const SpaService = lazy(() => import('./items/spaService-Tab.jsx'))
 const SpaServiceList = lazy(() => import('./items/spaServiceList.jsx'))
 const SpaServiceAvails = lazy(() => import('./items/SpaServiceAvails.jsx'))
+const CmsPageTab = lazy(() => import('./items/cmsPageTab.jsx'))
 const CmsTab = lazy(() => import('./items/cmsTab.jsx'))
+const CmsEmpty = lazy(() => import('./items/cmsEmpty.jsx'))
 const HeroBanner = lazy(() => import('./items/heroBanner.jsx'))
 const WelcomeSection = lazy(() => import('./items/welcomeSection.jsx'))
 const OffersSection = lazy(() => import('./items/offersSection.jsx'))
@@ -49,6 +52,12 @@ const LocationSection = lazy(() => import('./items/locationSection.jsx'))
 const FaqSection = lazy(() => import('./items/faqSection.jsx'))
 const ContactSection = lazy(() => import('./items/contactSection.jsx'))
 const MenuBanner = lazy(() => import('./items/menuBanner.jsx'))
+const MenuOrderSection = lazy(() => import('./items/menuOrderSection.jsx'))
+const MenuSectionTitles = lazy(() => import('./items/menuSectionTitles.jsx'))
+const SpaHeroBanner = lazy(() => import('./items/spaHeroBanner.jsx'))
+const SpaReserveSection = lazy(() => import('./items/spaReserveSection.jsx'))
+const SpaGallerySection = lazy(() => import('./items/spaGallerySection.jsx'))
+const SpaHilotSection = lazy(() => import('./items/spaHilotSection.jsx'))
 const FooterSection = lazy(() => import('./items/footerSection.jsx'))
 
 // Staff sign in with Supabase Auth, not a passcode baked into the bundle.
@@ -86,7 +95,16 @@ function AdminDash() {
   const [activeServiceTab, setActiveServiceTab] = useState('all')
   const [activeFoodTab, setActiveFoodTab] = useState('all')
   const [activeSpaTab, setActiveSpaTab] = useState('services')
-  const [activeCmsTab, setActiveCmsTab] = useState('hero')
+  // CMS is picked twice: which page of the site, then which section of it.
+  // Each page keeps its own last-opened section rather than sharing one, so
+  // hopping to Food Menu and back does not drop a staff member out of the
+  // home-page tab they were working in. A page absent from the record has
+  // never been opened, and answers with its first section.
+  const [activeCmsPage, setActiveCmsPage] = useState(DEFAULT_CMS_PAGE)
+  const [cmsSectionByPage, setCmsSectionByPage] = useState({})
+  const activeCmsTab = cmsSectionByPage[activeCmsPage] ?? firstSectionOf(activeCmsPage)
+  const setActiveCmsTab = (id) =>
+    setCmsSectionByPage((previous) => ({ ...previous, [activeCmsPage]: id }))
   // Units opens on the day board — the question staff ask most is "who is in
   // which unit today", not "what does a Teepee cost".
   const [activeUnitTab, setActiveUnitTab] = useState('availability')
@@ -359,29 +377,78 @@ function AdminDash() {
                         <h1 className="admin-dash-title">CMS</h1>
                         <ClockDate />
                     </div>
-                    <Suspense fallback={<TabsSkeleton count={10} />}>
-                        <CmsTab active={activeCmsTab} onChange={setActiveCmsTab} />
+                    {/* Which page, then which section of it. The two rows and
+                        the panel below all read from items/cmsPages.js — see
+                        the header there. */}
+                    <Suspense fallback={<TabsSkeleton count={5} />}>
+                        <CmsPageTab active={activeCmsPage} onChange={setActiveCmsPage} />
+                    </Suspense>
+                    <Suspense fallback={<TabsSkeleton count={8} />}>
+                        <CmsTab
+                            page={activeCmsPage}
+                            active={activeCmsTab}
+                            onChange={setActiveCmsTab}
+                        />
                     </Suspense>
                     <Suspense fallback={<PanelSkeleton />}>
-                        {activeCmsTab === 'hero' && <HeroBanner />}
-                        {activeCmsTab === 'welcome' && <WelcomeSection />}
-                        {activeCmsTab === 'offers' && <OffersSection />}
-                        {activeCmsTab === 'accommodations' && (
-                            // The cards are edited in Units, so the tab that
-                            // does not edit them offers a way to get there.
-                            <AccommodationSection
-                                onGoToUnits={() => {
-                                    setActiveUnitTab('manage')
-                                    setActiveSection('units')
-                                }}
-                            />
+                        {activeCmsPage === 'home' && (
+                            <>
+                                {activeCmsTab === 'hero' && <HeroBanner />}
+                                {activeCmsTab === 'welcome' && <WelcomeSection />}
+                                {activeCmsTab === 'offers' && <OffersSection />}
+                                {activeCmsTab === 'accommodations' && (
+                                    // The cards are edited in Units, so the tab
+                                    // that does not edit them offers a way to
+                                    // get there.
+                                    <AccommodationSection
+                                        onGoToUnits={() => {
+                                            setActiveUnitTab('manage')
+                                            setActiveSection('units')
+                                        }}
+                                    />
+                                )}
+                                {activeCmsTab === 'testimonials' && <TestimonialsSection />}
+                                {activeCmsTab === 'location' && <LocationSection />}
+                                {activeCmsTab === 'faq' && <FaqSection />}
+                                {activeCmsTab === 'contact' && <ContactSection />}
+                            </>
                         )}
-                        {activeCmsTab === 'testimonials' && <TestimonialsSection />}
-                        {activeCmsTab === 'location' && <LocationSection />}
-                        {activeCmsTab === 'faq' && <FaqSection />}
-                        {activeCmsTab === 'contact' && <ContactSection />}
-                        {activeCmsTab === 'menu-banner' && <MenuBanner />}
-                        {activeCmsTab === 'footer' && <FooterSection />}
+
+                        {activeCmsPage === 'menu' && (
+                            <>
+                                {activeCmsTab === 'banner' && <MenuBanner />}
+                                {activeCmsTab === 'how-to-order' && <MenuOrderSection />}
+                                {activeCmsTab === 'section-titles' && <MenuSectionTitles />}
+                            </>
+                        )}
+
+                        {activeCmsPage === 'spa' && (
+                            <>
+                                {activeCmsTab === 'banner' && <SpaHeroBanner />}
+                                {activeCmsTab === 'how-to-reserve' && <SpaReserveSection />}
+                                {activeCmsTab === 'gallery' && <SpaGallerySection />}
+                                {activeCmsTab === 'hilot' && (
+                                    // The treatment cards are catalog data
+                                    // edited in Spa, so the tab that does not
+                                    // edit them offers a way to get there.
+                                    <SpaHilotSection
+                                        onGoToSpa={() => {
+                                            setActiveSpaTab('services')
+                                            setActiveSection('spa')
+                                        }}
+                                    />
+                                )}
+                            </>
+                        )}
+
+                        {activeCmsPage === 'site' && activeCmsTab === 'footer' && <FooterSection />}
+
+                        {/* No editors yet — its copy is still in the page file.
+                            Listed in the picker anyway, because a page missing
+                            from it looks like a page nobody can edit. */}
+                        {activeCmsPage === 'mybooking' && (
+                            <CmsEmpty label="My Booking" file="src/pages/mybooking.jsx" />
+                        )}
                     </Suspense>
                 </div>
             ) : activeSection === 'export' ? (

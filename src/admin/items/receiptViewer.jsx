@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import '../css/receipt-viewer.css'
 import {
     getReceiptUrl,
@@ -73,15 +73,22 @@ export default function ReceiptViewer({ booking, onClose, onApprove, onCancel })
     // after paying owes the difference and sends a second one, so showing only
     // the latest would leave staff verifying a part-payment against the full
     // amount with no way to see where the rest went.
-    const receipts = useMemo(() => {
-        const withPaths = (booking?.receipts ?? []).filter((entry) => entry.path)
-        if (withPaths.length > 0) return withPaths
-        // Bookings taken before receipts became a list carry a single path on
-        // the row and no history to go with it.
-        return booking?.receiptPath
+    //
+    // Deliberately NOT wrapped in useMemo. Nothing depends on this array's
+    // identity — pathKey below is the stable dependency, and it is a string —
+    // so memoising it bought nothing, while the hand-written dependency list
+    // ([booking?.receipts, booking?.receiptPath]) was narrower than the one
+    // React Compiler infers from the body (booking). Facing that mismatch the
+    // compiler refuses to touch the component at all, so one useMemo that was
+    // never load-bearing was costing the whole viewer its optimization.
+    const withPaths = (booking?.receipts ?? []).filter((entry) => entry.path)
+    // Bookings taken before receipts became a list carry a single path on the
+    // row and no history to go with it.
+    const receipts = withPaths.length > 0
+        ? withPaths
+        : booking?.receiptPath
             ? [{ path: booking.receiptPath, amount: null, uploadedAt: null }]
             : []
-    }, [booking?.receipts, booking?.receiptPath])
 
     // A stable dependency. The booking object is rebuilt on every store poll, so
     // depending on the array itself would re-mint every signed URL twice a
