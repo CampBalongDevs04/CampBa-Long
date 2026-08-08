@@ -123,6 +123,14 @@
     border-color: var(--forest);
 }
 
+.stay-length-chip-disabled,
+.stay-length-chip-disabled:hover{
+    opacity: 0.45;
+    filter: grayscale(1);
+    cursor: not-allowed;
+    border-color: var(--gold-soft);
+}
+
 .stay-length-note{
     display: flex;
     align-items: baseline;

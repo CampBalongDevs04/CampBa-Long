@@ -2,9 +2,9 @@ import './css/stayLength.css'
 import {
     checkOutForNights,
     countNights,
-    isSelectableCheckOut,
     maxNightsFrom,
     minNightsFrom,
+    nextClosureAfter,
 } from '../../data/extendedStay.js'
 import {
     describeMaintenanceDayNames,
@@ -52,6 +52,9 @@ export default function StayLength({ checkIn, checkOut, schedule, onChange }){
     const floor = minNightsFrom(checkIn)
     const ceiling = maxNightsFrom(checkIn)
     const disabled = !checkIn
+    // The closure that's actually setting the ceiling above, so the note and
+    // the chip tooltips can name it rather than just saying "unavailable".
+    const upcomingClosure = checkIn ? nextClosureAfter(checkIn) : null
 
     // `direction` is which way the guest is moving, handed down to
     // checkOutForNights() so a value that lands on a maintenance day is nudged
@@ -113,21 +116,23 @@ export default function StayLength({ checkIn, checkOut, schedule, onChange }){
 
             <div className="stay-length-choices">
                 {QUICK_PICKS.map(({ nights: value, label }) => {
-                    // Offered only when it delivers exactly what it says. A
-                    // one-night stay from a Sunday would check out on a closed
-                    // Monday, so checkOutForNights() nudges it to two —
-                    // correct behaviour for the stepper, but a chip reading
-                    // "1 night" that books two is a small lie. It is dropped
-                    // from the row instead.
-                    const target = checkIn ? checkOutForNights(checkIn, value, 1) : null
-                    if (!target || !isSelectableCheckOut(checkIn, target)) return null
-                    if (countNights(checkIn, target) !== value) return null
+                    // Grayed out rather than dropped from the row once it
+                    // would cross the next closure — a stay can't run through
+                    // one any more, so anything past the ceiling simply can't
+                    // be booked from this check-in. Still shown, so the guest
+                    // sees "1 week" exists and why it isn't on offer here.
+                    const blocked = !checkIn || value > ceiling
                     return (
                         <button
                             key={value}
                             type="button"
-                            className={`stay-length-chip${value === nights ? ' selected' : ''}`}
-                            onClick={() => setNights(value, 1)}
+                            className={`stay-length-chip${value === nights ? ' selected' : ''}${blocked ? ' stay-length-chip-disabled' : ''}`}
+                            disabled={blocked}
+                            aria-disabled={blocked}
+                            title={blocked && upcomingClosure
+                                ? `Unavailable — ${formatDate(upcomingClosure)} is a maintenance day, so this check-in can only run up to ${ceiling} night${ceiling === 1 ? '' : 's'}.`
+                                : undefined}
+                            onClick={() => { if (!blocked) setNights(value, 1) }}
                             aria-pressed={value === nights}
                         >
                             {label}
@@ -153,6 +158,10 @@ export default function StayLength({ checkIn, checkOut, schedule, onChange }){
                             {atFloor && floor > 1
                                 ? ` A ${arrivalDay} check-in stays at least ${floor} nights`
                                   + ` — nobody checks out on ${describeMaintenanceDayNames(days)}.`
+                                : ''}
+                            {upcomingClosure
+                                ? ` This stay can run up to ${ceiling} night${ceiling === 1 ? '' : 's'}`
+                                  + ` — ${formatDate(upcomingClosure)} is a maintenance day.`
                                 : ''}
                         </>
                     )}

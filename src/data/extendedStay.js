@@ -50,24 +50,25 @@
 //
 // HOW LONG A STAY MAY BE
 // ----------------------
-// As long as the guest wants. A week is a normal holiday and the calendar lets
-// them pick it: choose Aug 6, choose Aug 9, that is the stay.
+// As long as the guest wants, up to the next maintenance day. A week is a
+// normal holiday and the calendar lets them pick it: choose Aug 6, choose
+// Aug 9, that is the stay — as long as nothing in between is closed.
 //
-// The resort's maintenance days bound the ENDS of a stay, not its length.
-// Nobody arrives or departs on a maintenance day — that is what the closure is
-// about, turnover and cleaning — but a guest already on-site simply stays
-// through it, which is the only way a week-long booking can exist at all (any
-// seven-night stay necessarily covers every weekday). So:
+// A stay may not run through a maintenance day. Running one through used to be
+// the plan (a guest already on-site just stays through the closure), but that
+// path is broken further down the booking flow, so for now the rule is
+// simpler and enforced up front instead:
 //
 //     check-in  may not fall on a maintenance day
 //     check-out may not fall on a maintenance day
-//     every day in between may be anything
+//     no day of the stay may fall on one either
 //
 // WHICH days those are is a setting, not a constant — the resort closes Monday
 // today, Monday and Tuesday next month. data/maintenanceDays.js owns it and
-// this module asks. Everything below is written for a RUN of closed days rather
-// than a single one: minNightsFrom() walks forward until it finds an open day
-// instead of assuming one step clears it.
+// this module asks. maxNightsFrom() walks forward from check-in and stops at
+// the night before the first closed day it finds, so the nights stepper, the
+// quick-pick chips and the check-out calendar can never offer a range that
+// crosses one.
 //
 // MAX_STAY_NIGHTS below is a guardrail against a mis-click holding the last
 // A-House for a year, not a product rule. Raise it freely.
@@ -128,54 +129,47 @@ export function isMaintenanceDay(value) {
     return date != null && isMaintenanceDow(date.getDay())
 }
 
-// The shortest stay that can start on this date. One night, unless that night
-// would check out on a maintenance day — a Sunday arrival with Monday closed
-// has to stay until the Tuesday, which is two nights, and with Monday AND
-// Tuesday closed it stays until the Wednesday.
-//
-// The walk is what makes a multi-day closure work: it steps over the whole run
-// rather than assuming one step clears it.
+// Can an overnight stay even start on this date? Kept as a night count rather
+// than a bool because every call site already reads it that way, but a stay
+// can no longer run through a closure to earn a longer answer — the only
+// values this returns now are 1 (fine) or 2 (the very next day is closed, so
+// no overnight schedule is offered here at all; see TimeSelector).
 export function minNightsFrom(checkIn) {
     const start = startOfDay(checkIn)
     if (!start) return 1
-    for (let nights = 1; nights <= DAYS_IN_WEEK; nights += 1) {
-        if (!isMaintenanceDay(addDays(start, nights))) return nights
-    }
-    return 1
+    return isMaintenanceDay(addDays(start, 1)) ? 2 : 1
 }
 
-// The longest stay the pickers offer from this date. The guardrail, pulled back
-// day by day until the check-out lands on a day the resort is open. Never
-// shorter than the floor: a max below the min would leave the stepper with no
-// legal value at all.
+// The first maintenance day strictly after this check-in, within the
+// MAX_STAY_NIGHTS guardrail. Null if the resort has nothing closed that far
+// out — there is then no closure to bound the stay.
+export function nextClosureAfter(checkIn) {
+    const start = startOfDay(checkIn)
+    if (!start) return null
+    for (let nights = 1; nights <= MAX_STAY_NIGHTS; nights += 1) {
+        const candidate = addDays(start, nights)
+        if (isMaintenanceDay(candidate)) return candidate
+    }
+    return null
+}
+
+// The longest stay the pickers offer from this date: every night up to, but
+// not including, the next maintenance day. A hard ceiling rather than
+// something nudged past, since a stay may not run through a closure any more
+// (see the header above). Falls back to the guardrail when nothing is closed
+// within it.
 export function maxNightsFrom(checkIn) {
-    const start = startOfDay(checkIn)
-    if (!start) return MAX_STAY_NIGHTS
-    const floor = minNightsFrom(start)
-    for (let nights = MAX_STAY_NIGHTS; nights > MAX_STAY_NIGHTS - DAYS_IN_WEEK; nights -= 1) {
-        if (nights < floor) break
-        if (!isMaintenanceDay(addDays(start, nights))) return nights
-    }
-    return floor
+    const closure = nextClosureAfter(checkIn)
+    if (!closure) return MAX_STAY_NIGHTS
+    return Math.max(0, countNights(checkIn, closure) - 1)
 }
 
-// Can the guest actually check out on this date? Strictly after the check-in,
-// not a maintenance day, and inside the guardrail. The one place that question
-// is answered — the calendar disables cells with it and the nights stepper
-// steps past them with it, so the two can never offer different dates.
-export function isSelectableCheckOut(checkIn, candidate) {
-    const start = startOfDay(checkIn)
-    const date = startOfDay(candidate)
-    if (!start || !date) return false
-    const nights = countNights(start, date)
-    return nights >= 1 && nights <= MAX_STAY_NIGHTS && !isMaintenanceDay(date)
-}
-
-// The check-out date for a requested number of nights, nudged off a
-// maintenance day rather than refused: a guest asking for 7 nights from a
-// Monday-landing date gets 8, which is the nearest stay they can actually
-// book. `direction` is which way to nudge — the stepper passes the way it was
-// already moving, so pressing "−" never bounces the value back up.
+// The check-out date for a requested number of nights, clamped to what's
+// actually available rather than refused outright: a guest asking for 7
+// nights when only 5 fit before the next closure gets 5, the most they can
+// actually book without crossing it. `direction` is which way the guest was
+// moving — kept so a value landing outside [min, max] settles on the end it
+// overshot rather than always snapping to the same one.
 export function checkOutForNights(checkIn, nights, direction = 1) {
     const start = startOfDay(checkIn)
     if (!start) return null

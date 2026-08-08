@@ -4,7 +4,9 @@ import {
     addDays,
     countNights,
     isMaintenanceDay,
+    maxNightsFrom,
     MAX_STAY_NIGHTS,
+    nextClosureAfter,
 } from '../../data/extendedStay.js'
 import { describeMaintenanceDays, useMaintenanceDays } from '../../data/maintenanceDays.js'
 
@@ -22,11 +24,11 @@ function isSameDay(a, b) {
     return a && b && a.getTime() === b.getTime()
 }
 
-// The first date past the end of the longest bookable stay. This is a
-// guardrail, not a product rule — a stay is as long as the guest wants one to
-// be, a week included — so it sits a generous month out. Maintenance days
-// bound the ENDS of a stay rather than its length: they stay unselectable in
-// both panels while remaining highlighted inside a range the stay runs through.
+// The first date past the end of the longest bookable stay — the fallback
+// ceiling on the check-out panel when nothing is closed within MAX_STAY_NIGHTS
+// of check-in. The real ceiling day to day is the next maintenance day (a
+// stay may not run through one), which is what maxDate is actually set to
+// below; this is just the guardrail behind it against an unbounded pick.
 function stayLimitAfter(date) {
     return addDays(date, MAX_STAY_NIGHTS + 1)
 }
@@ -243,11 +245,13 @@ export default function BookingCalendar({ checkIn = null, checkOut = null, onCha
             return
         }
         // Keep the check-out only if it still describes a stay from the new
-        // check-in: after it, and inside the guardrail. Moving the check-in
-        // forward past your check-out clears it, so the next click on the
-        // right-hand panel reads as the new end of the range.
+        // check-in: after it, and inside the guardrail, with nothing closed
+        // between the two. Moving the check-in forward past your check-out —
+        // or across a closure the old check-in was safely on the other side
+        // of — clears it, so the next click on the right-hand panel reads as
+        // the new end of the range.
         const nights = checkOut ? countNights(date, checkOut) : 0
-        const nextCheckOut = nights >= 1 && nights <= MAX_STAY_NIGHTS ? checkOut : null
+        const nextCheckOut = nights >= 1 && nights <= maxNightsFrom(date) ? checkOut : null
         onChange?.({ checkIn: date, checkOut: nextCheckOut })
     }
 
@@ -280,7 +284,7 @@ export default function BookingCalendar({ checkIn = null, checkOut = null, onCha
                         selected={checkOut}
                         onSelect={selectCheckOut}
                         minDate={checkIn}
-                        maxDate={checkIn ? stayLimitAfter(checkIn) : null}
+                        maxDate={checkIn ? (nextClosureAfter(checkIn) ?? stayLimitAfter(checkIn)) : null}
                         rangeStart={checkIn}
                         rangeEnd={checkOut}
                         closure={closure}
@@ -309,8 +313,9 @@ export default function BookingCalendar({ checkIn = null, checkOut = null, onCha
                     Stay as long as you like — pick your check-in, then your
                     check-out.
                     {closure && (
-                        <> {closure}, so a stay can&rsquo;t start or end on one,
-                        but a longer stay runs straight through.</>
+                        <> {closure}, so a stay can&rsquo;t start, end, or run
+                        through one — check out before the next closure, or
+                        check in after it.</>
                     )}
                 </p>
                 {(checkIn || checkOut) && (
