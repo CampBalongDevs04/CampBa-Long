@@ -6,7 +6,13 @@ import {
     isMaintenanceDay,
     MAX_STAY_NIGHTS,
 } from '../../data/extendedStay.js'
-import { describeMaintenanceDays, useMaintenanceDays } from '../../data/maintenanceDays.js'
+import {
+    describeClosureOn,
+    describeMaintenanceDates,
+    describeMaintenanceDays,
+    isPastDateKey,
+    useMaintenanceDays,
+} from '../../data/maintenanceDays.js'
 
 const MONTH_NAMES = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -31,16 +37,33 @@ function stayLimitAfter(date) {
     return addDays(date, MAX_STAY_NIGHTS + 1)
 }
 
-// 'Mondays are maintenance day', or 'Monday to Tuesday are maintenance days'.
-// The closure is a setting now (data/maintenanceDays.js), so the tooltip on a
-// greyed cell and the note under the calendar both have to be built rather
-// than written — and they are built from one place so they cannot disagree.
-function closureLabel(days) {
-    if (days.length === 0) return ''
-    const subject = describeMaintenanceDays(days)
-    return days.length === 1
-        ? `${subject} are maintenance day`
-        : `${subject} are maintenance days`
+// The note under the calendar: 'Mondays are maintenance day', 'Monday to
+// Tuesday are maintenance days', 'Mondays are maintenance day, and so are
+// Aug 8, 9 and 10'. The closure is a setting now (data/maintenanceDays.js) —
+// a weekly pattern plus any number of single dates — so this has to be built
+// rather than written.
+//
+// Dates already past are left out: they close nothing anyone can still book,
+// and listing them would make the sentence longer and less true.
+function closureLabel(days, dates) {
+    const upcoming = dates.filter((key) => !isPastDateKey(key))
+    const weekly = days.length === 0
+        ? ''
+        : `${describeMaintenanceDays(days)} ${days.length === 1 ? 'are maintenance day' : 'are maintenance days'}`
+
+    if (upcoming.length === 0) return weekly
+    const single = describeMaintenanceDates(upcoming)
+    if (!weekly) return `The resort is closed on ${single}`
+    return `${weekly}, and so ${upcoming.length === 1 ? 'is' : 'are'} ${single}`
+}
+
+// Why THIS cell is greyed — the weekly pattern for most of them, one date for a
+// one-off closure. Per cell rather than one label for the whole calendar,
+// because "Mondays are maintenance day" on a greyed August 8th would be a wrong
+// answer to the question the guest is actually asking.
+function cellClosureLabel(date) {
+    const reason = describeClosureOn(date)
+    return reason ? `the resort is closed on ${reason} for maintenance` : ''
 }
 
 function formatDate(date) {
@@ -50,7 +73,7 @@ function formatDate(date) {
     })
 }
 
-function CalendarPanel({ label, variant, selected, onSelect, minDate, maxDate, rangeStart, rangeEnd, closure }) {
+function CalendarPanel({ label, variant, selected, onSelect, minDate, maxDate, rangeStart, rangeEnd }) {
     const today = startOfDay(new Date())
     const initialView = selected || minDate || today
     const [viewYear, setViewYear] = useState(initialView.getFullYear())
@@ -117,6 +140,8 @@ function CalendarPanel({ label, variant, selected, onSelect, minDate, maxDate, r
         const isInRange = rangeStart && rangeEnd &&
             date.getTime() > rangeStart.getTime() && date.getTime() < rangeEnd.getTime()
 
+        const closedBecause = isClosed ? cellClosureLabel(date) : ''
+
         const classNames = ['cal-cell', 'cal-day']
         if (isClosed) classNames.push('cal-maintenance')
         if (isDisabled) classNames.push('cal-disabled')
@@ -135,10 +160,10 @@ function CalendarPanel({ label, variant, selected, onSelect, minDate, maxDate, r
                 disabled={isDisabled && !isClosed}
                 aria-disabled={isDisabled}
                 onClick={() => { if (!isDisabled) onSelect(date) }}
-                data-hint={isClosed ? closure : undefined}
+                data-hint={closedBecause || undefined}
                 aria-label={
-                    isClosed
-                        ? `${formatDate(date)} — unavailable, ${closure}`
+                    closedBecause
+                        ? `${formatDate(date)} — unavailable, ${closedBecause}`
                         : formatDate(date)
                 }
             >
@@ -231,8 +256,8 @@ export default function BookingCalendar({ checkIn = null, checkOut = null, onCha
     // Subscribed rather than read once: staff can change the closure from the
     // dashboard while this calendar is open, and the cells have to regrey
     // themselves rather than keep offering a date the database now refuses.
-    const { days } = useMaintenanceDays()
-    const closure = closureLabel(days)
+    const { days, dates } = useMaintenanceDays()
+    const closure = closureLabel(days, dates)
 
     // Day Time schedule: check-out always happens on the check-in date
     const effectiveCheckOut = sameDayCheckout ? checkIn : checkOut
@@ -269,7 +294,6 @@ export default function BookingCalendar({ checkIn = null, checkOut = null, onCha
                     onSelect={selectCheckIn}
                     rangeStart={checkIn}
                     rangeEnd={effectiveCheckOut}
-                    closure={closure}
                 />
                 {sameDayCheckout ? (
                     <SameDayPanel checkIn={checkIn} />
@@ -283,7 +307,6 @@ export default function BookingCalendar({ checkIn = null, checkOut = null, onCha
                         maxDate={checkIn ? stayLimitAfter(checkIn) : null}
                         rangeStart={checkIn}
                         rangeEnd={checkOut}
-                        closure={closure}
                     />
                 )}
             </div>

@@ -1,5 +1,6 @@
 import './css/stayLength.css'
 import {
+    addDays,
     checkOutForNights,
     countNights,
     isSelectableCheckOut,
@@ -7,7 +8,7 @@ import {
     minNightsFrom,
 } from '../../data/extendedStay.js'
 import {
-    describeMaintenanceDayNames,
+    describeClosureOn,
     useMaintenanceDays,
     WEEKDAY_NAMES,
 } from '../../data/maintenanceDays.js'
@@ -47,9 +48,13 @@ function formatDate(date){
 export default function StayLength({ checkIn, checkOut, schedule, onChange }){
     // Subscribed so the floor, the ceiling and the note below all move together
     // when staff change the closure — every one of them is derived from it.
-    const { days } = useMaintenanceDays()
+    useMaintenanceDays()
     const nights = countNights(checkIn, checkOut)
     const floor = minNightsFrom(checkIn)
+    // The day the guest cannot check out on: the one right after the check-in.
+    // Named by whichever closure shut it — 'Mondays' for the weekly pattern,
+    // 'August 9, 2026' for a one-off.
+    const closedOn = checkIn ? describeClosureOn(addDays(checkIn, 1)) : ''
     const ceiling = maxNightsFrom(checkIn)
     const disabled = !checkIn
 
@@ -150,9 +155,9 @@ export default function StayLength({ checkIn, checkOut, schedule, onChange }){
                         <>
                             Checking out <strong>{formatDate(checkOut)}</strong>
                             {schedule ? ` at ${schedule.time.split(' - ')[1]}` : ''}.
-                            {atFloor && floor > 1
+                            {atFloor && floor > 1 && closedOn
                                 ? ` A ${arrivalDay} check-in stays at least ${floor} nights`
-                                  + ` — nobody checks out on ${describeMaintenanceDayNames(days)}.`
+                                  + ` — nobody checks out on ${closedOn}.`
                                 : ''}
                         </>
                     )}

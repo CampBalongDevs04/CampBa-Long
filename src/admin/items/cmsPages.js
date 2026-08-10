@@ -87,6 +87,26 @@ export const CMS_PAGES = [
         ],
     },
     {
+        id: 'booking',
+        label: 'Booking',
+        path: '/booking',
+        // Split by WHERE on the form a staff member is looking, which is how
+        // they arrive — "the wording above the Reserve button is wrong" — rather
+        // than by which table each string happens to live in.
+        //
+        // The schedules, units, prices and the calendar are not here: they are
+        // what the page is FOR, edited in Units and Maintenance. These three
+        // tabs own the words around them. Same split as Accommodations.
+        sections: [
+            // The hero, plus the heading over each of the four steps.
+            { id: 'hero', label: 'Hero & Steps' },
+            // The two notes under the schedule cards.
+            { id: 'notes', label: 'Notes & Inclusions' },
+            // The "Please read first before reserving" panel above the button.
+            { id: 'policy', label: 'Reserve Policy' },
+        ],
+    },
+    {
         id: 'mybooking',
         label: 'My Booking',
         path: '/my-booking',

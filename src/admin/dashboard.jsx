@@ -59,6 +59,9 @@ const SpaHeroBanner = lazy(() => import('./items/spaHeroBanner.jsx'))
 const SpaReserveSection = lazy(() => import('./items/spaReserveSection.jsx'))
 const SpaGallerySection = lazy(() => import('./items/spaGallerySection.jsx'))
 const SpaHilotSection = lazy(() => import('./items/spaHilotSection.jsx'))
+const BookingHeroSection = lazy(() => import('./items/bookingHeroSection.jsx'))
+const BookingNotesSection = lazy(() => import('./items/bookingNotesSection.jsx'))
+const BookingPolicySection = lazy(() => import('./items/bookingPolicySection.jsx'))
 const FooterSection = lazy(() => import('./items/footerSection.jsx'))
 
 // Staff sign in with Supabase Auth, not a passcode baked into the bundle.
@@ -462,6 +465,14 @@ function AdminDash() {
                                         }}
                                     />
                                 )}
+                            </>
+                        )}
+
+                        {activeCmsPage === 'booking' && (
+                            <>
+                                {activeCmsTab === 'hero' && <BookingHeroSection />}
+                                {activeCmsTab === 'notes' && <BookingNotesSection />}
+                                {activeCmsTab === 'policy' && <BookingPolicySection />}
                             </>
                         )}
 

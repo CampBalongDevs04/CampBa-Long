@@ -17,43 +17,31 @@ import BookingSummary from './components/bookingSummary'
 import HoldQueueNotice from './components/holdQueueNotice'
 import { useBookingQueue } from './components/useBookingQueue.js'
 import Footer from '../components/footer'
+import BookingTrustIcon from '../components/BookingTrustIcon.jsx'
 import { createBooking, createGroupBooking, STAY_SCHEDULES as timeOptions } from '../data/accommodationDB.js'
+import { useBookingPage, bookingStep, BOOKING_STEP_IDS } from '../data/bookingPage.js'
 
 // Paying is deliberately NOT one of these steps any more. It happens from My
 // Bookings, after the unit is held — see the comment on handleConfirm.
-const steps = [
-    {
-        id: 'step-schedule',
-        title: 'Dates & Schedule',
-        sub: 'Pick your check-in date and stay schedule, then set how many nights'
-            + ' you are staying. Every night is charged at the same rate.',
-    },
-    {
-        id: 'step-accommodation',
-        title: 'Accommodation',
-        sub: 'Select the unit that suits your group.',
-    },
-    {
-        id: 'step-guest',
-        title: 'Guest Information',
-        sub: 'Tell us who is booking so we can confirm your reservation.',
-    },
-    {
-        id: 'step-confirm',
-        title: 'Review & Reserve',
-        sub: 'Read our resort policy, then reserve your unit. You will have 10 minutes'
-            + ' to upload your down-payment receipt before the hold is released.',
-    },
-]
+//
+// The four steps' wording is in the database (data/bookingPage.js). Their
+// NUMBER and their ids are not: each id below is the DOM anchor of a block of
+// this form, which handleLeaveQueue scrolls to and each <section> points
+// aria-labelledby at. Staff edit what a step is called, never how many there
+// are — see the header of the booking page CMS migration.
+const [SCHEDULE_STEP, ACCOMMODATION_STEP, GUEST_STEP] = BOOKING_STEP_IDS
 
+// `index` is still the position on the page — it is what prints in the circle
+// and it is fixed by the form, not by the database. The id it looks its wording
+// up by comes from the same fixed list.
 function StepHeader({ index }){
-    const step = steps[index]
+    const step = bookingStep(BOOKING_STEP_IDS[index])
     return(
         <header className="booking-step-header">
             <span className="booking-step-num" aria-hidden="true">{index + 1}</span>
             <div className="booking-step-heading">
                 <h2 className="booking-step-title" id={step.id}>{step.title}</h2>
-                <p className="booking-step-sub">{step.sub}</p>
+                {step.subtitle && <p className="booking-step-sub">{step.subtitle}</p>}
             </div>
         </header>
     )
@@ -62,6 +50,10 @@ function StepHeader({ index }){
 export default function Booking(){
     const location = useLocation()
     const navigate = useNavigate()
+    // The page's wording, live: a correction saved in the dashboard reaches a
+    // guest who already has this form open. Subscribing here is also what makes
+    // bookingStep() below re-read — it is a plain lookup against the same store.
+    const { page, activeTrust } = useBookingPage()
     const [selectedTime, setSelectedTime] = useState(null)
     const [dates, setDates] = useState({ checkIn: null, checkOut: null })
     // A cart, not a single pick: { [accommodationId]: quantity }, one entry
@@ -247,12 +239,16 @@ export default function Booking(){
     // One entry per step above — a step counts as done only once every
     // field it collects is filled in, so Reserve can be blocked until
     // all three are complete.
+    //
+    // Named by their CMS headings rather than by three more hardcoded strings:
+    // this alert tells a guest which step to go back to, and a step renamed in
+    // the dashboard would otherwise be pointed at under its old name.
     const missingSteps = [
         !(dates.checkIn && stayLengthSet && selectedTime !== null)
-            && 'Dates & Schedule',
-        cartUnitCount === 0 && 'Accommodation',
+            && bookingStep(SCHEDULE_STEP).title,
+        cartUnitCount === 0 && bookingStep(ACCOMMODATION_STEP).title,
         !(pax && guest.fullName.trim() && guest.mobile.trim() && guest.email.trim())
-            && 'Guest Information',
+            && bookingStep(GUEST_STEP).title,
     ].filter(Boolean)
 
     // A group larger than the cart's COMBINED capacity is the one pax rule
@@ -359,7 +355,7 @@ export default function Booking(){
                 // a network or server error should leave the cart intact.
                 if (result.reason === 'unavailable') {
                     setCart({})
-                    document.getElementById('step-accommodation')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    document.getElementById(ACCOMMODATION_STEP)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                 }
                 return
             }
@@ -410,7 +406,7 @@ export default function Booking(){
             // the problem, and clearing all of it would throw away choices
             // that were fine. The message names which one ran out.
             if (result.reason === 'unavailable') {
-                document.getElementById('step-accommodation')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                document.getElementById(ACCOMMODATION_STEP)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
             }
             return
         }
@@ -439,7 +435,7 @@ export default function Booking(){
         setQueueRequest(null)
         setBookingError(null)
         setCart({})
-        document.getElementById('step-accommodation')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        document.getElementById(ACCOMMODATION_STEP)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
 
     // Lost the place to the heartbeat (a slept phone, a backgrounded tab).
@@ -454,36 +450,23 @@ export default function Booking(){
         <main className="page booking-page">
             <div className="booking-shell">
                 <header className="booking-hero">
-                    <p className="booking-eyebrow">Camp Ba-long Reservations</p>
-                    <h1 className="book-title">Complete Your Booking</h1>
-                    <p className="booking-tagline">
-                        Reserve your stay in four simple steps — your unit is held
-                        first, then you settle the down payment from My Bookings
-                        within 10 minutes. We confirm once the receipt is verified.
-                    </p>
+                    {page.eyebrow && <p className="booking-eyebrow">{page.eyebrow}</p>}
+                    <h1 className="book-title">{page.title}</h1>
+                    {page.tagline && <p className="booking-tagline">{page.tagline}</p>}
 
-                    <ul className="booking-trust" aria-label="Booking assurances">
-                        <li className="booking-trust-item">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                <rect x="4" y="10" width="16" height="10" rx="2.5" />
-                                <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-                            </svg>
-                            Your unit is reserved before you pay a peso — for 10 minutes
-                        </li>
-                        <li className="booking-trust-item">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                <path d="M20 6 9 17l-5-5" />
-                            </svg>
-                            Every receipt is personally verified
-                        </li>
-                        <li className="booking-trust-item">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                <circle cx="12" cy="12" r="9" />
-                                <path d="M12 7v5l3 3" />
-                            </svg>
-                            Confirmation sent within 24 hours
-                        </li>
-                    </ul>
+                    {/* Emptied entirely from the dashboard, the list goes with
+                        it — a bordered strip with nothing in it reads as a
+                        loading failure. */}
+                    {activeTrust.length > 0 && (
+                        <ul className="booking-trust" aria-label="Booking assurances">
+                            {activeTrust.map((point) => (
+                                <li className="booking-trust-item" key={point.id}>
+                                    <BookingTrustIcon icon={point.icon} />
+                                    {point.text}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                 </header>
 
                 <div className="booking-layout">
@@ -620,7 +603,6 @@ export default function Booking(){
                                     onAgreeChange={setAgreed}
                                     onConfirm={handleConfirm}
                                     submitting={submitting}
-                                    confirmLabel="Reserve & Proceed to Payment"
                                 />
                             </div>
                         </section>

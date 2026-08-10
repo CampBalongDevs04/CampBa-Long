@@ -41,7 +41,26 @@ function SpaIcon() {
     )
 }
 
+// Three cards in this picker are about a booking in one form or another, so
+// they share the sidebar's calendar and differ only in what is drawn inside it:
+// a PLUS is the form where a stay is made, a TICK is the stay a guest already
+// has. Two unrelated drawings would hide that they are the same thing at two
+// points in its life — and the calendar itself is what the dashboard already
+// uses for Bookings in the sidebar.
 function BookingIcon() {
+    return (
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="17" rx="2" />
+            <line x1="3" y1="9" x2="21" y2="9" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="12" y1="12" x2="12" y2="18" />
+            <line x1="9" y1="15" x2="15" y2="15" />
+        </svg>
+    )
+}
+
+function MyBookingIcon() {
     return (
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="4" width="18" height="17" rx="2" />
@@ -63,11 +82,15 @@ function SiteIcon() {
     )
 }
 
+// One per page in cmsPages.js. A page added there without a line here gets a
+// card with an empty circle where the others have a drawing, which reads as an
+// icon that failed to load rather than a page that has none.
 const PAGE_ICONS = {
     home: <HomeIcon />,
     menu: <MenuIcon />,
     spa: <SpaIcon />,
-    mybooking: <BookingIcon />,
+    booking: <BookingIcon />,
+    mybooking: <MyBookingIcon />,
     site: <SiteIcon />,
 }
 
