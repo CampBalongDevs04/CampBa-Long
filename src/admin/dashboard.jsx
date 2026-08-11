@@ -43,7 +43,6 @@ const SpaServiceList = lazy(() => import('./items/spaServiceList.jsx'))
 const SpaServiceAvails = lazy(() => import('./items/SpaServiceAvails.jsx'))
 const CmsPageTab = lazy(() => import('./items/cmsPageTab.jsx'))
 const CmsTab = lazy(() => import('./items/cmsTab.jsx'))
-const CmsEmpty = lazy(() => import('./items/cmsEmpty.jsx'))
 const HeroBanner = lazy(() => import('./items/heroBanner.jsx'))
 const WelcomeSection = lazy(() => import('./items/welcomeSection.jsx'))
 const OffersSection = lazy(() => import('./items/offersSection.jsx'))
@@ -62,6 +61,8 @@ const SpaHilotSection = lazy(() => import('./items/spaHilotSection.jsx'))
 const BookingHeroSection = lazy(() => import('./items/bookingHeroSection.jsx'))
 const BookingNotesSection = lazy(() => import('./items/bookingNotesSection.jsx'))
 const BookingPolicySection = lazy(() => import('./items/bookingPolicySection.jsx'))
+const MyBookingHeroSection = lazy(() => import('./items/myBookingHeroSection.jsx'))
+const MyBookingPaymentSection = lazy(() => import('./items/myBookingPaymentSection.jsx'))
 const FooterSection = lazy(() => import('./items/footerSection.jsx'))
 
 // Staff sign in with Supabase Auth, not a passcode baked into the bundle.
@@ -476,14 +477,14 @@ function AdminDash() {
                             </>
                         )}
 
-                        {activeCmsPage === 'site' && activeCmsTab === 'footer' && <FooterSection />}
-
-                        {/* No editors yet — its copy is still in the page file.
-                            Listed in the picker anyway, because a page missing
-                            from it looks like a page nobody can edit. */}
                         {activeCmsPage === 'mybooking' && (
-                            <CmsEmpty label="My Booking" file="src/pages/mybooking.jsx" />
+                            <>
+                                {activeCmsTab === 'hero' && <MyBookingHeroSection />}
+                                {activeCmsTab === 'payment' && <MyBookingPaymentSection />}
+                            </>
                         )}
+
+                        {activeCmsPage === 'site' && activeCmsTab === 'footer' && <FooterSection />}
                     </Suspense>
                 </div>
             ) : activeSection === 'export' ? (

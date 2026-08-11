@@ -86,6 +86,23 @@
     color: var(--leaf);
 }
 
+/* Stands in for the whole grid when there is no method to show. Amber rather
+   than the usual cream: this is the one state on the panel where the guest
+   cannot complete what the panel is for, and it should not look like ordinary
+   copy they can skim past. */
+.payment-none{
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(198, 161, 91, 0.55);
+    background-color: rgba(198, 161, 91, 0.1);
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--ink);
+}
+
 /* Instruction note — same shape as the pax fit note */
 .payment-note{
     box-sizing: border-box;
@@ -127,6 +144,43 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
+}
+
+/* The caution against the upload button. Warmer than an error and louder than
+   the gold instruction note above the QR codes — it is not something that has
+   gone wrong, but it is the one line on this panel with a consequence attached,
+   and a guest skimming to the button has to catch it on the way past. */
+.payment-upload-warning{
+    box-sizing: border-box;
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 0;
+    padding: 11px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(143, 58, 45, 0.35);
+    border-left: 3px solid #8F3A2D;
+    background-color: rgba(143, 58, 45, 0.07);
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--ink);
+}
+
+.payment-upload-warning-icon{
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    border-radius: 50%;
+    background-color: #8F3A2D;
+    color: #FFFFFF;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
 }
 
 /* Real input stays in the DOM for the form, but visually hidden */

@@ -18,11 +18,10 @@
 //
 //  PAGES WITH NO SECTIONS YET
 //  --------------------------
-//  My Booking is listed with an empty `sections` array. Its copy is still
-//  written into src/pages/mybooking.jsx, so there is genuinely nothing to edit
-//  here yet — and it is listed anyway, because a page missing from the picker
-//  looks like a page that cannot be edited by anybody, which is a different
-//  and wronger answer. cmsEmpty.jsx is what it shows instead of a panel.
+//  There are none left. My Booking was the last card carrying "Not set up",
+//  and it now has the two sections below. cmsEmpty.jsx is still in the tree for
+//  whichever page is added to this file before its editors are written — see
+//  the note there.
 // ============================================================================
 
 export const CMS_PAGES = [
@@ -110,7 +109,18 @@ export const CMS_PAGES = [
         id: 'mybooking',
         label: 'My Booking',
         path: '/my-booking',
-        sections: [],
+        // Split the way the page is: the words a guest reads around their
+        // bookings, then the panel they pay through.
+        //
+        // The booking cards themselves are not here and never will be — they
+        // are guests' own reservations, managed in Bookings in the sidebar.
+        // These two tabs own the furniture around them.
+        sections: [
+            // The hero, and the green panel that offers "Save Receipt".
+            { id: 'hero', label: 'Hero & Notes' },
+            // The QR codes guests scan, and the note above them.
+            { id: 'payment', label: 'Payment & QR' },
+        ],
     },
     {
         id: 'site',

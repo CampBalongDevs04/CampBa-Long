@@ -1,12 +1,16 @@
 import '../css/cmsPage.css'
 
-// What Spa Service and My Booking show, because neither has anything to edit
-// yet — their copy is still written into the page files and changing it is
-// still a code change and a redeploy.
+// What a page in the CMS picker shows before its editors exist — its copy
+// still written into the page file, so changing it is still a code change and
+// a redeploy.
 //
-// They are in the picker anyway. A page left out of it looks like a page
-// nobody can edit; a page in it with this panel behind says which it is, and
-// says the same thing to whoever builds the editors next.
+// NOTHING RENDERS THIS TODAY. Spa Service had it, then My Booking, and both
+// now have real panels; it is kept for the next page added to cmsPages.js
+// ahead of its editors, which is the order every page so far has arrived in.
+// A page left out of the picker looks like a page nobody can edit; a page in
+// it with this panel behind says which it is, and says the same thing to
+// whoever builds the editors next. Its partner is the "Not set up" badge in
+// cmsPageTab.jsx, which the same empty `sections` array drives.
 export default function CmsEmpty({ label, file }) {
     return (
         <div className="cms-empty-panel">

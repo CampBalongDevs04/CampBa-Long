@@ -343,6 +343,11 @@
 
 .booking-card-actions{
     display: flex;
+    /* Wraps because the row is not always three buttons: a paid booking swaps
+       Cancel for a sentence, and a sentence plus three buttons does not fit a
+       card at every width. */
+    flex-wrap: wrap;
+    align-items: center;
     justify-content: flex-end;
     gap: 12px;
     margin-top: 26px;
@@ -378,6 +383,21 @@
 .booking-card-cancel:disabled{
     opacity: 0.45;
     cursor: not-allowed;
+}
+
+/* Stands where Cancel was, on a booking that has been paid for or a stay that
+   is over. Deliberately not a disabled button: a greyed-out Cancel invites the
+   guest to keep pressing it for an explanation it will never give, and this is
+   a sentence rather than a control. `margin-right: auto` keeps it at the left
+   of a row whose buttons are pushed right. */
+.booking-card-nocancel{
+    flex: 1 1 220px;
+    align-self: center;
+    margin: 0 auto 0 0;
+    max-width: 46ch;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: rgba(22, 41, 30, 0.7);
 }
 
 .booking-card-delete{
