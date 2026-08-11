@@ -71,6 +71,27 @@
     box-shadow: 0 4px 12px rgba(76, 107, 79, 0.25);
 }
 
+/* A required field left blank, or one that doesn't parse (a mobile number
+   short of 11 digits, an email with no .com) — same red the pax counter
+   already uses past capacity, so "something's wrong here" reads as one
+   language across the whole step. */
+.pax-field-input-error{
+    border-color: #B24A3A;
+    background-color: rgba(178, 74, 58, 0.06);
+}
+
+.pax-field-input-error:focus{
+    border-color: #B24A3A;
+    box-shadow: 0 4px 12px rgba(178, 74, 58, 0.2);
+}
+
+.pax-field-error{
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #8F3A2D;
+}
+
 /* Guest counter — inline stepper, sits on the left */
 .pax-counter{
     display: flex;

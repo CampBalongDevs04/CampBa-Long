@@ -246,7 +246,7 @@ function SpaCheckoutPanel({ cart, status, onIncrease, onDecrease, onRemove, onPl
                 aria-expanded={!collapsed}
             >
                 <span className="spa-checkout-header-left">
-                    <span className="spa-checkout-bag" aria-hidden="true">🧖</span>
+                    <span className="spa-checkout-bag" aria-hidden="true" />
                     <span className="spa-checkout-title">Your Order</span>
                     {itemCount > 0 && <span className="spa-checkout-count">{itemCount}</span>}
                 </span>
@@ -287,7 +287,7 @@ function SpaCheckoutPanel({ cart, status, onIncrease, onDecrease, onRemove, onPl
                                 {cart.map((line) => (
                                     <li className="spa-checkout-item" key={line.id}>
                                         <div className={`spa-checkout-thumb${line.image ? '' : ' is-empty'}`}>
-                                            {line.image ? <img src={line.image} alt="" /> : <span aria-hidden="true">🧖</span>}
+                                            {line.image ? <img src={line.image} alt="" /> : <span className="spa-checkout-thumb-icon" aria-hidden="true" />}
                                         </div>
                                         <div className="spa-checkout-item-info">
                                             <p className="spa-checkout-item-name">{line.name}</p>

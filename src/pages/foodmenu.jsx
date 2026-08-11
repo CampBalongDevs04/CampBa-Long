@@ -501,7 +501,7 @@ function CheckoutPanel({ cart, status, onIncrease, onDecrease, onRemove, onPlace
         aria-expanded={!collapsed}
       >
         <span className="kiosk-checkout-header-left">
-          <span className="kiosk-checkout-bag" aria-hidden="true">🛍</span>
+          <span className="kiosk-checkout-bag" aria-hidden="true" />
           <span className="kiosk-checkout-title">Your Order</span>
           {itemCount > 0 && <span className="kiosk-checkout-count">{itemCount}</span>}
         </span>

@@ -514,18 +514,10 @@ export default function Accommodations() {
     const viewportRef = useRef(null);
     const trackRef = useRef(null);
     const dragRef = useRef({ dragging: false, startX: 0 });
-    const wheelLockRef = useRef(false);
-    const currentIndexRef = useRef(currentIndex);
-    // The wheel listener is bound once and the list can grow underneath it.
+    // goTo is a stable callback (see below), so it reads the card count
+    // through this ref rather than closing over a stale one.
     const cardCountRef = useRef(cardCount);
     const toastTimerRef = useRef(null);
-
-    // The wheel listener below is bound once, so it reads the active index
-    // through this ref. Syncing happens in an effect — refs must not be
-    // written during render.
-    useEffect(() => {
-        currentIndexRef.current = currentIndex;
-    }, [currentIndex]);
 
     useEffect(() => {
         cardCountRef.current = cardCount;
@@ -535,12 +527,12 @@ export default function Accommodations() {
         setCurrentIndex(Math.max(0, Math.min(cardCountRef.current - 1, index)));
     }, []);
 
-    const showToast = useCallback((message) => {
+    const showToast = useCallback((message, duration = 2600) => {
         clearTimeout(toastTimerRef.current);
         setToast({ message, visible: true });
         toastTimerRef.current = setTimeout(
             () => setToast((t) => ({ ...t, visible: false })),
-            2600,
+            duration,
         );
     }, []);
 
@@ -559,34 +551,6 @@ export default function Accommodations() {
         window.addEventListener('resize', updateOffset);
         return () => window.removeEventListener('resize', updateOffset);
     }, [updateOffset]);
-
-    // Wheel needs a non-passive listener so preventDefault can stop page scroll.
-    useEffect(() => {
-        const viewport = viewportRef.current;
-        if (!viewport) return;
-        let accumulated = 0;
-        const onWheel = (e) => {
-            const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-            const dir = delta > 0 ? 1 : -1;
-            const index = currentIndexRef.current;
-            const atEdge =
-                (dir === -1 && index === 0) ||
-                (dir === 1 && index === cardCountRef.current - 1);
-            // At either end, let the gesture fall through so the page can
-            // still scroll past the carousel.
-            if (atEdge && !wheelLockRef.current) return;
-            e.preventDefault();
-            if (wheelLockRef.current) return;
-            accumulated += delta;
-            if (Math.abs(accumulated) < 10) return;
-            accumulated = 0;
-            setCurrentIndex((i) => Math.max(0, Math.min(cardCountRef.current - 1, i + dir)));
-            wheelLockRef.current = true;
-            setTimeout(() => { wheelLockRef.current = false; }, 350);
-        };
-        viewport.addEventListener('wheel', onWheel, { passive: false });
-        return () => viewport.removeEventListener('wheel', onWheel);
-    }, []);
 
     useEffect(() => () => clearTimeout(toastTimerRef.current), []);
 
@@ -627,30 +591,50 @@ export default function Accommodations() {
             return;
         }
 
-        // Exact fits first, preferring the tightest capacity range.
-        const fits = accommodations
+        // Tent Pitching has no capacity of its own — it's a flat per-tent fee
+        // for whatever tent(s) the guest brings, tracked as paxMax: Infinity
+        // (see paxRanges() above) so its card can say "Any group size" instead
+        // of a made-up ceiling. That made it match every pax count here,
+        // crowding out real recommendations — a guest typing 16 got told to
+        // book "Tent Pitching" as if one tent could sleep 16 people. Only
+        // units with a real, finite capacity are candidates for a single-unit
+        // recommendation.
+        const capped = accommodations
             .map((a, i) => ({ a, i }))
+            .filter(({ a }) => Number.isFinite(a.paxMax));
+
+        if (!capped.length) {
+            showToast('No units are listed yet.');
+            return;
+        }
+
+        // Exact fits first, preferring the tightest capacity range.
+        const fits = capped
             .filter(({ a }) => val >= a.paxMin && val <= a.paxMax)
             .sort((x, y) => (x.a.paxMax - x.a.paxMin) - (y.a.paxMax - y.a.paxMin));
 
         let match = fits[0];
         if (!match) {
             // No exact fit: smallest unit that can still hold everyone.
-            const bigEnough = accommodations
-                .map((a, i) => ({ a, i }))
+            const bigEnough = capped
                 .filter(({ a }) => a.paxMax >= val)
                 .sort((x, y) => x.a.paxMax - y.a.paxMax);
-            match = bigEnough[0]
-                || { a: accommodations[cardCount - 1], i: cardCount - 1 };
+            match = bigEnough[0];
         }
 
-        if (!match.a) {
-            showToast('No units are listed yet.');
+        if (match) {
+            goTo(match.i);
+            showToast(`Recommended: ${match.a.title} for ${val} pax.`);
             return;
         }
 
-        goTo(match.i);
-        showToast(`Recommended: ${match.a.title} for ${val} pax.`);
+        // Bigger than any single unit's real capacity (e.g. 16 pax against a
+        // 15-pax Pavilion ceiling): there is no one card to point at, so say
+        // so instead of scrolling to a unit that can't actually fit the group.
+        showToast(
+            `Sorry, we don't have a single unit that fits ${val} pax. Please select more than one unit to accommodate your whole group.`,
+            3400,
+        );
     };
 
     const handleBook = (acc) => {
@@ -694,7 +678,7 @@ export default function Accommodations() {
             </div>
 
             <div className="acc-carousel">
-                <p className="acc-scroll-hint">Drag, scroll, or use the arrows to browse available units</p>
+                <p className="acc-scroll-hint">Drag or use the arrows to browse available units</p>
                 <div className="acc-carousel-wrap">
                     <button
                         className="acc-nav-btn"

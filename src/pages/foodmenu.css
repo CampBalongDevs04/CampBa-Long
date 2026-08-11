@@ -721,12 +721,6 @@
   border-top: 3px solid #c9762b;
   box-shadow: 0 14px 28px -14px rgba(31, 79, 47, 0.4);
   padding: 1.5rem 1.5rem 1.25rem;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-
-.coffee-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 36px -14px rgba(31, 79, 47, 0.45);
 }
 
 .coffee-card-title {
@@ -1334,8 +1328,12 @@
 }
 
 .kiosk-checkout-bag {
-  font-size: 1.15rem;
-  line-height: 1;
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+  background-color: currentColor;
+  -webkit-mask: url('../assets/svg/foodi.svg') no-repeat center / contain;
+  mask: url('../assets/svg/foodi.svg') no-repeat center / contain;
 }
 
 .kiosk-checkout-title {

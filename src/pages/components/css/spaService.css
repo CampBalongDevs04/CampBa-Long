@@ -1018,8 +1018,12 @@ html{
     gap: 0.6rem;
 }
 .spa-checkout-bag{
-    font-size: 1.2rem;
-    line-height: 1;
+    width: 1.2rem;
+    height: 1.2rem;
+    flex-shrink: 0;
+    background-color: currentColor;
+    -webkit-mask: url('../../../assets/svg/spai.svg') no-repeat center / contain;
+    mask: url('../../../assets/svg/spai.svg') no-repeat center / contain;
 }
 .spa-checkout-title{
     font-weight: 700;
@@ -1091,6 +1095,13 @@ html{
     height: 100%;
     object-fit: cover;
     display: block;
+}
+.spa-checkout-thumb-icon{
+    width: 22px;
+    height: 22px;
+    background-color: var(--forest);
+    -webkit-mask: url('../../../assets/svg/spai.svg') no-repeat center / contain;
+    mask: url('../../../assets/svg/spai.svg') no-repeat center / contain;
 }
 .spa-checkout-item-info{
     flex: 1;

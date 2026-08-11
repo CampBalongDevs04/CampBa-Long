@@ -34,6 +34,25 @@ const [SCHEDULE_STEP, ACCOMMODATION_STEP, GUEST_STEP] = BOOKING_STEP_IDS
 // `index` is still the position on the page — it is what prints in the circle
 // and it is fixed by the form, not by the database. The id it looks its wording
 // up by comes from the same fixed list.
+// Guest-detail checks, shared between the missing-steps gate below and what
+// PaxInput shows under each field — one definition of "valid" so Confirm
+// never blocks on something the field itself already accepted, or the other
+// way around.
+const MOBILE_DIGITS = 11
+
+function isValidMobile(mobile){
+    return String(mobile ?? '').replace(/\D/g, '').length === MOBILE_DIGITS
+}
+
+// Loose on purpose: this only checks the address ends in a .com domain
+// (which covers @gmail.com along with every other .com provider) rather than
+// trying to verify the address is real.
+const EMAIL_COM_RE = /^[^\s@]+@[^\s@]+\.com$/i
+
+function isValidEmail(email){
+    return EMAIL_COM_RE.test(String(email ?? '').trim())
+}
+
 function StepHeader({ index }){
     const step = bookingStep(BOOKING_STEP_IDS[index])
     return(
@@ -247,9 +266,27 @@ export default function Booking(){
         !(dates.checkIn && stayLengthSet && selectedTime !== null)
             && bookingStep(SCHEDULE_STEP).title,
         cartUnitCount === 0 && bookingStep(ACCOMMODATION_STEP).title,
-        !(pax && guest.fullName.trim() && guest.mobile.trim() && guest.email.trim())
+        !(pax && guest.fullName.trim() && isValidMobile(guest.mobile) && isValidEmail(guest.email))
             && bookingStep(GUEST_STEP).title,
     ].filter(Boolean)
+
+    // What, specifically, is wrong with each guest field — PaxInput shows
+    // these as the red text under the box, and scrollToFirstIssue below uses
+    // them to pick which one to jump to.
+    const guestFieldErrors = {
+        fullName: guest.fullName.trim() ? null : 'Please enter your full name.',
+        mobile: !guest.mobile.trim()
+            ? 'Please enter your mobile number.'
+            : !isValidMobile(guest.mobile)
+                ? `Mobile number must contain ${MOBILE_DIGITS} digits (e.g. 0917 123 4567).`
+                : null,
+        email: !guest.email.trim()
+            ? 'Please enter your email address.'
+            : !isValidEmail(guest.email)
+                ? 'Please enter a valid email address (e.g. juan@gmail.com).'
+                : null,
+        pax: pax ? null : 'Please enter the number of guests.',
+    }
 
     // A group larger than the cart's COMBINED capacity is the one pax rule
     // that blocks the booking — that's how many people the selected units
@@ -418,9 +455,35 @@ export default function Booking(){
         })
     }
 
+    // The alert text at the bottom of the form already NAMES which step is
+    // incomplete — this is what takes the guest there, rather than leaving
+    // them to scroll up and hunt for the one field it meant. Schedule and
+    // Accommodation jump to the step (neither has a single field to blame);
+    // Guest Information jumps to the specific box, in the order it appears.
+    function scrollToFirstIssue(){
+        if (!(dates.checkIn && stayLengthSet && selectedTime !== null)) {
+            document.getElementById(SCHEDULE_STEP)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            return
+        }
+        if (cartUnitCount === 0) {
+            document.getElementById(ACCOMMODATION_STEP)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            return
+        }
+        const fieldId = guestFieldErrors.fullName ? 'guest-fullname'
+            : guestFieldErrors.mobile ? 'guest-mobile'
+            : guestFieldErrors.email ? 'guest-email'
+            : (guestFieldErrors.pax || capacityIssue) ? 'pax'
+            : null
+        document.getElementById(fieldId)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+
     function handleConfirm(){
         setAttemptedConfirm(true)
-        if (missingSteps.length > 0 || capacityIssue || submitting) return
+        if (submitting) return
+        if (missingSteps.length > 0 || capacityIssue) {
+            scrollToFirstIssue()
+            return
+        }
         return reserve()
     }
 
@@ -535,6 +598,8 @@ export default function Booking(){
                                     guest={guest}
                                     onGuestChange={setGuest}
                                     rateGroup={rateGroup}
+                                    fieldErrors={guestFieldErrors}
+                                    showErrors={attemptedConfirm}
                                 />
 
                                 {/* Each ceiling is the party minus the other
