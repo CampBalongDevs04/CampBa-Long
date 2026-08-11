@@ -2,7 +2,9 @@ import { useEffect } from 'react'
 import '../css/exportPanel.css'
 import Export from './export.jsx'
 
-export default function ExportPanel({ open = false, onClose, bookings = [] }) {
+// Export reads the bookings out of the store itself (see export.jsx), so this
+// wrapper only has to open and close.
+export default function ExportPanel({ open = false, onClose }) {
     useEffect(() => {
         if (!open) return
         const handleKey = (e) => {
@@ -40,7 +42,7 @@ export default function ExportPanel({ open = false, onClose, bookings = [] }) {
                     </button>
                 </div>
                 <div className="export-panel-body">
-                    <Export bookings={bookings} />
+                    <Export />
                 </div>
             </aside>
         </div>

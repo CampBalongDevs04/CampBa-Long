@@ -40,6 +40,76 @@
     color: var(--leaf);
 }
 
+/* ---------- Period tiles ---------- */
+/* Each tile carries the period it covers and how many bookings are in it, so
+   an empty month is visible here instead of in the downloaded file. */
+.export-preset-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(120px, 1fr));
+    gap: 10px;
+}
+
+.export-preset {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    text-align: left;
+    font-family: 'Jost', sans-serif;
+    background: transparent;
+    border: 1px solid var(--gold);
+    border-radius: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background 200ms ease, transform 200ms ease, border-color 200ms ease;
+}
+
+.export-preset:hover:not(:disabled),
+.export-preset:focus-visible:not(:disabled) {
+    background: var(--gold);
+    transform: translateY(-1px);
+}
+
+.export-preset:hover:not(:disabled) .export-preset-label,
+.export-preset:hover:not(:disabled) .export-preset-period,
+.export-preset:hover:not(:disabled) .export-preset-count {
+    color: var(--cream);
+}
+
+.export-preset:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.export-preset.is-empty {
+    border-color: rgba(198, 161, 91, 0.4);
+}
+
+.export-preset-label {
+    font-weight: 600;
+    font-size: 0.78rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--forest-dark);
+}
+
+.export-preset-period {
+    font-size: 0.74rem;
+    letter-spacing: 0.3px;
+    color: var(--leaf);
+}
+
+.export-preset-count {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    color: var(--gold);
+}
+
+.export-preset.is-empty .export-preset-count {
+    color: var(--leaf);
+    font-weight: 400;
+}
+
 .export-card-buttons {
     display: flex;
     flex-wrap: wrap;
@@ -93,6 +163,57 @@
     transform: none;
 }
 
+/* What the picked range holds, before it is downloaded. */
+.export-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 26px;
+    margin: 4px 0 0;
+}
+
+.export-summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.export-summary dt {
+    font-family: 'Jost', sans-serif;
+    font-size: 0.68rem;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--leaf);
+}
+
+.export-summary dd {
+    margin: 0;
+    font-family: 'Jost', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--forest-dark);
+}
+
+.export-filename {
+    margin: 0;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.74rem;
+    letter-spacing: 0.3px;
+    color: var(--leaf);
+}
+
+.export-filename code {
+    font-size: 0.72rem;
+    word-break: break-all;
+}
+
+.export-error {
+    margin: 0;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.82rem;
+    letter-spacing: 0.3px;
+    color: #9b2226;
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 640px) {
     .export-card {
@@ -104,6 +225,11 @@
     .export-card-buttons {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
+    }
+
+    .export-preset-grid {
+        grid-template-columns: repeat(2, 1fr);
+        width: 100%;
     }
 
     .export-btn {

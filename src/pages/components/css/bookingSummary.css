@@ -32,24 +32,36 @@
     text-transform: uppercase;
     color: var(--gold);
 }
+/* Label and figure share a line while both fit; when they cannot, the figure
+   drops to its own line rather than being squeezed into a column of single
+   characters. A label like "Free entrance (2 pax) — kids 7 & below" is 259px
+   wide and used to leave "− ₱1,200.00" ten pixels to render in. */
 .summary-row{
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: baseline;
-    gap: 12px;
+    gap: 4px 12px;
     padding: 4px 0;
 }
 .summary-row-label{
-    flex-shrink: 0;
+    flex: 1 1 auto;
+    min-width: 0;
     font-size: 16px;
     color: var(--leaf);
 }
 .summary-row-value{
+    flex: 0 1 auto;
+    max-width: 100%;
+    /* Keeps the figure against the right edge on the line it wrapped onto. */
+    margin-left: auto;
     font-size: 16px;
     font-weight: 600;
     text-align: right;
     color: var(--ink);
-    overflow-wrap: anywhere;
+    /* `anywhere` would break "₱37,200.00" mid-number; the arithmetic rows have
+       spaces around their + − × = to break at instead. */
+    overflow-wrap: break-word;
 }
 .summary-row-empty{
     font-weight: 400;
@@ -77,21 +89,27 @@
 }
 .summary-total{
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: baseline;
-    gap: 12px;
+    gap: 4px 12px;
     margin-top: 4px;
     padding-top: 12px;
     border-top: 2px solid var(--gold-soft);
 }
 .summary-total-label{
+    flex: 1 1 auto;
+    min-width: 0;
     font-size: 17px;
     font-weight: 600;
     color: var(--forest);
 }
 .summary-total-value{
+    flex: 0 0 auto;
+    margin-left: auto;
     font-size: 21px;
     font-weight: 700;
+    white-space: nowrap;
     color: var(--forest);
 }
 .summary-receipt-ok{
@@ -145,5 +163,28 @@
     .booking-summary{
         position: static;
         width: 100%;
+        max-width: 100%;
+    }
+}
+
+/* ---- narrow phones: 30px of side padding was eating a sixth of the
+   column, which is what pushed the arithmetic rows into three lines ---- */
+@media (max-width: 520px){
+    .booking-summary{
+        padding: 22px 18px;
+        border-radius: 14px;
+    }
+    .summary-title{
+        font-size: 23px;
+    }
+    .summary-row-label,
+    .summary-row-value{
+        font-size: 15px;
+    }
+    .summary-total-label{
+        font-size: 16px;
+    }
+    .summary-total-value{
+        font-size: 19px;
     }
 }

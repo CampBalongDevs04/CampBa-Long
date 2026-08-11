@@ -365,6 +365,30 @@ export function StatCardsSkeleton({ count = 5 }) {
     )
 }
 
+/** Overview stat board: revenue panel, four counts, occupancy strip. */
+export function StatBoardSkeleton() {
+    return (
+        <div className="skl-stat-board">
+            <div className="skl-stat-hero">
+                <Skeleton onDark width="35%" height={14} />
+                <Skeleton onDark width="65%" height={44} />
+                <Skeleton onDark width="80%" height={12} />
+            </div>
+            {Array.from({ length: 4 }, (_, i) => (
+                <div className="skl-stat-card" key={i}>
+                    <Skeleton width="60%" height={14} />
+                    <Skeleton width="40%" height={30} />
+                    <Skeleton width="70%" height={11} />
+                </div>
+            ))}
+            <div className="skl-stat-card skl-stat-wide">
+                <Skeleton width={150} height={30} />
+                <Skeleton height={12} />
+            </div>
+        </div>
+    )
+}
+
 /** Pill tab bar (admin filters). */
 export function TabsSkeleton({ count = 6 }) {
     return (

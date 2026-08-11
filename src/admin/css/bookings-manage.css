@@ -20,6 +20,7 @@
     align-items: center;
     gap: 8px;
     flex: 1 1 260px;
+    min-width: 0;
     max-width: 380px;
     background: #fff;
     border: 1px solid rgba(198, 161, 91, 0.35);
@@ -28,8 +29,20 @@
     color: rgba(10, 22, 14, 0.55);
 }
 
+/* The magnifier is a flex child with no intrinsic minimum, so without this it
+   squashes into an oval as soon as the field is asked to give up width. */
+.bookings-search svg {
+    flex: 0 0 auto;
+}
+
 .bookings-search input {
-    flex: 1;
+    flex: 1 1 auto;
+    /* A text input's automatic minimum size is ~20 characters wide. Left at
+       `auto` the field refuses to shrink below it and pushes the box out. */
+    min-width: 0;
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
     border: none;
     outline: none;
     background: transparent;
@@ -305,13 +318,43 @@
 }
 
 /* ---------- Responsive ---------- */
+
+/* Once the filter pills need a line of their own, the 380px cap leaves the
+   field stranded beside 500px of nothing — so let it take the line it is on. */
+@media (max-width: 1024px) {
+    .bookings-search {
+        flex-basis: 100%;
+        max-width: none;
+    }
+}
+
 @media (max-width: 860px) {
+    /* NOT `flex-direction: column`. In a column the search field's
+       `flex: 1 1 260px` is read down the main axis, which made the basis a
+       260px HEIGHT — the field rendered as a 260px-tall box. Wrapping keeps
+       the basis horizontal and stacks the two groups just the same. */
     .bookings-toolbar {
-        flex-direction: column;
         align-items: stretch;
+        gap: 12px;
     }
 
+    .bookings-filters {
+        flex-basis: 100%;
+    }
+}
+
+@media (max-width: 560px) {
     .bookings-search {
-        max-width: none;
+        padding: 9px 12px;
+    }
+
+    /* Five pills over three ragged lines; sized down they take two. */
+    .bookings-filter {
+        padding: 7px 11px;
+        font-size: 0.78rem;
+    }
+
+    .bookings-panel {
+        border-radius: 14px;
     }
 }
