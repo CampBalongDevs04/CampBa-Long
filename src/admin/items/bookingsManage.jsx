@@ -303,7 +303,7 @@ export default function BookingsManage() {
                                                     <button
                                                         type="button"
                                                         className="bookings-action bookings-action-danger"
-                                                        onClick={() => (b.isGroup ? cancelBookingGroup(b.id) : cancelBooking(b.id))}
+                                                        onClick={() => (b.isGroup ? cancelBookingGroup(b.id, { asStaff: true }) : cancelBooking(b.id, { asStaff: true }))}
                                                     >
                                                         Cancel
                                                     </button>
@@ -326,7 +326,7 @@ export default function BookingsManage() {
                     booking={reviewing}
                     onClose={() => setReviewingId(null)}
                     onApprove={(booking) => (booking.isGroup ? confirmBookingGroup(booking.id) : confirmBooking(booking.id))}
-                    onCancel={(booking) => (booking.isGroup ? cancelBookingGroup(booking.id) : cancelBooking(booking.id))}
+                    onCancel={(booking) => (booking.isGroup ? cancelBookingGroup(booking.id, { asStaff: true }) : cancelBooking(booking.id, { asStaff: true }))}
                 />
             )}
         </div>

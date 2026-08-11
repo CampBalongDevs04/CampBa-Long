@@ -10,6 +10,8 @@ import {
     bookingsPersistOnThisDevice,
     forgetMyBookings,
     wasCancelledByPaymentTimeout,
+    canGuestCancel,
+    hasPaidSomething,
     PAYMENT_WINDOW_MINUTES,
     useMyBookingGroups,
     cancelBookingGroup,
@@ -19,6 +21,7 @@ import {
 } from '../data/accommodationDB.js'
 import { splitFreeEntrance } from '../data/entranceFee.js'
 import { countNights } from '../data/extendedStay.js'
+import { useMyBookingPage, fillTokens, unitTokens } from '../data/myBookingPage.js'
 
 function formatDate(iso){
     if (!iso) return '—'
@@ -52,6 +55,31 @@ const STATUS_LABELS = {
     active: 'Checked In',
     completed: 'Completed',
     cancelled: 'Cancelled',
+}
+
+// What stands where the Cancel button used to, on a booking that can no longer
+// be called off from here. Two different facts, and a guest is owed whichever
+// one applies:
+//
+//   • The down payment is already with the resort. Cancelling from a phone
+//     would release the unit while the money is still held against a stay that
+//     no longer exists, so this one goes through a person — which is what
+//     "Cancellation is no longer allowed once the down payment has been made"
+//     on the booking page has always meant.
+//   • The stay is simply over.
+//
+// Said out loud rather than left as a gap. A button that quietly disappears
+// reads as a page that failed to load, and the guest's next move — message the
+// resort — is exactly what an empty space cannot tell them.
+function NoCancelNote({ booking, thing }){
+    return (
+        <p className="booking-card-nocancel" role="note">
+            {hasPaidSomething(booking)
+                ? `Your down payment is with us, so this ${thing} can no longer be cancelled`
+                  + ' here. Message the resort if you need to change it.'
+                : 'This stay is over, so it can no longer be cancelled.'}
+        </p>
+    )
 }
 
 function foodOrderSummary(booking){
@@ -99,6 +127,7 @@ function perHeadLabel(booking, formatted){
 }
 
 function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, payNow }){
+    const { page: copy } = useMyBookingPage()
     const status = getBookingStage(booking)
     const { start, end } = splitTimes(booking.schedule)
     const paymentKnown = booking.downpayment != null
@@ -325,22 +354,23 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, 
                     >
                         Delete Booking
                     </button>
-                ) : (
+                ) : canGuestCancel(booking) ? (
                     <button
                         type="button"
                         className="booking-card-cancel"
                         onClick={() => onCancel(booking.id)}
-                        disabled={status === 'completed'}
                     >
                         Cancel Booking
                     </button>
+                ) : (
+                    <NoCancelNote booking={booking} thing="booking" />
                 )}
                 <button
                     type="button"
                     className="booking-card-receipt"
                     onClick={() => onSaveReceipt(booking)}
                 >
-                    Save Receipt
+                    {copy.saveReceiptLabel}
                 </button>
                 <button
                     type="button"
@@ -361,6 +391,7 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, 
 // (the header's unit id, the singular accomodationName) has no single answer
 // here — it reads better written straight through than threaded with ternaries.
 function GroupBookingCard({ group, onCancel, onDelete, onSaveReceipt, payNow }){
+    const { page: copy } = useMyBookingPage()
     const status = getBookingStage(group)
     const { start, end } = splitTimes(group.schedule)
     const outstanding = Math.max(
@@ -588,22 +619,23 @@ function GroupBookingCard({ group, onCancel, onDelete, onSaveReceipt, payNow }){
                     >
                         Delete Booking
                     </button>
-                ) : (
+                ) : canGuestCancel(group) ? (
                     <button
                         type="button"
                         className="booking-card-cancel"
                         onClick={() => onCancel(group.id)}
-                        disabled={status === 'completed'}
                     >
                         Cancel Reservation
                     </button>
+                ) : (
+                    <NoCancelNote booking={group} thing="reservation" />
                 )}
                 <button
                     type="button"
                     className="booking-card-receipt"
                     onClick={() => onSaveReceipt(group)}
                 >
-                    Save Receipt
+                    {copy.saveReceiptLabel}
                 </button>
             </div>
         </article>
@@ -615,6 +647,9 @@ function MyBooking() {
     const location = useLocation()
     const { bookings, cancelBooking, deleteBooking } = useBookings()
     const groups = useMyBookingGroups()
+    // Everything a guest reads on this page that is not their own booking —
+    // edited in CMS → My Booking (data/myBookingPage.js).
+    const { page: copy } = useMyBookingPage()
     const [error, setError] = useState(null)
     // False in a private window that blocks localStorage: the reservation is
     // real and staff have it, but this tab is the only thing holding the key
@@ -696,16 +731,12 @@ function MyBooking() {
         <main className="page my-booking-page">
             <div className="my-booking-shell">
                 <header className="my-booking-hero">
-                    <p className="my-booking-eyebrow">Camp Ba-long Reservations</p>
-                    <h1 className="my-booking-title">My Bookings</h1>
-                    <p className="my-booking-tagline">
-                        Review your reservation history and manage upcoming stays.
-                    </p>
-                    <p className="my-booking-privacy">
-                        Only the bookings made on this device appear here. Open the site on
-                        another phone or browser and you will see that device&apos;s bookings
-                        instead — your details are never shown to another guest.
-                    </p>
+                    {copy.eyebrow && <p className="my-booking-eyebrow">{copy.eyebrow}</p>}
+                    <h1 className="my-booking-title">{copy.title}</h1>
+                    {copy.tagline && <p className="my-booking-tagline">{copy.tagline}</p>}
+                    {copy.privacyNote && (
+                        <p className="my-booking-privacy">{copy.privacyNote}</p>
+                    )}
                     {!persistent && (
                         <p className="my-booking-warning" role="status">
                             This browser is not saving anything, so this list will be empty when
@@ -719,40 +750,46 @@ function MyBooking() {
                     <p className="my-booking-error" role="alert">{error}</p>
                 )}
 
-                {justBooked && (
-                    <section className="my-booking-confirmed" role="status">
-                        <p className="my-booking-confirmed-title">
-                            {payNowId
-                                ? `${justBooked.isGroup ? 'Units' : 'Unit'} held for booking ${justBooked.code}`
-                                : `Booking ${justBooked.code} received`}
-                        </p>
-                        <p className="my-booking-confirmed-text">
-                            {payNowId ? (
-                                <>
-                                    Your {justBooked.isGroup ? 'units are' : 'unit is'} reserved for the next{' '}
-                                    {PAYMENT_WINDOW_MINUTES} minutes. Send the{' '}
-                                    {formatPeso(justBooked.downpayment)} down payment and
-                                    upload the receipt below before the timer runs out, or
-                                    the booking is cancelled and the {justBooked.isGroup ? 'units are' : 'unit is'} released.
-                                    Ordering food or a spa treatment first adds them to
-                                    that amount.
-                                </>
-                            ) : (
-                                <>
-                                    Save a copy for check-in — it downloads as an image you
-                                    can keep in your photos.
-                                </>
+                {justBooked && (() => {
+                    /* One panel, two things it can be saying. `payNowId` is set
+                       only when the guest arrived here to pay, so that version
+                       is about a running clock; otherwise the money is already
+                       in and the panel is about keeping the receipt.
+
+                       The wording of both is staff's (CMS → My Booking → Save
+                       Receipt Note). What the browser knows — the booking's
+                       code, its down payment, the minutes on the hold, and
+                       whether this is one unit or several — goes in as tokens,
+                       because those change per booking and cannot be typed. */
+                    const tokens = {
+                        code: justBooked.code,
+                        amount: formatPeso(justBooked.downpayment),
+                        minutes: PAYMENT_WINDOW_MINUTES,
+                        ...unitTokens(justBooked.isGroup),
+                    }
+                    const title = payNowId ? copy.holdTitle : copy.savedTitle
+                    const text = payNowId ? copy.holdText : copy.savedText
+
+                    return (
+                        <section className="my-booking-confirmed" role="status">
+                            <p className="my-booking-confirmed-title">
+                                {fillTokens(title, tokens)}
+                            </p>
+                            {text && (
+                                <p className="my-booking-confirmed-text">
+                                    {fillTokens(text, tokens)}
+                                </p>
                             )}
-                        </p>
-                        <button
-                            type="button"
-                            className="my-booking-confirmed-save"
-                            onClick={() => handleSaveReceipt(justBooked)}
-                        >
-                            Save Receipt
-                        </button>
-                    </section>
-                )}
+                            <button
+                                type="button"
+                                className="my-booking-confirmed-save"
+                                onClick={() => handleSaveReceipt(justBooked)}
+                            >
+                                {copy.saveReceiptLabel}
+                            </button>
+                        </section>
+                    )
+                })()}
 
                 {entries.length === 0 ? (
                     <section className="my-booking-empty" aria-live="polite">
