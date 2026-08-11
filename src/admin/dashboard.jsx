@@ -8,6 +8,7 @@ import LotusDividerIcon from '../components/LotusDividerIcon.jsx'
 import logoCamp from '../assets/images/logocamp.png'
 import ClockDate from './items/extras/clockDate.jsx'
 import {
+    StatBoardSkeleton,
     StatCardsSkeleton,
     TabsSkeleton,
     PanelSkeleton,
@@ -233,7 +234,7 @@ function AdminDash() {
                         <h1 className="admin-dash-title">Overview</h1>
                         <ClockDate />
                     </div>
-                    <Suspense fallback={<StatCardsSkeleton count={6} />}>
+                    <Suspense fallback={<StatBoardSkeleton />}>
                         <Units />
                     </Suspense>
                     <Suspense fallback={<TabsSkeleton count={6} />}>

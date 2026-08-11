@@ -1,149 +1,152 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import '../css/export.css'
 import Calendar from './calendar.jsx'
-import { formatRangeLabel } from './calendarRange.js'
+import { useAccommodationDB, useBookingGroups } from '../../data/accommodationDB.js'
+import {
+    RANGE_PRESETS,
+    resolveRange,
+    customRange,
+    mergeReservations,
+    selectReservations,
+    previewTotals,
+    exportBookingReport,
+    reportFilename,
+} from './bookingReport.js'
 
-const documentExport = [
-    {
-        title: "Export Booking History",
-        description: "Download Excel-compatible reports for today, this week, this, month, or this year.",
-        day: "Day",
-        week: "Week",
-        month: "Month",
-        year: "Year"
-    }
-]
+// The Export section writes the resort's own Check-in-out spreadsheet from the
+// live database — see bookingReport.js for the column layout it reproduces.
+//
+// Every button here says how many reservations it is about to write before it
+// writes them. An export is one of the few actions on this dashboard with no
+// visible result inside the app: the file lands in Downloads and is opened
+// somewhere else, so "0 rows" has to be answerable on this page, not in Excel.
 
-const RANGE_KEYS = ['day', 'week', 'month', 'year']
-
-function getRangeStart(range) {
-    const now = new Date()
-    const start = new Date(now)
-    start.setHours(0, 0, 0, 0)
-
-    if (range === 'week') {
-        start.setDate(start.getDate() - start.getDay())
-    } else if (range === 'month') {
-        start.setDate(1)
-    } else if (range === 'year') {
-        start.setMonth(0, 1)
-    }
-    return start
+function peso(amount) {
+    return `₱${Number(amount || 0).toLocaleString('en-PH', { maximumFractionDigits: 0 })}`
 }
 
-function endOfDay(date) {
-    const end = new Date(date)
-    end.setHours(23, 59, 59, 999)
-    return end
+function countLabel(count) {
+    if (count === 0) return 'No bookings'
+    return `${count} booking${count === 1 ? '' : 's'}`
 }
 
-function escapeCsv(value) {
-    const text = String(value ?? '')
-    if (/[",\n]/.test(text)) {
-        return `"${text.replace(/"/g, '""')}"`
-    }
-    return text
-}
-
-function buildCsv(periodLabel, start, end, bookings) {
-    const rows = bookings.filter((booking) => {
-        const date = new Date(booking.date ?? booking.checkIn)
-        return !Number.isNaN(date.getTime()) && date >= start && date <= end
-    })
-
-    const totalRevenue = rows.reduce((sum, b) => sum + (Number(b.amount) || 0), 0)
-
-    const lines = [
-        ['Camp Ba-long — Booking History Report'],
-        ['Period', periodLabel],
-        ['From', start.toLocaleDateString()],
-        ['To', end.toLocaleDateString()],
-        ['Generated', new Date().toLocaleString()],
-        [],
-        ['Guest', 'Unit', 'Check-in', 'Check-out', 'Status', 'Amount'],
-        ...rows.map((b) => [b.guest, b.unit, b.checkIn, b.checkOut, b.status, b.amount]),
-        [],
-        ['Total Bookings', rows.length],
-        ['Total Revenue', totalRevenue],
-    ]
-
-    return lines.map((line) => line.map(escapeCsv).join(',')).join('\r\n')
-}
-
-function downloadCsv(periodLabel, start, end, bookings, fileTag) {
-    const csv = buildCsv(periodLabel, start, end, bookings)
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `campbalong-report-${fileTag}.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-}
-
-function exportPreset(range, bookings) {
-    const stamp = new Date().toISOString().slice(0, 10)
-    downloadCsv(`This ${range}`, getRangeStart(range), new Date(), bookings, `${range}-${stamp}`)
-}
-
-function dateTag(date) {
-    return date.toISOString().slice(0, 10)
-}
-
-export default function Export({ bookings = [] }) {
+export default function Export() {
+    const bookings = useAccommodationDB()
+    const groups = useBookingGroups()
     const [range, setRange] = useState({ start: null, end: null })
+    // Which button is mid-download, so it can say so and not be pressed twice.
+    const [busy, setBusy] = useState(null)
+    const [failed, setFailed] = useState('')
 
-    const exportCustomRange = () => {
-        if (!range.start || !range.end) return
-        downloadCsv(
-            formatRangeLabel(range.start, range.end),
-            range.start,
-            endOfDay(range.end),
-            bookings,
-            `${dateTag(range.start)}-to-${dateTag(range.end)}`
-        )
+    const reservations = useMemo(() => mergeReservations(bookings, groups), [bookings, groups])
+
+    // Resolved once per render pass rather than per button, so all four tiles
+    // and the download they trigger agree on where "today" is.
+    const presets = useMemo(() => {
+        const now = new Date()
+        return RANGE_PRESETS.map((preset) => {
+            const resolved = resolveRange(preset.id, now)
+            const rows = selectReservations(reservations, resolved.start, resolved.end)
+            return { ...preset, range: resolved, rows, totals: previewTotals(rows) }
+        })
+    }, [reservations])
+
+    const picked = useMemo(() => {
+        const resolved = customRange(range.start, range.end)
+        if (!resolved) return null
+        const rows = selectReservations(reservations, resolved.start, resolved.end)
+        return { range: resolved, rows, totals: previewTotals(rows) }
+    }, [range, reservations])
+
+    const download = async (key, target) => {
+        if (busy) return
+        setBusy(key)
+        setFailed('')
+        try {
+            await exportBookingReport({ range: target.range, reservations: target.rows })
+        } catch (error) {
+            // A failed export is silent otherwise — no file appears and the
+            // page looks unchanged, which reads as a dead button.
+            console.error('Booking report export failed', error)
+            setFailed('The report could not be generated. Please try again.')
+        } finally {
+            setBusy(null)
+        }
     }
 
     return (
         <>
-            {documentExport.map((doc) => (
-                <div className="export-card" key={doc.title}>
-                    <div className="export-card-copy">
-                        <h3 className="export-card-title">{doc.title}</h3>
-                        <p className="export-card-description">{doc.description}</p>
-                    </div>
-                    <div className="export-card-buttons">
-                        {RANGE_KEYS.map((rangeKey) => (
-                            <button
-                                key={rangeKey}
-                                type="button"
-                                className="export-btn"
-                                onClick={() => exportPreset(rangeKey, bookings)}
-                            >
-                                {doc[rangeKey]}
-                            </button>
-                        ))}
-                    </div>
+            <div className="export-card">
+                <div className="export-card-copy">
+                    <h3 className="export-card-title">Export Booking History</h3>
+                    <p className="export-card-description">
+                        Downloads the Check-in-out sheet as an Excel workbook — guest, date,
+                        accommodation, time, payments and status — for a whole day, week, month or
+                        year.
+                    </p>
                 </div>
-            ))}
+                <div className="export-preset-grid">
+                    {presets.map((preset) => (
+                        <button
+                            key={preset.id}
+                            type="button"
+                            className={
+                                preset.rows.length === 0
+                                    ? 'export-preset is-empty'
+                                    : 'export-preset'
+                            }
+                            disabled={busy != null}
+                            onClick={() => download(preset.id, preset)}
+                        >
+                            <span className="export-preset-label">{preset.label}</span>
+                            <span className="export-preset-period">{preset.range.label}</span>
+                            <span className="export-preset-count">
+                                {busy === preset.id ? 'Preparing…' : countLabel(preset.rows.length)}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+            </div>
 
             <div className="export-card export-card-calendar">
                 <div className="export-card-copy">
                     <h3 className="export-card-title">Export Custom Range</h3>
                     <p className="export-card-description">
-                        Pick a start and end date on the calendar, then download the report for that exact range.
+                        Pick a start and end date on the calendar, then download the same sheet for
+                        that exact range.
                     </p>
+
+                    {picked && (
+                        <dl className="export-summary">
+                            <div className="export-summary-item">
+                                <dt>Bookings</dt>
+                                <dd>{picked.rows.length}</dd>
+                            </div>
+                            <div className="export-summary-item">
+                                <dt>Collected</dt>
+                                <dd>{peso(picked.totals.collected)}</dd>
+                            </div>
+                            <div className="export-summary-item">
+                                <dt>Outstanding</dt>
+                                <dd>{peso(picked.totals.due - picked.totals.collected)}</dd>
+                            </div>
+                        </dl>
+                    )}
+
                     <button
                         type="button"
                         className="export-btn export-range-btn"
-                        disabled={!range.start || !range.end}
-                        onClick={exportCustomRange}
+                        disabled={!picked || busy != null}
+                        onClick={() => download('custom', picked)}
                     >
-                        Export Range
+                        {busy === 'custom' ? 'Preparing…' : 'Export Range'}
                     </button>
+
+                    {picked && (
+                        <p className="export-filename">
+                            Saves as <code>{reportFilename(picked.range)}</code>
+                        </p>
+                    )}
                 </div>
                 <Calendar
                     startDate={range.start}
@@ -151,6 +154,12 @@ export default function Export({ bookings = [] }) {
                     onRangeChange={({ start, end }) => setRange({ start, end })}
                 />
             </div>
+
+            {failed && (
+                <p className="export-error" role="alert">
+                    {failed}
+                </p>
+            )}
         </>
     )
 }
