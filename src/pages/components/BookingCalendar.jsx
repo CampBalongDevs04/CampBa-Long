@@ -3,7 +3,9 @@ import './css/bookingCalendar.css'
 import {
     addDays,
     countNights,
+    firstMaintenanceDayInRange,
     isMaintenanceDay,
+    isSelectableCheckOut,
     MAX_STAY_NIGHTS,
 } from '../../data/extendedStay.js'
 import {
@@ -28,11 +30,11 @@ function isSameDay(a, b) {
     return a && b && a.getTime() === b.getTime()
 }
 
-// The first date past the end of the longest bookable stay. This is a
-// guardrail, not a product rule — a stay is as long as the guest wants one to
-// be, a week included — so it sits a generous month out. Maintenance days
-// bound the ENDS of a stay rather than its length: they stay unselectable in
-// both panels while remaining highlighted inside a range the stay runs through.
+// The first date past the end of the longest bookable stay. This is an outer
+// guardrail against a mis-click holding a unit for a year, not the thing that
+// actually shapes the check-out panel day to day — isSelectableCheckOut()
+// below does that, disabling any date whose range would cross a maintenance
+// day, wherever in the stay it falls.
 function stayLimitAfter(date) {
     return addDays(date, MAX_STAY_NIGHTS + 1)
 }
@@ -64,6 +66,22 @@ function closureLabel(days, dates) {
 function cellClosureLabel(date) {
     const reason = describeClosureOn(date)
     return reason ? `the resort is closed on ${reason} for maintenance` : ''
+}
+
+// Why a CHECK-OUT cell is greyed when the date itself is open but the stay
+// leading up to it is not — the range from the chosen check-in runs through a
+// maintenance day somewhere in between, and this names that day rather than
+// the one the guest clicked.
+function rangeClosureLabel(checkIn, date) {
+    const own = cellClosureLabel(date)
+    if (own) return own
+    if (!checkIn) return ''
+    const blocker = firstMaintenanceDayInRange(checkIn, date)
+    if (!blocker) return ''
+    const reason = describeClosureOn(blocker)
+    return reason
+        ? `the stay would run through ${formatDate(blocker)}, closed on ${reason} for maintenance`
+        : ''
 }
 
 function formatDate(date) {
@@ -131,8 +149,15 @@ function CalendarPanel({ label, variant, selected, onSelect, minDate, maxDate, r
     for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(viewYear, viewMonth, day)
         const isPast = date.getTime() < today.getTime()
-        // Whichever days the resort has closed, not a hardcoded Monday.
-        const isClosed = isMaintenanceDay(date)
+        // A check-in cell only answers for itself — whichever days the resort
+        // has closed, not a hardcoded Monday. A check-out cell answers for the
+        // whole stay it would complete: `minDate` is the chosen check-in here
+        // (see the two CalendarPanel call sites below), so a date that is
+        // itself open still greys out if reaching it from that check-in would
+        // run through a maintenance day anywhere in between.
+        const isClosed = variant === 'checkout' && minDate
+            ? !isSelectableCheckOut(minDate, date)
+            : isMaintenanceDay(date)
         const isBeforeMin = minDate && date.getTime() <= minDate.getTime()
         const isPastMax = maxDate && date.getTime() >= maxDate.getTime()
         const isDisabled = isPast || isClosed || isBeforeMin || isPastMax
@@ -140,7 +165,9 @@ function CalendarPanel({ label, variant, selected, onSelect, minDate, maxDate, r
         const isInRange = rangeStart && rangeEnd &&
             date.getTime() > rangeStart.getTime() && date.getTime() < rangeEnd.getTime()
 
-        const closedBecause = isClosed ? cellClosureLabel(date) : ''
+        const closedBecause = isClosed
+            ? (variant === 'checkout' ? rangeClosureLabel(minDate, date) : cellClosureLabel(date))
+            : ''
 
         const classNames = ['cal-cell', 'cal-day']
         if (isClosed) classNames.push('cal-maintenance')
@@ -267,12 +294,13 @@ export default function BookingCalendar({ checkIn = null, checkOut = null, onCha
             onChange?.({ checkIn: date, checkOut: date })
             return
         }
-        // Keep the check-out only if it still describes a stay from the new
-        // check-in: after it, and inside the guardrail. Moving the check-in
-        // forward past your check-out clears it, so the next click on the
-        // right-hand panel reads as the new end of the range.
-        const nights = checkOut ? countNights(date, checkOut) : 0
-        const nextCheckOut = nights >= 1 && nights <= MAX_STAY_NIGHTS ? checkOut : null
+        // Keep the check-out only if it still describes a legal stay from the
+        // new check-in: after it, inside the guardrail, and clear of any
+        // maintenance day in between. Moving the check-in past your check-out
+        // — or across a closure that now sits inside the range — clears it, so
+        // the next click on the right-hand panel reads as the new end of the
+        // range.
+        const nextCheckOut = checkOut && isSelectableCheckOut(date, checkOut) ? checkOut : null
         onChange?.({ checkIn: date, checkOut: nextCheckOut })
     }
 
@@ -332,8 +360,9 @@ export default function BookingCalendar({ checkIn = null, checkOut = null, onCha
                     Stay as long as you like — pick your check-in, then your
                     check-out.
                     {closure && (
-                        <> {closure}, so a stay can&rsquo;t start or end on one,
-                        but a longer stay runs straight through.</>
+                        <> {closure}, so a stay can&rsquo;t start, end, or run
+                        through one — check out before it, or ask us about the
+                        dates around it.</>
                     )}
                 </p>
                 {(checkIn || checkOut) && (

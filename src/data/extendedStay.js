@@ -50,26 +50,32 @@
 //
 // HOW LONG A STAY MAY BE
 // ----------------------
-// As long as the guest wants. A week is a normal holiday and the calendar lets
-// them pick it: choose Aug 6, choose Aug 9, that is the stay.
-//
-// The resort's maintenance days bound the ENDS of a stay, not its length.
-// Nobody arrives or departs on a maintenance day — that is what the closure is
-// about, turnover and cleaning — but a guest already on-site simply stays
-// through it, which is the only way a week-long booking can exist at all (any
-// seven-night stay necessarily covers every weekday). So:
+// As long as the guest wants, up to the next maintenance day. A stay may not
+// include one at all — not at the ends, not in the middle:
 //
 //     check-in  may not fall on a maintenance day
 //     check-out may not fall on a maintenance day
-//     every day in between may be anything
+//     no day in between may be one either
 //
-// WHICH days those are is a setting, not a constant — the resort closes Monday
-// today, Monday and Tuesday next month, and the 8th to the 10th of August for a
-// repaint. data/maintenanceDays.js owns both halves of that (a weekly pattern
-// and a list of single dates) and this module asks it one question:
-// isMaintenanceDay(). Everything below is written for a RUN of closed days
-// rather than a single one: minNightsFrom() walks forward until it finds an
-// open day instead of assuming one step clears it.
+// The resort closes for turnover and cleaning, and nobody is on-site while
+// that happens — a guest already checked in has to be checked out before it,
+// not staying through it. Practically, that means the closure caps the length
+// of a stay: check in Wed the 12th with Monday the 17th closed, and the
+// longest stay on offer checks out Sun the 16th (4 nights), not Tue the 18th.
+//
+// This does put a week-long stay out of reach WHILE a weekly closure is
+// running — any seven nights necessarily cover one. That trade was made on
+// purpose: WHICH days are closed is a setting, not a constant
+// (data/maintenanceDays.js owns it, weekly pattern and one-off dates both), so
+// staff can lift or move the closure from the dashboard for a stretch they
+// know a longer stay is wanted over — a holiday week, a private event — rather
+// than the system quietly allowing guests to occupy a unit while it is being
+// serviced.
+//
+// This module asks maintenanceDays.js one question, isMaintenanceDay(), and
+// everything below is written for a RUN of closed days rather than a single
+// one: stayTouchesMaintenanceDay() walks every day of the candidate range
+// rather than only checking the two ends.
 //
 // MAX_STAY_NIGHTS below is a guardrail against a mis-click holding the last
 // A-House for a year, not a product rule. Raise it freely.
@@ -129,80 +135,92 @@ export function isMaintenanceDay(value) {
     return isMaintenanceDow(date.getDay()) || isMaintenanceDate(date)
 }
 
-// The shortest stay that can start on this date. One night, unless that night
-// would check out on a maintenance day — a Sunday arrival with Monday closed
-// has to stay until the Tuesday, which is two nights, and with Monday AND
-// Tuesday closed it stays until the Wednesday.
+// The first maintenance day inside [checkIn, checkOut], inclusive of both
+// ends — the one day, if any, that a candidate stay is blocked BY. Walking to
+// MAX_STAY_NIGHTS rather than stopping at a week matters for one-off closures,
+// which are not bounded by the week: the 8th through the 20th closed for a
+// rebuild is thirteen closed days in a row.
 //
-// The walk is what makes a multi-day closure work: it steps over the whole run
-// rather than assuming one step clears it. It runs to MAX_STAY_NIGHTS rather
-// than to the end of a week because one-off dates are not bounded by the week:
-// closing the 8th through the 20th for a rebuild is thirteen closed days in a
-// row, and a walk that gave up after seven would hand back a check-out date the
-// database is going to refuse.
-//
-// Falling back to 1 means the whole guardrail window is closed — nothing can
-// start here at all, and the calendar has already greyed the date out.
-export function minNightsFrom(checkIn) {
+// checkOut defaults to checkIn so a one-argument call answers "is this single
+// date closed", the same question isMaintenanceDay() answers — this is the
+// range version of it.
+export function firstMaintenanceDayInRange(checkIn, checkOut) {
     const start = startOfDay(checkIn)
-    if (!start) return 1
-    for (let nights = 1; nights <= MAX_STAY_NIGHTS; nights += 1) {
-        if (!isMaintenanceDay(addDays(start, nights))) return nights
+    if (!start) return null
+    const end = startOfDay(checkOut) ?? start
+    const nights = Math.max(0, Math.min(countNights(start, end), MAX_STAY_NIGHTS + 1))
+    for (let step = 0; step <= nights; step += 1) {
+        const day = addDays(start, step)
+        if (isMaintenanceDay(day)) return day
     }
-    return 1
+    return null
 }
 
-// The longest stay the pickers offer from this date. The guardrail, pulled back
-// day by day until the check-out lands on a day the resort is open. Never
-// shorter than the floor: a max below the min would leave the stepper with no
-// legal value at all.
+// Would this stay include a maintenance day anywhere along it — at check-in,
+// at check-out, or on a night in between? The SQL twin is
+// stay_touches_maintenance_day() in the Supabase migrations.
+export function stayTouchesMaintenanceDay(checkIn, checkOut) {
+    return firstMaintenanceDayInRange(checkIn, checkOut) != null
+}
+
+// The shortest stay that can start on this date — always 1 night, since a
+// range only grows as nights increase and never sheds a maintenance day once
+// one has entered it. So the moment the smallest possible stay, [checkIn,
+// checkIn+1], touches one, EVERY longer stay from the same check-in touches it
+// too: there is no minimum long enough to walk past a closure the way there
+// used to be. `null` means exactly that — no legal check-out exists from this
+// date at all — which is what the calendar already keeps a guest from picking
+// (a check-in the day before a closure never offers only overnight, only Day
+// Time; see TimeSelector).
+export function minNightsFrom(checkIn) {
+    const start = startOfDay(checkIn)
+    if (!start) return null
+    return stayTouchesMaintenanceDay(start, addDays(start, 1)) ? null : 1
+}
+
+// The longest stay the pickers offer from this date, or null alongside
+// minNightsFrom() when there is no legal stay from here at all. Pulled back
+// night by night from the guardrail until the range no longer touches a
+// maintenance day — MAX_STAY_NIGHTS if the resort has that many consecutive
+// open days ahead, fewer the moment a closure sits inside the window.
 export function maxNightsFrom(checkIn) {
     const start = startOfDay(checkIn)
-    if (!start) return MAX_STAY_NIGHTS
+    if (!start) return null
     const floor = minNightsFrom(start)
+    if (floor == null) return null
     for (let nights = MAX_STAY_NIGHTS; nights > floor; nights -= 1) {
-        if (!isMaintenanceDay(addDays(start, nights))) return nights
+        if (!stayTouchesMaintenanceDay(start, addDays(start, nights))) return nights
     }
     return floor
 }
 
 // Can the guest actually check out on this date? Strictly after the check-in,
-// not a maintenance day, and inside the guardrail. The one place that question
-// is answered — the calendar disables cells with it and the nights stepper
-// steps past them with it, so the two can never offer different dates.
+// inside the guardrail, and the whole range clear of maintenance days — not
+// just the two ends. The one place that question is answered — the calendar
+// disables cells with it and the nights stepper's quick-picks filter with it,
+// so the two can never offer different dates.
 export function isSelectableCheckOut(checkIn, candidate) {
     const start = startOfDay(checkIn)
     const date = startOfDay(candidate)
     if (!start || !date) return false
     const nights = countNights(start, date)
-    return nights >= 1 && nights <= MAX_STAY_NIGHTS && !isMaintenanceDay(date)
+    return nights >= 1 && nights <= MAX_STAY_NIGHTS && !stayTouchesMaintenanceDay(start, date)
 }
 
-// The check-out date for a requested number of nights, nudged off a
-// maintenance day rather than refused: a guest asking for 7 nights from a
-// Monday-landing date gets 8, which is the nearest stay they can actually
-// book. `direction` is which way to nudge — the stepper passes the way it was
-// already moving, so pressing "−" never bounces the value back up.
-export function checkOutForNights(checkIn, nights, direction = 1) {
+// The check-out date for a requested number of nights, clamped into
+// [minNightsFrom, maxNightsFrom]. No nudging off a blocked value is needed
+// here the way it once was: every night count inside that range is already
+// clear of maintenance days, by construction of maxNightsFrom() above, so the
+// clamp alone always lands on a legal date. `null` when there is no legal
+// stay from this check-in at all.
+export function checkOutForNights(checkIn, nights) {
     const start = startOfDay(checkIn)
     if (!start) return null
-    const step = direction < 0 ? -1 : 1
-    let want = Math.max(1, Math.round(Number(nights) || 1))
-
-    // Every candidate the clamp can produce lies inside [1, MAX_STAY_NIGHTS],
-    // and each pass either returns or moves one night through that window — so
-    // this many passes is more than enough to walk out of the longest closure
-    // that fits in it. The spare iterations are for the clamp bouncing the
-    // value back inside [min, max] after a nudge overshoots one end.
-    for (let guard = 0; guard < MAX_STAY_NIGHTS + 3; guard += 1) {
-        const min = minNightsFrom(start)
-        const max = maxNightsFrom(start)
-        want = Math.min(max, Math.max(min, want))
-        const candidate = addDays(start, want)
-        if (!isMaintenanceDay(candidate)) return candidate
-        want += step
-    }
-    return addDays(start, Math.max(minNightsFrom(start), want))
+    const min = minNightsFrom(start)
+    if (min == null) return null
+    const max = maxNightsFrom(start)
+    const want = Math.min(max, Math.max(min, Math.max(1, Math.round(Number(nights) || 1))))
+    return addDays(start, want)
 }
 
 // How many nights this booking is actually BILLED for.

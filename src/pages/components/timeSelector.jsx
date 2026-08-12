@@ -17,12 +17,13 @@ import { addDays, minNightsFrom } from '../../data/extendedStay.js'
 import { describeClosureOn, useMaintenanceDays } from '../../data/maintenanceDays.js'
 import { useBookingPage } from '../../data/bookingPage.js'
 
-// Every schedule used to be offered on every check-in date — a stay was meant
-// to be able to run straight through a closure (e.g. a Sunday arrival simply
-// staying until Tuesday when Monday is closed). In practice that path is
-// bugged further down the booking flow, so until it's fixed the overnight
-// schedules are blocked outright on a check-in whose very next day is a
-// closure, the same way a Sunday arrival used to be Day-Time-only.
+// A stay may not include a maintenance day anywhere along it — not at the
+// ends, not in the middle (see "HOW LONG A STAY MAY BE" in
+// data/extendedStay.js) — so a check-in whose very next day is a closure has
+// no overnight stay it can book, of any length: the shortest possible one, one
+// night, already fails, and every longer one only adds days to a range that
+// already does. Day Time is unaffected — it never has a next day to fail on —
+// so it stays offered on every date that is itself open.
 export default function TimeSelector({ selectedTime, onSelectTime, checkIn }){
     // Subscribed rather than read once: staff can change the closure from the
     // dashboard while this is on screen, and a schedule that has just become
@@ -32,10 +33,10 @@ export default function TimeSelector({ selectedTime, onSelectTime, checkIn }){
     // Inclusions). The cards themselves are not: they are the schedules the
     // booking engine holds units against, edited in Units.
     const { page } = useBookingPage()
-    // floor > 1 means a single night from this check-in would check out on a
-    // closed day — that's exactly when the overnight schedules are unusable.
+    // null means no overnight stay exists from this check-in at all — see
+    // minNightsFrom()'s own comment for why that is the only other answer.
     const floor = checkIn != null ? minNightsFrom(checkIn) : 1
-    const overnightBlocked = floor > 1
+    const overnightBlocked = floor == null
     // WHICH closure blocked it: the day after the check-in is the one nobody
     // could check out on, and it may be shut for the week ('Mondays') or shut
     // as a one-off ('August 9, 2026'). Naming the weekly pattern for a one-off

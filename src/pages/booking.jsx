@@ -243,7 +243,7 @@ export default function Booking(){
         }
 
         if (selectedTime !== null && schedule?.sameDay !== true
-            && minNightsFrom(nextDates.checkIn) > 1) {
+            && minNightsFrom(nextDates.checkIn) == null) {
             setSelectedTime(null)
         }
     }

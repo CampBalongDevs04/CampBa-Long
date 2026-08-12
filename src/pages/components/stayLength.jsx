@@ -4,13 +4,13 @@ import {
     checkOutForNights,
     countNights,
     isSelectableCheckOut,
+    MAX_STAY_NIGHTS,
     maxNightsFrom,
     minNightsFrom,
 } from '../../data/extendedStay.js'
 import {
     describeClosureOn,
     useMaintenanceDays,
-    WEEKDAY_NAMES,
 } from '../../data/maintenanceDays.js'
 
 // THE CALENDAR IS THE RANGE PICKER
@@ -51,31 +51,33 @@ export default function StayLength({ checkIn, checkOut, schedule, onChange }){
     useMaintenanceDays()
     const nights = countNights(checkIn, checkOut)
     const floor = minNightsFrom(checkIn)
-    // The day the guest cannot check out on: the one right after the check-in.
-    // Named by whichever closure shut it — 'Mondays' for the weekly pattern,
-    // 'August 9, 2026' for a one-off.
-    const closedOn = checkIn ? describeClosureOn(addDays(checkIn, 1)) : ''
     const ceiling = maxNightsFrom(checkIn)
     const disabled = !checkIn
 
-    // `direction` is which way the guest is moving, handed down to
-    // checkOutForNights() so a value that lands on a maintenance day is nudged
-    // the way they were already going — pressing "−" never bounces the number
-    // back up.
-    const setNights = (value, direction = 1) => {
+    // `floor` (and `ceiling` with it) comes back null when even the shortest
+    // possible stay — one night — would run into a maintenance day: nothing
+    // legal starts here at all. In practice TimeSelector has already sent the
+    // guest back for a different check-in before an overnight schedule (and
+    // this control) can be reached from one, but the guard stays here too
+    // rather than trusting that from a distance.
+    const noStayFromHere = checkIn != null && floor == null
+
+    // The day a longer stay is capped by — the first maintenance day past the
+    // ceiling — named by whichever closure it is: 'Mondays' for the weekly
+    // pattern, 'August 9, 2026' for a one-off. Null when the guardrail
+    // (MAX_STAY_NIGHTS), not a closure, is what stops the stay from going
+    // longer.
+    const cappedOn = checkIn && ceiling != null && ceiling < MAX_STAY_NIGHTS
+        ? describeClosureOn(addDays(checkIn, ceiling + 1))
+        : ''
+
+    const setNights = (value) => {
         if (disabled) return
-        const next = checkOutForNights(checkIn, value, direction)
+        const next = checkOutForNights(checkIn, value)
         if (!next) return
         if (checkOut && next.getTime() === checkOut.getTime()) return
         onChange?.(next)
     }
-
-    // An arrival the day before a closure cannot check out into it, so its
-    // shortest stay is longer than one night — two with Monday closed, three
-    // with Monday and Tuesday. Worth saying rather than leaving "−"
-    // mysteriously dead.
-    const atFloor = nights > 0 && nights <= floor
-    const arrivalDay = checkIn ? WEEKDAY_NAMES[checkIn.getDay()] : ''
 
     return (
         <div className={`stay-length${disabled ? ' stay-length-disabled' : ''}`}>
@@ -95,8 +97,8 @@ export default function StayLength({ checkIn, checkOut, schedule, onChange }){
                     type="button"
                     className="stay-length-step"
                     aria-label="One night shorter"
-                    onClick={() => setNights(nights - 1, -1)}
-                    disabled={disabled || nights <= floor}
+                    onClick={() => setNights(nights - 1)}
+                    disabled={disabled || floor == null || nights <= floor}
                 >
                     &minus;
                 </button>
@@ -109,8 +111,8 @@ export default function StayLength({ checkIn, checkOut, schedule, onChange }){
                     type="button"
                     className="stay-length-step"
                     aria-label="One night longer"
-                    onClick={() => setNights(Math.max(floor - 1, nights) + 1, 1)}
-                    disabled={disabled || nights >= ceiling}
+                    onClick={() => setNights(nights + 1)}
+                    disabled={disabled || ceiling == null || nights >= ceiling}
                 >
                     +
                 </button>
@@ -118,21 +120,26 @@ export default function StayLength({ checkIn, checkOut, schedule, onChange }){
 
             <div className="stay-length-choices">
                 {QUICK_PICKS.map(({ nights: value, label }) => {
-                    // Offered only when it delivers exactly what it says. A
-                    // one-night stay from a Sunday would check out on a closed
-                    // Monday, so checkOutForNights() nudges it to two —
-                    // correct behaviour for the stepper, but a chip reading
-                    // "1 night" that books two is a small lie. It is dropped
-                    // from the row instead.
-                    const target = checkIn ? checkOutForNights(checkIn, value, 1) : null
-                    if (!target || !isSelectableCheckOut(checkIn, target)) return null
-                    if (countNights(checkIn, target) !== value) return null
+                    // Every length is always shown — greyed out rather than
+                    // dropped when this check-in can't currently reach it, so
+                    // "1 week" stays visible as a real option even when a
+                    // closure inside it rules it out today. Staff can move
+                    // that closure, or the guest can pick a different
+                    // check-in, and the chip should not have quietly vanished
+                    // in the meantime. Enabled only when it delivers exactly
+                    // what it says: the full length, clear of every
+                    // maintenance day along it.
+                    const target = checkIn ? checkOutForNights(checkIn, value) : null
+                    const reachable = target != null
+                        && isSelectableCheckOut(checkIn, target)
+                        && countNights(checkIn, target) === value
                     return (
                         <button
                             key={value}
                             type="button"
                             className={`stay-length-chip${value === nights ? ' selected' : ''}`}
-                            onClick={() => setNights(value, 1)}
+                            onClick={() => setNights(value)}
+                            disabled={!reachable}
                             aria-pressed={value === nights}
                         >
                             {label}
@@ -146,18 +153,27 @@ export default function StayLength({ checkIn, checkOut, schedule, onChange }){
                 <span className="stay-length-note-body">
                     {!checkIn ? (
                         <>Pick a <strong>check-in date</strong> above, then choose your check-out — or set the nights here.</>
+                    ) : noStayFromHere ? (
+                        <>
+                            No stay can start here — the resort is closed for
+                            maintenance the very next day. Pick a different
+                            check-in date.
+                        </>
                     ) : nights < 1 ? (
                         <>
                             Choose your <strong>check-out date</strong> on the calendar, or set the
-                            nights here. Stay as long as you like.
+                            nights here.
+                            {cappedOn
+                                ? ` Up to ${ceiling} night${ceiling === 1 ? '' : 's'} from this date — the resort is closed on ${cappedOn} after that.`
+                                : ' Stay as long as you like.'}
                         </>
                     ) : (
                         <>
                             Checking out <strong>{formatDate(checkOut)}</strong>
                             {schedule ? ` at ${schedule.time.split(' - ')[1]}` : ''}.
-                            {atFloor && floor > 1 && closedOn
-                                ? ` A ${arrivalDay} check-in stays at least ${floor} nights`
-                                  + ` — nobody checks out on ${closedOn}.`
+                            {cappedOn
+                                ? ` The longest stay from here is ${ceiling} night${ceiling === 1 ? '' : 's'}`
+                                  + ` — the resort is closed on ${cappedOn} for maintenance.`
                                 : ''}
                         </>
                     )}

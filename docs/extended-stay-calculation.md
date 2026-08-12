@@ -115,9 +115,12 @@ senior discount taken off at the resort against their ID.
 | Down payment (50%, sent within 10 minutes of reserving) | **₱3,900.00** |
 | Balance on-site at check-in | ₱3,900.00, less any senior discount the desk applies |
 
-The same stay stretched to a week (Aug 6 → Aug 13, 3 pax, no kids or seniors)
-runs straight through Monday Aug 10 and comes to ₱2,250 × 7 = ₱15,750 plus
-₱2,450 entrance = **₱18,200**, half of it — ₱9,100 — due on reservation.
+The same math scales to any length the calendar allows — but not to a week
+from *this* check-in. Thu Aug 6 is already as long a stay as the calendar
+offers before Monday Aug 10 closes the resort: 3 nights, checking out Sun Aug
+9, is the ceiling. A week-long stay is still bookable, just not from a
+Thursday while Monday closes weekly — see §4 for why, and how staff can lift
+that for a stretch where a longer stay is wanted.
 
 > When a promo *is* running it does not replace the standing rate — it sits
 > beside it, and `effectiveRatePrice()` is what every screen asks for the number
@@ -132,40 +135,53 @@ so it picks the extra nights up on its own.
 
 ## 4. How long a stay may be
 
-**As long as the guest wants.** Pick Aug 6, pick Aug 9 — that is the stay. Pick
-Aug 13 instead and it is a week. There is no short cap; a fortnight is a
-supported booking.
+**As long as the guest wants, up to the next maintenance day.** Pick Aug 6,
+pick Aug 9 — that is the stay, as long as nothing in between is closed. A
+fortnight is a supported booking whenever a fortnight of open days is there to
+book.
 
-The resort's Monday maintenance day bounds the **ends** of a stay, not its
-length:
+A stay may not include a maintenance day anywhere along it — not at the ends,
+not in the middle:
 
 ```
-check-in  may not be a Monday
-check-out may not be a Monday
-every day in between may be anything
+check-in  may not be a maintenance day
+check-out may not be a maintenance day
+no night in between may be one either
 ```
 
-Nobody arrives or departs on maintenance day — that is what the closure is
-about, turnover and cleaning — but a guest already on-site simply stays through
-it. This distinction is what makes a week-long booking possible at all: any
-seven-night stay necessarily covers a Monday. On the calendar those Mondays stay
-unselectable while remaining highlighted inside the range, which reads exactly
-right — you pass through it, you cannot start or end on it.
+Nobody is on-site while the resort is being serviced — that is what the
+closure means — so a guest already checked in has to be checked out before it,
+not staying through it. Concretely: check in Wed the 12th with Monday the 17th
+closed, and the calendar's longest offer checks out Sun the 16th (4 nights),
+not Tue the 18th. On the calendar, both panels grey out any date that would
+put a maintenance day inside the range — the check-out panel included, which
+is what actually shortens the stay as the check-in approaches a closure.
+
+This does mean a week-long stay is out of reach *while a weekly closure is
+running* — any seven nights necessarily cover it. That trade is deliberate:
+WHICH days are closed is a setting (the dashboard's Maintenance tab, backed by
+`public.maintenance_days`), not a constant, so staff can lift or move the
+closure for a stretch they know a longer stay is wanted over — a holiday week,
+a private event — rather than the system quietly letting a guest occupy a unit
+while it is being cleaned.
 
 Two consequences worth knowing:
 
-* **A Sunday check-in stays at least 2 nights**, because one night would check
-  out on the Monday. `minNightsFrom()` is the rule. Sunday arrivals are no
-  longer forced to Day Time — that restriction only existed because the sole
-  overnight stay they could make ended on a Monday.
-* **The nights stepper steps *over* a Monday.** From a Thursday, `+` goes
-  3 → 5 nights (Sunday → Tuesday), skipping the Monday check-out; `−` goes
-  5 → 3, nudging the way you were already moving so the number never bounces
-  back. The quick-pick chips only appear when they deliver exactly their label,
-  so "1 night" is simply absent on a Sunday.
+* **A check-in the day before a closure has no overnight stay at all.** Even
+  one night would check out into the closure, and every longer stay only adds
+  days to a range that already fails — there is no minimum long enough to walk
+  past it the way there briefly was. `minNightsFrom()` returns `null` for
+  exactly this case, and TimeSelector greys out both overnight schedules for
+  that check-in, leaving Day Time (no night to fail on) as the only option.
+* **The nights stepper and quick-pick chips just stop early.** From a
+  Wednesday with Monday closed four days out, `+` disables itself at 4 nights
+  instead of stepping past the closure, and "1 week" simply does not appear as
+  a chip — offered only when it delivers exactly what it says.
 
 `MAX_STAY_NIGHTS` (30) exists so an unbounded date picker cannot take a unit off
 the market for a year. It is a guardrail, not a product rule — raise it freely.
+It is independent of the maintenance cap above: whichever limit is tighter for
+a given check-in is the one the guest actually runs into.
 
 ---
 
@@ -202,17 +218,24 @@ about them.
 
 ## 6. What the database asserts
 
-`supabase/migrations/20260806120000_extended_stays.sql` adds two things:
+`supabase/migrations/20260806120000_extended_stays.sql` adds **`nights`** on
+`bookings` and `booking_groups` — a generated column,
+`greatest(check_out_date - check_in_date, 1)`, so it can never disagree with
+the dates the occupancy window was built from.
 
-1. **`nights`** on `bookings` and `booking_groups` — a generated column,
-   `greatest(check_out_date - check_in_date, 1)`, so it can never disagree with
-   the dates the occupancy window was built from.
-2. **A maintenance-day guard** — `stay_ends_on_maintenance_day()` plus a CHECK
-   constraint, so a stay that would *start or finish* on a Monday is refused by
-   the database and not only by the booking form. A Monday **inside** the stay
-   is explicitly allowed; forbidding it would make a week-long booking
-   impossible. Added `NOT VALID`: it binds every write from here on without
-   scanning rows already in the table.
+The maintenance-day guard has moved twice since. It started as a CHECK
+constraint restricted to a hardcoded Monday; `20260808220000_maintenance_days`
+turned the closure into a setting (`public.maintenance_days`) and moved the
+rule into a BEFORE trigger, because a CHECK constraint may only call an
+IMMUTABLE function and a setting has to be read from a table. As of
+`20260812120000_maintenance_day_full_stay.sql`, the trigger
+(`reject_maintenance_day_touch()`, firing on `bookings` and `booking_groups`)
+refuses a stay whose check-in, check-out, **or any night in between** falls on
+a maintenance day — `stay_touches_maintenance_day()` walks the whole range,
+not just the two ends. This is the server-side twin of §4 above, and of
+`stayTouchesMaintenanceDay()` in `src/data/extendedStay.js`: the same rule
+enforced twice so nothing can reach the table by a path the booking form
+didn't check.
 
 Nothing about occupancy changed. `occupancy_window()` has always run from the
 check-in day's start hour to the check-out day's end hour, so Aug 6 → Aug 9 on

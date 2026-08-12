@@ -89,7 +89,7 @@ const ACCOMMODATION_INFO = [
 // comment on computeEntranceFee() in data/entranceFee.js for how it's applied
 // now. Units in FREE_ENTRANCE_EXCLUDED_UNITS don't get the perk at all, per
 // the rate card's "not applicable for ..." notes.
-export const FREE_ENTRANCE_EXCLUDED_UNITS = new Set(['tent-pitching', 'cottage', 'pavilion'])
+export const FREE_ENTRANCE_EXCLUDED_UNITS = new Set(['tent-pitching', 'cottage', 'pavilion', 'table'])
 
 export function isFreeEntranceEligible(unitId){
     return unitId != null && !FREE_ENTRANCE_EXCLUDED_UNITS.has(unitId)
