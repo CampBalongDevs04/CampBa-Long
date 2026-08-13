@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/seo-postbuild.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -31,7 +31,7 @@
     "tailwindcss": "^4.3.1",
     "vite": "^8.1.0"
   },
-  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
+  "description": "Booking and CMS site for Camp Ba-long Nature Farm & Resort, Liliw, Laguna.",
   "main": "eslint.config.js",
   "repository": {
     "type": "git",

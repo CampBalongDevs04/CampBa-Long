@@ -32,7 +32,7 @@ export default function Location(){
                 <div className = "location-header">
                     <LotusDividerIcon />
                     {section.eyebrow && <p className = "location-eyebrow">{section.eyebrow}</p>}
-                    {section.title && <h1 className = "location-title">{section.title}</h1>}
+                    {section.title && <h2 className="location-title">{section.title}</h2>}
                     {section.subtitle && <p className = "location-sub">{section.subtitle}</p>}
                 </div>
 

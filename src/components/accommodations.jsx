@@ -398,7 +398,7 @@ function AccommodationModal({ acc, onClose, onBook }) {
                 <div className="acc-modal-carousel">
                     <div className="acc-modal-slide" style={{ background: acc.photoBg }}>
                         {images[slide] ? (
-                            <img src={images[slide]} alt={`${acc.title} photo ${slide + 1}`} draggable="false" />
+                            <img src={images[slide]} alt={`${acc.title} photo ${slide + 1}`} draggable="false" loading="lazy" decoding="async" />
                         ) : (
                             <>
                                 <UnitIcon paths={acc.icon} />
@@ -441,7 +441,7 @@ function AccommodationModal({ acc, onClose, onBook }) {
                                         aria-label={`Go to photo ${i + 1}`}
                                         aria-current={i === slide}
                                     >
-                                        {src && <img src={src} alt="" draggable="false" />}
+                                        {src && <img src={src} alt="" draggable="false" loading="lazy" decoding="async" />}
                                     </button>
                                 ))}
                             </div>
@@ -653,7 +653,7 @@ export default function Accommodations() {
                 See data/accommodationSection.js for why those are separate. */}
             <div className="acc-header">
                 <LotusDividerIcon />
-                {section.title && <h1 className="acc-title">{section.title}</h1>}
+                {section.title && <h2 className="acc-title">{section.title}</h2>}
                 {section.subtitle && <p className="acc-sub">{section.subtitle}</p>}
             </div>
 
@@ -722,7 +722,7 @@ export default function Accommodations() {
                                             — a unit can genuinely be all three. */}
                                         {promo && <span className="acc-badge acc-badge-promo">Promo</span>}
                                         {acc.image ? (
-                                            <img src={acc.image} alt={acc.title} draggable="false" />
+                                            <img src={acc.image} alt={acc.title} draggable="false" loading="lazy" decoding="async" />
                                         ) : (
                                             <>
                                                 <UnitIcon paths={acc.icon} />

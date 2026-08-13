@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import './components/css/spaService.css'
 import Footer from '../components/footer'
 import LotusDividerIcon from '../components/LotusDividerIcon'
+import Seo from '../components/Seo.jsx'
 import { useBookings } from '../data/useBookings.js'
 import { SkeletonImage } from '../components/skeletons/Skeleton.jsx'
 // The treatments and their prices live in Postgres (spa_services) — see
@@ -187,7 +188,7 @@ function SpaOrderModal({ item, onClose, onAddToCart }) {
                 ) : (
                     <div className="spa-order-body">
                         <div className="spa-order-image">
-                            <SkeletonImage src={item.image} alt={item.name} />
+                            <SkeletonImage src={item.image} alt={item.name} loading="lazy" decoding="async" />
                             <span className="spa-order-duration">
                                 <svg viewBox="0 0 24 24" strokeWidth="1.8" aria-hidden="true">
                                     <circle cx="12" cy="12" r="9" />
@@ -413,7 +414,8 @@ function SpaService() {
     }, [galleryPhotos, hilotServices])
 
     return (
-
+        <>
+        <Seo path="/spa" />
         <main className="page spa-service-page" ref={sectionsRef}>
             {/* The backdrop is only set inline once staff have uploaded one.
                 The stylesheet already paints the photo the site shipped with,
@@ -452,9 +454,9 @@ function SpaService() {
 
                 <div className="spa-how-to-header">
                     <LotusDividerIcon />
-                    <h1 className = "spa-header-title">
+                    <h2 className="spa-header-title">
                         {reserve.heading}
-                    </h1>
+                    </h2>
                 </div>
 
             <div className ="Spa-instruction-container">
@@ -489,9 +491,9 @@ function SpaService() {
             <section className ="spa-service-section">
                 <div className="spa-service-header">
                     <LotusDividerIcon />
-                    <h1 className="spa-service-title">
+                    <h2 className="spa-service-title">
                     {gallery.heading}
-                    </h1>
+                    </h2>
 
                     {gallery.subtitle && (
                         <p className="spa-service-subtitle">
@@ -517,7 +519,7 @@ function SpaService() {
                 <div className="spa-hilot-header">
                     <LotusDividerIcon />
                     {hilot.eyebrow && <span className="spa-hilot-eyebrow">{hilot.eyebrow}</span>}
-                    <h1 className="spa-hilot-title">{hilot.title}</h1>
+                    <h2 className="spa-hilot-title">{hilot.title}</h2>
                     {hilot.subtitle && (
                         <p className="spa-hilot-subtitle">
                             {hilot.subtitle}
@@ -600,6 +602,7 @@ function SpaService() {
                 onDismissBlocked={() => setCheckoutStatus('idle')}
             />
         </main>
+        </>
     )
 }
 

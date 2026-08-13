@@ -62,7 +62,7 @@
   .lotus-divider .rule.left{ --dir: left; background: linear-gradient(to left, transparent, var(--gold)); }
   .lotus-divider .rule.right{ background: linear-gradient(to right, transparent, var(--gold)); }
 
-  h1.offer-title{
+  .offer-title{
     font-family: 'Cormorant Garamond', serif;
     font-weight: 700;
     letter-spacing: clamp(2px, 1vw, 4px);

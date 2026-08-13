@@ -24,6 +24,7 @@ const MyBooking = lazy(() => import('./pages/mybooking.jsx'))
 // file, so admindash2345.jsx put the secret path back in the Network tab.
 const AdminDash = lazy(() => import('./admin/dashboard.jsx'))
 const Booking = lazy(() => import('./pages/booking.jsx'))
+const NotFound = lazy(() => import('./pages/notFound.jsx'))
 
 // Every path the public site answers on. Anything else is a candidate for the
 // admin URL, and only those pay for the digest check in useIsAdminPath.
@@ -107,11 +108,21 @@ function App() {
           <Suspense fallback={<BookingPageSkeleton />}><Booking /></Suspense>
         } />
         {/* The admin path is deliberately absent from this table. The catch-all
-            mounts the dashboard only once the digest matches; every other
-            unmatched path falls through to nothing, as it did before. */}
+            mounts the dashboard only once the digest matches.
+
+            The three states are not the same and must not be collapsed:
+              true  — the digest matched, this is the dashboard
+              false — definitively not the admin URL, so it is a wrong one
+              null  — still hashing, and we do not yet know which
+
+            Rendering the 404 while the answer is still null would flash "we
+            couldn't find that page" across the admin URL every time staff open
+            it, so null keeps rendering nothing, exactly as before. */}
         <Route path="*" element={
           isAdminPage === true ? (
             <Suspense fallback={<AdminLoginSkeleton />}><AdminDash /></Suspense>
+          ) : isAdminPage === false ? (
+            <Suspense fallback={null}><NotFound /></Suspense>
           ) : null
         } />
       </Routes>

@@ -5,10 +5,15 @@ import Accommodations from '../components/accommodations.jsx'
 import PromoMarquee from '../components/promoMarquee.jsx'
 import Testimonials from '../components/testimonials.jsx'
 import Location from '../components/location.jsx'
-import { FAQDemo } from '../components/Usage.tsx'
+// Lower-case 'usage.tsx' — the file is committed under that name, and Netlify
+// and Vercel build on Linux, where the spelling has to match exactly.
+import { FAQDemo } from '../components/usage.tsx'
 import Contact from '../components/contact.jsx'
 import Footer from '../components/footer.jsx'
+import Seo from '../components/Seo.jsx'
 import { SkeletonImage } from '../components/skeletons/Skeleton.jsx'
+import { useFaqSection } from '../data/faqSection.js'
+import { buildFaqSchema } from '../lib/structuredData.js'
 import {
     useHomeHero,
     resolveHeroImage,
@@ -56,6 +61,14 @@ function HeroButton({ href, label, className, children }) {
 function Home() {
     const { hero, activeFeatures } = useHomeHero()
 
+    // The same store the accordion further down the page renders from, so the
+    // FAQPage schema describes the questions actually on screen — including any
+    // staff added this morning — rather than a copy that drifts from them.
+    // Subscribing twice costs nothing: it is one useSyncExternalStore over a
+    // module-level cache, not a second fetch.
+    const { activeFaqs } = useFaqSection()
+    const faqSchema = buildFaqSchema(activeFaqs)
+
     const videoSrc = resolveHeroVideo(hero.videoUrl)
     // Only set when staff have uploaded one: the stylesheet already paints the
     // background the site shipped with, and an inline style that repeated it
@@ -66,6 +79,7 @@ function Home() {
 
     return (
         <>
+            <Seo path="/" extraSchema={faqSchema ? [faqSchema] : []} />
             <div className="hero-banner" id="home" style={backgroundStyle}>
                 {hero.showVideo && (
                     <video
@@ -117,7 +131,19 @@ function Home() {
                 </div>
 
                 <div className="hero-image-circle">
-                    <SkeletonImage src={resolveHeroImage(hero.imageUrl)} alt="Camp Ba-long resort" />
+                    {/* The largest thing above the fold, so it is what Google
+                        measures LCP against. Explicitly eager and high
+                        priority: the browser's own guess is made before the
+                        stylesheet says how big this is, and it guesses low for
+                        an image this far down the markup. Never lazy — a lazy
+                        LCP image is a direct Core Web Vitals penalty. */}
+                    <SkeletonImage
+                        src={resolveHeroImage(hero.imageUrl)}
+                        alt="Camp Ba-long resort"
+                        loading="eager"
+                        fetchPriority="high"
+                        decoding="async"
+                    />
                 </div>
                 </div>
 
@@ -130,7 +156,15 @@ function Home() {
                             const icon = resolveHeroIcon(feature.iconKey, feature.iconUrl)
                             return (
                                 <div className="hero-feature" key={feature.id}>
-                                    {icon && <img src={icon} alt="" aria-hidden="true" />}
+                                    {icon && (
+                                        <img
+                                            src={icon}
+                                            alt=""
+                                            aria-hidden="true"
+                                            loading="lazy"
+                                            decoding="async"
+                                        />
+                                    )}
                                     <div>
                                         <h3>{feature.title}</h3>
                                         {feature.description && <p>{feature.description}</p>}

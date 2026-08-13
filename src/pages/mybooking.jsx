@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import './components/css/mybooking.css'
 import Footer from '../components/footer'
+import Seo from '../components/Seo.jsx'
 import BookingPayment from './components/bookingPayment.jsx'
 import { saveReceiptImage } from './components/receiptImage.js'
 import { useBookings } from '../data/useBookings.js'
@@ -728,6 +729,8 @@ function MyBooking() {
     }
 
     return (
+        <>
+        <Seo path="/my-booking" />
         <main className="page my-booking-page">
             <div className="my-booking-shell">
                 <header className="my-booking-hero">
@@ -856,6 +859,7 @@ function MyBooking() {
 
             <Footer />
         </main>
+        </>
     )
 }
 

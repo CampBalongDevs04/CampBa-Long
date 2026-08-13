@@ -186,7 +186,7 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
                                 )}
                                 <div className="accomodation-card-image">
                                     {item.image
-                                        ? <SkeletonImage src={item.image} alt={item.name} />
+                                        ? <SkeletonImage src={item.image} alt={item.name} loading="lazy" decoding="async" />
                                         : <span className="accomodation-card-noimage">No image</span>}
                                     {/* On the photo rather than down in the
                                         price line, because the carousel is

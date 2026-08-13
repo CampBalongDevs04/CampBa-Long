@@ -1,0 +1,35 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Everything under /assets/ carries a content hash in its filename, so the URL
+# changes whenever the bytes do and it can be cached forever.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# The HTML is what points at those hashed files. Cache it and a deploy would be
+# invisible until the old copy expired.
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/sitemap.xml"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+# The single-page-app fallback: any path with no file behind it is answered
+# with the shell, and React reads the URL from there.
+#
+# It has no "!" on purpose. Without the force flag Netlify serves a real file
+# when one exists, which is what lets dist/menu/index.html — the copy that has
+# the menu page's own title and og:image baked into it — reach a crawler.
+# Adding "!" would send every request to the home page's HTML and silently
+# undo scripts/seo-postbuild.mjs.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

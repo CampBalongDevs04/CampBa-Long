@@ -29,10 +29,10 @@ export default function Offers() {
             <section className="offer-section">
 
                 <div className="Welcome-header">
-                    {welcome.title && <h1 className="Welcome-title">{welcome.title}</h1>}
+                    {welcome.title && <h2 className="Welcome-title">{welcome.title}</h2>}
                     {welcome.tagline && <p className="Welcome-description">{welcome.tagline}</p>}
                     <LotusDividerIcon />
-                    {welcome.message && <h1 className="Welcome-message">{welcome.message}</h1>}
+                    {welcome.message && <h3 className="Welcome-message">{welcome.message}</h3>}
                     {welcome.description && <p className="Welcome-description">{welcome.description}</p>}
                 </div>
 
@@ -46,7 +46,7 @@ export default function Offers() {
                             const photo = resolveHighlightImage(id, imageUrl)
                             return photo ? (
                                 <div className={`collage-photo photo-${index + 1}`} key={id}>
-                                    <img src={photo} alt={imageAlt} />
+                                    <img src={photo} alt={imageAlt} loading="lazy" decoding="async" />
                                 </div>
                             ) : null
                         })}
@@ -87,7 +87,7 @@ export default function Offers() {
     
                 <header className="offer-header">
                     <LotusDividerIcon />
-                    {section.title && <h1 className="offer-title">{section.title}</h1>}
+                    {section.title && <h2 className="offer-title">{section.title}</h2>}
                     {(section.subtitle || section.subtitleHighlight) && (
                         <p className="offer-sub">
                             {section.subtitle}{' '}

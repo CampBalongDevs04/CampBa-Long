@@ -140,6 +140,16 @@ More detail on the data layer: [`src/data/README-accommodation.md`](src/data/REA
 Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in your hosting
 provider's environment-variable settings, then redeploy.
 
+Set `VITE_SITE_ORIGIN` to the real domain at the same time. Until it is set,
+every canonical link, the sitemap and the Facebook share image point at a
+placeholder domain — `npm run build` prints a yellow warning while that is
+still the case.
+
+**[`docs/deployment.md`](docs/deployment.md) is the full guide**: which of
+`vercel.json` / `netlify.toml` / the nginx snippet to keep, the one routing
+setting that silently breaks link previews if it is wrong, and how to check a
+deploy actually worked.
+
 ### Why the build fails instead of warning
 
 Vite inlines `VITE_*` variables into the JavaScript bundle at **build** time,
@@ -347,6 +357,31 @@ so the front page is never blank.
 | Command | What it does |
 | --- | --- |
 | `npm run dev` | Dev server with HMR |
-| `npm run build` | Production build (fails without Supabase keys) |
+| `npm run build` | Production build (fails without Supabase keys), then `scripts/seo-postbuild.mjs` |
 | `npm run preview` | Serve the built bundle locally |
 | `npm run lint` | ESLint |
+
+---
+
+## Search engines
+
+Page titles, descriptions and the resort's address and phone live in one file:
+[`src/lib/seoConfig.js`](src/lib/seoConfig.js). Edit that, not `index.html`.
+
+Three things read it, and they must never disagree:
+
+| | |
+| --- | --- |
+| [`components/Seo.jsx`](src/components/Seo.jsx) | Rewrites the `<head>` as the guest navigates. Every public page mounts one. |
+| [`scripts/seo-postbuild.mjs`](scripts/seo-postbuild.mjs) | After `vite build`: writes `robots.txt`, `sitemap.xml`, and a copy of the HTML per route with that route's tags already in it. |
+| [`lib/structuredData.js`](src/lib/structuredData.js) | The JSON-LD that puts the resort in a local search result with a map pin and opening hours. |
+
+Two things are worth knowing before changing any of it:
+
+- **The per-route HTML is not an optimisation.** Facebook, Messenger and Viber
+  read a link preview out of the raw HTML and never run JavaScript. Without
+  those files every link shared anywhere shows the home page's title and photo.
+- **What the schema claims, the page must show.** The phone number in
+  `seoConfig.js` has to match the one in the contact card. Structured data that
+  disagrees with the visible page is what Google drops a rich result for — so
+  when staff change the number in the dashboard, change it here too.

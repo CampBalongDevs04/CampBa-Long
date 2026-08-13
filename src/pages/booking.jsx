@@ -17,6 +17,7 @@ import BookingSummary from './components/bookingSummary'
 import HoldQueueNotice from './components/holdQueueNotice'
 import { useBookingQueue } from './components/useBookingQueue.js'
 import Footer from '../components/footer'
+import Seo from '../components/Seo.jsx'
 import BookingTrustIcon from '../components/BookingTrustIcon.jsx'
 import { createBooking, createGroupBooking, STAY_SCHEDULES as timeOptions } from '../data/accommodationDB.js'
 import { useBookingPage, bookingStep, BOOKING_STEP_IDS } from '../data/bookingPage.js'
@@ -510,6 +511,8 @@ export default function Booking(){
     }
 
     return(
+        <>
+        <Seo path="/booking" />
         <main className="page booking-page">
             <div className="booking-shell">
                 <header className="booking-hero">
@@ -689,5 +692,6 @@ export default function Booking(){
             <Footer />
 
         </main>
+        </>
     )
 }
