@@ -9,6 +9,18 @@
   ],
   "headers": [
     {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Content-Security-Policy-Report-Only", "value": "default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'none'; script-src 'self' https://client.crisp.chat; style-src 'self' 'unsafe-inline' https://client.crisp.chat; font-src 'self' data: https://client.crisp.chat; img-src 'self' data: blob: https:; media-src 'self' blob: https://gxjhrtejzbpjtjedbtxl.supabase.co; connect-src 'self' https://gxjhrtejzbpjtjedbtxl.supabase.co wss://gxjhrtejzbpjtjedbtxl.supabase.co https://api.emailjs.com https://*.crisp.chat wss://*.crisp.chat; frame-src https://maps.google.com https://www.google.com https://*.crisp.chat; worker-src 'self' blob:; upgrade-insecure-requests" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
+        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin" }
+      ]
+    },
+    {
       "source": "/assets/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
