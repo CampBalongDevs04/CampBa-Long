@@ -13,51 +13,72 @@
 // rates, while the two overnight schedules share the same "overnight" rates
 // and unit list.
 import { STAY_SCHEDULES } from '../../data/accommodationDB.js'
-import { minNightsFrom } from '../../data/extendedStay.js'
-import { describeMaintenanceDays, useMaintenanceDays } from '../../data/maintenanceDays.js'
+import { addDays, minNightsFrom } from '../../data/extendedStay.js'
+import { describeClosureOn, useMaintenanceDays } from '../../data/maintenanceDays.js'
+import { useBookingPage } from '../../data/bookingPage.js'
 
-// Every schedule is offered on every check-in date. A Sunday arrival used to be
-// Day-Time-only, because the one overnight stay it could make checked out on
-// maintenance Monday — but a stay can run through a closure now, so a Sunday
-// arrival simply stays until the Tuesday. The calendar is what refuses a
-// check-out on a closed day, which is the rule that actually needs enforcing.
+// A stay may not include a maintenance day anywhere along it — not at the
+// ends, not in the middle (see "HOW LONG A STAY MAY BE" in
+// data/extendedStay.js) — so a check-in whose very next day is a closure has
+// no overnight stay it can book, of any length: the shortest possible one, one
+// night, already fails, and every longer one only adds days to a range that
+// already does. Day Time is unaffected — it never has a next day to fail on —
+// so it stays offered on every date that is itself open.
 export default function TimeSelector({ selectedTime, onSelectTime, checkIn }){
-    const { days } = useMaintenanceDays()
-    // Which arrivals have a shortest stay longer than one night depends on
-    // where the closure falls, so it is asked rather than assumed: with Monday
-    // closed it is Sunday arrivals, with Monday and Tuesday closed it is
-    // Saturday and Sunday arrivals too.
+    // Subscribed rather than read once: staff can change the closure from the
+    // dashboard while this is on screen, and a schedule that has just become
+    // bookable should stop being greyed out.
+    useMaintenanceDays()
+    // The heading over the cards is editable copy (CMS → Booking → Notes &
+    // Inclusions). The cards themselves are not: they are the schedules the
+    // booking engine holds units against, edited in Units.
+    const { page } = useBookingPage()
+    // null means no overnight stay exists from this check-in at all — see
+    // minNightsFrom()'s own comment for why that is the only other answer.
     const floor = checkIn != null ? minNightsFrom(checkIn) : 1
+    const overnightBlocked = floor == null
+    // WHICH closure blocked it: the day after the check-in is the one nobody
+    // could check out on, and it may be shut for the week ('Mondays') or shut
+    // as a one-off ('August 9, 2026'). Naming the weekly pattern for a one-off
+    // closure would send the guest looking for a rule that isn't there.
+    const closedOn = overnightBlocked ? describeClosureOn(addDays(checkIn, 1)) : ''
 
     return(
         <div className="booking-time-selector">
             <h3 className="title-selector">
-                Select Stay Schedule
+                {page.scheduleTitle}
             </h3>
 
             <div className="time-choices">
-                {STAY_SCHEDULES.map((time, index) => (
-                    <button
-                        key={time.key}
-                        type="button"
-                        className={`time-card ${selectedTime === index ? 'selected' : ''}`}
-                        onClick={() => onSelectTime(index)}
-                    >
-                        <span className="time-card-circle"></span>
-                        <div className="time-card-info">
-                            <span className="time-card-label">{time.checkIn}</span>
-                            <span className="time-card-time">{time.time}</span>
-                            <span className="time-card-desc">{time.description}</span>
-                        </div>
-                    </button>
-                ))}
+                {STAY_SCHEDULES.map((time, index) => {
+                    const isDisabled = overnightBlocked && time.sameDay !== true
+                    return (
+                        <button
+                            key={time.key}
+                            type="button"
+                            className={`time-card ${selectedTime === index ? 'selected' : ''} ${isDisabled ? 'time-card-disabled' : ''}`}
+                            disabled={isDisabled}
+                            aria-disabled={isDisabled}
+                            title={isDisabled ? `Unavailable — the resort is closed on ${closedOn} for maintenance, right after this check-in date.` : undefined}
+                            onClick={() => { if (!isDisabled) onSelectTime(index) }}
+                        >
+                            <span className="time-card-circle"></span>
+                            <div className="time-card-info">
+                                <span className="time-card-label">{time.checkIn}</span>
+                                <span className="time-card-time">{time.time}</span>
+                                <span className="time-card-desc">{time.description}</span>
+                            </div>
+                        </button>
+                    )
+                })}
             </div>
 
-            {floor > 1 && (
+            {overnightBlocked && (
                 <p className="time-closure-note" role="note">
-                    Staying overnight from this date? Your stay runs at least {floor} nights
-                    — the resort is closed {describeMaintenanceDays(days)} for maintenance,
-                    so nobody checks out on one.
+                    Overnight schedules aren&rsquo;t available from this date — the
+                    resort is closed on {closedOn} for maintenance, so nobody checks
+                    out the next day. Pick a different check-in date, or stay Day
+                    Time only.
                 </p>
             )}
         </div>

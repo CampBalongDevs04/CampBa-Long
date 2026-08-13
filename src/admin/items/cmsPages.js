@@ -18,11 +18,10 @@
 //
 //  PAGES WITH NO SECTIONS YET
 //  --------------------------
-//  My Booking is listed with an empty `sections` array. Its copy is still
-//  written into src/pages/mybooking.jsx, so there is genuinely nothing to edit
-//  here yet — and it is listed anyway, because a page missing from the picker
-//  looks like a page that cannot be edited by anybody, which is a different
-//  and wronger answer. cmsEmpty.jsx is what it shows instead of a panel.
+//  There are none left. My Booking was the last card carrying "Not set up",
+//  and it now has the two sections below. cmsEmpty.jsx is still in the tree for
+//  whichever page is added to this file before its editors are written — see
+//  the note there.
 // ============================================================================
 
 export const CMS_PAGES = [
@@ -87,10 +86,41 @@ export const CMS_PAGES = [
         ],
     },
     {
+        id: 'booking',
+        label: 'Booking',
+        path: '/booking',
+        // Split by WHERE on the form a staff member is looking, which is how
+        // they arrive — "the wording above the Reserve button is wrong" — rather
+        // than by which table each string happens to live in.
+        //
+        // The schedules, units, prices and the calendar are not here: they are
+        // what the page is FOR, edited in Units and Maintenance. These three
+        // tabs own the words around them. Same split as Accommodations.
+        sections: [
+            // The hero, plus the heading over each of the four steps.
+            { id: 'hero', label: 'Hero & Steps' },
+            // The two notes under the schedule cards.
+            { id: 'notes', label: 'Notes & Inclusions' },
+            // The "Please read first before reserving" panel above the button.
+            { id: 'policy', label: 'Reserve Policy' },
+        ],
+    },
+    {
         id: 'mybooking',
         label: 'My Booking',
         path: '/my-booking',
-        sections: [],
+        // Split the way the page is: the words a guest reads around their
+        // bookings, then the panel they pay through.
+        //
+        // The booking cards themselves are not here and never will be — they
+        // are guests' own reservations, managed in Bookings in the sidebar.
+        // These two tabs own the furniture around them.
+        sections: [
+            // The hero, and the green panel that offers "Save Receipt".
+            { id: 'hero', label: 'Hero & Notes' },
+            // The QR codes guests scan, and the note above them.
+            { id: 'payment', label: 'Payment & QR' },
+        ],
     },
     {
         id: 'site',

@@ -96,12 +96,14 @@
     flex-wrap: wrap;
     font-size: 0.98rem;
     font-weight: 600;
+    overflow-wrap: break-word;
 }
 
 .spa-list-desc {
     margin: 0 0 6px;
     font-size: 0.84rem;
     color: rgba(10, 22, 14, 0.62);
+    overflow-wrap: break-word;
 }
 
 .spa-list-duration {
@@ -123,17 +125,54 @@
 }
 
 /* ---------- Responsive ---------- */
-@media (max-width: 640px) {
+@media (max-width: 860px) {
     .spa-list-panel {
         padding: 18px;
     }
 
+    /* Photo and copy take the first line; price and Edit share the second,
+       one at each end. Giving the price `width: 100%` used to put each of the
+       three on a line of its own — a 226px-tall row for one treatment. */
     .spa-list-row {
         flex-wrap: wrap;
+        gap: 10px 16px;
+        padding: 14px 16px;
     }
 
     .spa-list-price {
+        margin-right: auto;
+    }
+
+    .spa-list-row .crud-row-actions {
+        width: auto;
+        margin-left: auto;
+    }
+}
+
+@media (max-width: 560px) {
+    .spa-list-panel {
+        padding: 14px;
+        border-radius: 14px;
+    }
+
+    /* The count and the Add button are the header's second line on their own,
+       so they read left-to-right rather than pinned to the right edge. */
+    .spa-list-header .crud-row-actions {
         width: 100%;
-        text-align: right;
+        justify-content: space-between;
+        margin-left: 0;
+    }
+
+    .spa-list-image {
+        width: 52px;
+        height: 52px;
+    }
+
+    .spa-list-name {
+        font-size: 0.92rem;
+    }
+
+    .spa-list-price {
+        font-size: 1rem;
     }
 }

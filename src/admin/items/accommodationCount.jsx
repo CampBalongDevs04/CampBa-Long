@@ -15,6 +15,25 @@ const UNIT_STATUS = {
     booked: { label: 'Booked', className: 'is-booked' },
 }
 
+// Types sharing a poolId (type.poolId ?? type.id, same key listUnitIds() uses)
+// collapse into one array together, in catalog order. A type with no pool is
+// simply a group of one — this is the whole grouping, not a special case of it.
+//
+// Pooled groups sort after every single-card group, regardless of where the
+// catalog's sort_order happens to put them. A wide, `grid-column: 1 / -1`
+// card wedged between two-column cards breaks the grid's reading order
+// wherever it lands — pushing it to the end is what keeps the ordinary cards
+// reading as an unbroken 2-column block, with the pooled card appended after.
+function groupByPool(types) {
+    const groups = new Map()
+    for (const type of types) {
+        const key = type.poolId ?? type.id
+        if (!groups.has(key)) groups.set(key, [])
+        groups.get(key).push(type)
+    }
+    return [...groups.values()].sort((a, b) => (a.length > 1) - (b.length > 1))
+}
+
 export default function AccommodationCount() {
     // Live view of the same database the booking page writes to: a guest
     // confirming a stay shows up here without a refresh.
@@ -38,12 +57,26 @@ export default function AccommodationCount() {
             </div>
 
             <div className="accommodation-holder">
-                {ACCOMMODATION_TYPES.map((type) => {
+                {/* Types that share a pool (Small Tent, Big Tent, Tent Pitching —
+                    see 20260803120000_shared_tent_pool.sql) are three names sold
+                    over the same four physical spots. Three separate cards each
+                    listing the same four unit badges under a different name was
+                    the actual bug here — this groups by pool instead, so a shared
+                    pool gets ONE card with one honest count, and everything
+                    unpooled (poolId null) still gets its own card exactly as
+                    before, one group of one. */}
+                {groupByPool(ACCOMMODATION_TYPES).map((group) => {
+                    const pooled = group.length > 1
+                    const name = group.map((type) => type.name).join(' · ')
+                    const image = group.find((type) => type.image)?.image ?? null
+
+                    // Every member of a pool resolves to the same shared unit
+                    // list, so any one of them answers for the whole group.
                     // Per-unit breakdown for the selected day: a unit can be
                     // taken for only part of it (Day Time 10-5) and still be
                     // free that evening, so each booked block is listed with
                     // its hours instead of blacking out the whole day.
-                    const units = listUnitIds(type.id).map((id) => ({
+                    const units = listUnitIds(group[0].id).map((id) => ({
                         id,
                         ...getUnitDayDetail(id, selectedDate),
                     }))
@@ -51,11 +84,14 @@ export default function AccommodationCount() {
                     const pendingCount = units.filter((unit) => unit.status === 'pending').length
 
                     return (
-                        <div className="accommodation-card" key={type.prefix}>
+                        <div
+                            className={`accommodation-card${pooled ? ' accommodation-card-pooled' : ''}`}
+                            key={group[0].poolId ?? group[0].id}
+                        >
                             <div className="accommodation-card-header">
                                 <div className="accommodation-card-image">
-                                    {type.image ? (
-                                        <img src={type.image} alt={type.name} />
+                                    {image ? (
+                                        <img src={image} alt={name} />
                                     ) : (
                                         <span className="accommodation-card-image-placeholder">
                                             No Image
@@ -63,9 +99,9 @@ export default function AccommodationCount() {
                                     )}
                                 </div>
                                 <div className="accommodation-card-info">
-                                    <p className="accommodation-card-name">{type.name}</p>
+                                    <p className="accommodation-card-name">{name}</p>
                                     <p className="accommodation-card-count">
-                                        {availableCount} <span>/ {type.total} available</span>
+                                        {availableCount} <span>/ {units.length} available</span>
                                     </p>
                                     {pendingCount > 0 && (
                                         <p className="accommodation-card-pending">

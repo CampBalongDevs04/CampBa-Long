@@ -113,7 +113,7 @@
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
-.stay-length-chip:hover{
+.stay-length-chip:hover:not(:disabled){
     border-color: var(--gold);
 }
 
@@ -121,6 +121,14 @@
     color: var(--cream);
     background-color: var(--forest);
     border-color: var(--forest);
+}
+
+/* This length isn't reachable from the current check-in — a maintenance day
+   sits inside it. Still shown, not hidden: same reasoning as
+   .stay-length-step:disabled below, just for the chips. */
+.stay-length-chip:disabled{
+    opacity: 0.4;
+    cursor: default;
 }
 
 .stay-length-note{

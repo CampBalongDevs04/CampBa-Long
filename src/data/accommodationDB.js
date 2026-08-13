@@ -1748,9 +1748,23 @@ export function markBookingGroupPaidFull(id) {
 // Frees the unit for those dates again — from either side of the app. Staff
 // write the row directly; a guest proves the booking is theirs first, and
 // cancel_my_booking() refuses if it is not.
-export async function cancelBooking(id) {
-    // Someone else's booking on the admin board — the staff write path.
-    if (!ownedByThisDevice(id) && staffSession) {
+//
+// `asStaff` is how the DASHBOARD says which of those it is, rather than having
+// this guess from device ownership. The guess is wrong in one case and it is
+// not a rare one: a booking made on the same machine somebody administers from
+// is "owned by this device", so the dashboard's own Cancel used to fall through
+// to the guest RPC. That was harmless while the RPC cancelled anything — and
+// stopped being harmless the moment it started refusing paid bookings, because
+// rejecting a fake receipt is precisely a staff cancel of a paid booking (see
+// supabase/migrations/20260811120000_my_booking_cms.sql). Staff pass the flag;
+// the guest page does not, so a signed-in staff member cancelling their OWN
+// booking from /my-booking still goes through the guest path and is held to the
+// guest's rules.
+export async function cancelBooking(id, { asStaff = false } = {}) {
+    // The admin board — the staff write path. Not bound by the guest rules,
+    // which is the point: the human deciding to cancel a paid stay IS the
+    // escape hatch those rules route guests to.
+    if (staffSession && (asStaff || !ownedByThisDevice(id))) {
         return patchBooking(id, { status: 'cancelled' })
     }
 
@@ -1800,8 +1814,8 @@ export async function deleteBooking(id) {
 // (cancel_booking_group() cascades to the member `bookings` rows itself); the
 // staff path writes both tables directly since staff already have full RLS
 // access to each — same trust level as every other direct staff write here.
-export async function cancelBookingGroup(id) {
-    if (!ownedByThisDeviceGroup(id) && staffSession) {
+export async function cancelBookingGroup(id, { asStaff = false } = {}) {
+    if (staffSession && (asStaff || !ownedByThisDeviceGroup(id))) {
         const { error: unitsError } = await supabase
             .from('bookings')
             .update({ status: 'cancelled' })
@@ -1960,6 +1974,42 @@ export function isPaymentWindowTracked(booking) {
 export function paymentMsRemaining(booking, now = serverNow()) {
     if (!isPaymentWindowTracked(booking)) return 0
     return Math.max(0, booking.paymentDueAt - now)
+}
+
+// Has this guest already sent money against the booking? True from the moment a
+// receipt is uploaded — before staff have looked at it — because from the
+// guest's side the payment has been made either way, and the resort is holding
+// it. Works on a single booking and on a combined reservation: both carry the
+// same three fields.
+export function hasPaidSomething(booking) {
+    return (
+        Boolean(booking?.hasReceipt) ||
+        Number(booking?.paidSubmitted ?? 0) > 0 ||
+        booking?.payment === 'down-payment' ||
+        booking?.payment === 'paid-full'
+    )
+}
+
+// Whether the guest may still call this off themselves. Two things stop them,
+// and each stops them for its own reason:
+//
+//   • A stay that is over cannot be un-taken.
+//   • A booking that has been paid for is now a conversation with a person.
+//     Cancelling it from the phone would release the unit while the resort
+//     still holds the down payment against a stay that no longer exists, which
+//     is the situation booking_policies has always warned about ("Cancellation
+//     is no longer allowed once the down payment has been made") and nothing
+//     used to enforce.
+//
+// The same rule is in Postgres — cancel_my_booking() and cancel_booking_group()
+// refuse a row with a receipt on it (see
+// supabase/migrations/20260811120000_my_booking_cms.sql) — so this is what the
+// guest is SHOWN, not what holds the line. Staff cancelling from the dashboard
+// write the table directly and are deliberately not bound by either.
+export function canGuestCancel(booking) {
+    if (!booking) return false
+    if (getBookingStage(booking) === 'completed') return false
+    return !hasPaidSomething(booking)
 }
 
 // Cancelled because nobody paid in time, as opposed to cancelled on purpose.

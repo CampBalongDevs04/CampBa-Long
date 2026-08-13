@@ -89,32 +89,17 @@ const ACCOMMODATION_INFO = [
 // comment on computeEntranceFee() in data/entranceFee.js for how it's applied
 // now. Units in FREE_ENTRANCE_EXCLUDED_UNITS don't get the perk at all, per
 // the rate card's "not applicable for ..." notes.
-export const FREE_ENTRANCE_EXCLUDED_UNITS = new Set(['tent-pitching', 'cottage', 'pavilion'])
+export const FREE_ENTRANCE_EXCLUDED_UNITS = new Set(['tent-pitching', 'cottage', 'pavilion', 'table'])
 
 export function isFreeEntranceEligible(unitId){
     return unitId != null && !FREE_ENTRANCE_EXCLUDED_UNITS.has(unitId)
 }
 
-// What each stay schedule's rate includes, shown alongside the schedule note.
-export const INCLUSIONS = {
-    day: [
-        'Free entrance for 2 pax (not applicable for Cottage & Pavilion)',
-        'Free parking',
-        '3 hours free use of cold spring jacuzzi',
-        'Free use of charcoal griller',
-        'Access to swimming pool, kiddie pool & running water',
-        'Access to bathrooms and showers',
-    ],
-    overnight: [
-        'Free entrance for 2 pax (not applicable for Tent Pitching)',
-        'Free parking',
-        '3 hours free use of cold spring jacuzzi',
-        'Free use of charcoal griller',
-        'Access to swimming pool, kiddie pool & running water',
-        'Access to bathrooms and showers',
-        'Beddings included (except tent pitching)',
-    ],
-}
+// What each rate group includes used to be an INCLUSIONS constant here. It is
+// editable copy now — booking_inclusions in Postgres, read through
+// inclusionsFor() in data/bookingPage.js, which keeps the same list as its
+// fallback. Kept out of this module rather than re-exported from it: two names
+// for one list is how the two copies drift apart.
 
 // Price + pax capacity depend on the stay schedule: Day Time (7 hrs) has its
 // own rates, while Day-and-Night and Night-and-Day (both 22 hrs) share the

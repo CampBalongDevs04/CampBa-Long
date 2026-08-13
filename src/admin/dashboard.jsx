@@ -8,6 +8,7 @@ import LotusDividerIcon from '../components/LotusDividerIcon.jsx'
 import logoCamp from '../assets/images/logocamp.png'
 import ClockDate from './items/extras/clockDate.jsx'
 import {
+    StatBoardSkeleton,
     StatCardsSkeleton,
     TabsSkeleton,
     PanelSkeleton,
@@ -43,7 +44,6 @@ const SpaServiceList = lazy(() => import('./items/spaServiceList.jsx'))
 const SpaServiceAvails = lazy(() => import('./items/SpaServiceAvails.jsx'))
 const CmsPageTab = lazy(() => import('./items/cmsPageTab.jsx'))
 const CmsTab = lazy(() => import('./items/cmsTab.jsx'))
-const CmsEmpty = lazy(() => import('./items/cmsEmpty.jsx'))
 const HeroBanner = lazy(() => import('./items/heroBanner.jsx'))
 const WelcomeSection = lazy(() => import('./items/welcomeSection.jsx'))
 const OffersSection = lazy(() => import('./items/offersSection.jsx'))
@@ -59,6 +59,11 @@ const SpaHeroBanner = lazy(() => import('./items/spaHeroBanner.jsx'))
 const SpaReserveSection = lazy(() => import('./items/spaReserveSection.jsx'))
 const SpaGallerySection = lazy(() => import('./items/spaGallerySection.jsx'))
 const SpaHilotSection = lazy(() => import('./items/spaHilotSection.jsx'))
+const BookingHeroSection = lazy(() => import('./items/bookingHeroSection.jsx'))
+const BookingNotesSection = lazy(() => import('./items/bookingNotesSection.jsx'))
+const BookingPolicySection = lazy(() => import('./items/bookingPolicySection.jsx'))
+const MyBookingHeroSection = lazy(() => import('./items/myBookingHeroSection.jsx'))
+const MyBookingPaymentSection = lazy(() => import('./items/myBookingPaymentSection.jsx'))
 const FooterSection = lazy(() => import('./items/footerSection.jsx'))
 
 // Staff sign in with Supabase Auth, not a passcode baked into the bundle.
@@ -229,7 +234,7 @@ function AdminDash() {
                         <h1 className="admin-dash-title">Overview</h1>
                         <ClockDate />
                     </div>
-                    <Suspense fallback={<StatCardsSkeleton count={6} />}>
+                    <Suspense fallback={<StatBoardSkeleton />}>
                         <Units />
                     </Suspense>
                     <Suspense fallback={<TabsSkeleton count={6} />}>
@@ -465,14 +470,22 @@ function AdminDash() {
                             </>
                         )}
 
-                        {activeCmsPage === 'site' && activeCmsTab === 'footer' && <FooterSection />}
-
-                        {/* No editors yet — its copy is still in the page file.
-                            Listed in the picker anyway, because a page missing
-                            from it looks like a page nobody can edit. */}
-                        {activeCmsPage === 'mybooking' && (
-                            <CmsEmpty label="My Booking" file="src/pages/mybooking.jsx" />
+                        {activeCmsPage === 'booking' && (
+                            <>
+                                {activeCmsTab === 'hero' && <BookingHeroSection />}
+                                {activeCmsTab === 'notes' && <BookingNotesSection />}
+                                {activeCmsTab === 'policy' && <BookingPolicySection />}
+                            </>
                         )}
+
+                        {activeCmsPage === 'mybooking' && (
+                            <>
+                                {activeCmsTab === 'hero' && <MyBookingHeroSection />}
+                                {activeCmsTab === 'payment' && <MyBookingPaymentSection />}
+                            </>
+                        )}
+
+                        {activeCmsPage === 'site' && activeCmsTab === 'footer' && <FooterSection />}
                     </Suspense>
                 </div>
             ) : activeSection === 'export' ? (

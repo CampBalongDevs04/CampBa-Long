@@ -5,6 +5,7 @@ import PaymentCountdown from './paymentCountdown.jsx'
 import { formatCountdown, usePaymentWindow } from './usePaymentWindow.js'
 import { payBooking, getBookingStage, DOWNPAYMENT_RATE } from '../../data/accommodationDB.js'
 import { countNights } from '../../data/extendedStay.js'
+import { useMyBookingPage, fillTokens } from '../../data/myBookingPage.js'
 
 // The payment panel inside a My Bookings card. Paying used to be step 4 of the
 // booking form, before the reservation existed; it lives here now, next to the
@@ -101,6 +102,10 @@ export default function BookingPayment({
     const [receipt, setReceipt] = useState(null)
     const [status, setStatus] = useState('idle')   // idle | sending | sent
     const [error, setError] = useState(null)
+    // The wording of the note above the QR codes, edited in
+    // CMS → My Booking → Payment & QR. Its {amount} is filled in below, once
+    // what is outstanding has been worked out.
+    const { page: copy } = useMyBookingPage()
 
     const stage = getBookingStage(booking)
     // Ten minutes to pay, counted against the resort's clock. `tracked` is true
@@ -467,12 +472,18 @@ export default function BookingPayment({
                                 inputId={`receipt-upload-${booking.id}`}
                                 note={
                                     <>
-                                        <strong className="payment-note-heading">
-                                            Send {formatPeso(outstanding)}.
-                                        </strong>{' '}
-                                        Scan the QR of your preferred method, then upload the
-                                        screenshot as proof. Your unit stays held while we
-                                        verify it.
+                                        {copy.payNoteHeading && (
+                                            <>
+                                                <strong className="payment-note-heading">
+                                                    {fillTokens(copy.payNoteHeading, {
+                                                        amount: formatPeso(outstanding),
+                                                    })}
+                                                </strong>{' '}
+                                            </>
+                                        )}
+                                        {fillTokens(copy.payNoteText, {
+                                            amount: formatPeso(outstanding),
+                                        })}
                                     </>
                                 }
                             />

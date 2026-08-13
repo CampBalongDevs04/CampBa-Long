@@ -48,6 +48,23 @@ function formatDateTime(iso) {
     })
 }
 
+// When the reservation itself was made — as opposed to formatDateTime() above,
+// which is when a screenshot arrived. Carries the year, unlike that one:
+// receipts are read close to when they land, but a booking can be reopened
+// long after, and "Aug 11" alone would be ambiguous by then.
+function formatBookedAt(iso) {
+    if (!iso) return '—'
+    const date = new Date(iso)
+    if (Number.isNaN(date.getTime())) return '—'
+    return date.toLocaleString('en-PH', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+    })
+}
+
 function stayLabel(booking) {
     const from = formatDate(booking.checkIn)
     const to = formatDate(booking.checkOut)
@@ -201,6 +218,10 @@ export default function ReceiptViewer({ booking, onClose, onApprove, onCancel })
                 <div className="receipt-body">
                     <dl className="receipt-facts">
                         <div className="receipt-fact">
+                            <dt>Booked on</dt>
+                            <dd>{formatBookedAt(booking.createdAt)}</dd>
+                        </div>
+                        <div className="receipt-fact">
                             <dt>Expected down payment</dt>
                             <dd className="receipt-fact-strong">{formatPeso(expected)}</dd>
                         </div>
@@ -227,6 +248,10 @@ export default function ReceiptViewer({ booking, onClose, onApprove, onCancel })
                         <div className="receipt-fact">
                             <dt>Mobile</dt>
                             <dd>{booking.guest?.mobile || '—'}</dd>
+                        </div>
+                        <div className="receipt-fact">
+                            <dt>Email</dt>
+                            <dd>{booking.guest?.email || '—'}</dd>
                         </div>
                     </dl>
 

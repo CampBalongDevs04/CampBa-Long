@@ -141,7 +141,7 @@ export default function OverviewList({ filter = 'all', emptyTitle, emptyText }) 
                     booking={reviewing}
                     onClose={() => setReviewingId(null)}
                     onApprove={(b) => (b.isGroup ? confirmBookingGroup(b.id) : confirmBooking(b.id))}
-                    onCancel={(b) => (b.isGroup ? cancelBookingGroup(b.id) : cancelBooking(b.id))}
+                    onCancel={(b) => (b.isGroup ? cancelBookingGroup(b.id, { asStaff: true }) : cancelBooking(b.id, { asStaff: true }))}
                 />
             )}
         </div>

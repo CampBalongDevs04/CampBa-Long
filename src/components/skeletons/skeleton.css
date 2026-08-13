@@ -629,6 +629,56 @@
     box-shadow: 0 10px 20px -12px rgba(10, 22, 14, 0.45);
 }
 
+/* Overview stat board (mirrors .stat-board) */
+.skl-stat-board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    width: 100%;
+}
+
+.skl-stat-hero {
+    box-sizing: border-box;
+    grid-column: span 2;
+    grid-row: span 2;
+    /* Close to the real panel's height so the swap barely moves the page. */
+    min-height: 250px;
+    background: var(--forest-dark, #16291E);
+    border: 1px solid rgba(198, 161, 91, 0.45);
+    border-radius: 18px;
+    padding: 22px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-shadow: 0 16px 32px -18px rgba(6, 15, 9, 0.85);
+}
+
+.skl-stat-board .skl-stat-card {
+    border-top: 0;
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    border-radius: 16px;
+    padding: 18px;
+    min-height: 140px;
+    justify-content: center;
+}
+
+.skl-stat-wide {
+    grid-column: span 4;
+    min-height: 112px;
+}
+
+@media (max-width: 1100px) {
+    .skl-stat-board { grid-template-columns: repeat(2, 1fr); }
+    .skl-stat-hero { grid-column: span 2; grid-row: span 1; }
+    .skl-stat-wide { grid-column: span 2; }
+}
+
+@media (max-width: 520px) {
+    .skl-stat-board { grid-template-columns: 1fr; }
+    .skl-stat-hero,
+    .skl-stat-wide { grid-column: span 1; }
+}
+
 /* Tab bar (mirrors .tab-bar) */
 .skl-tab-bar {
     display: flex;

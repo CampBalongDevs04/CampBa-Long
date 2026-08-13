@@ -11,49 +11,56 @@ import PaxInput from './components/paxInput'
 import KidsCount from './components/kidscount'
 import SeniorCount from './components/seniorCount'
 import PwdCount from './components/pwdCount'
-import { computeStayQuote } from '../data/extendedStay.js'
+import { computeStayQuote, minNightsFrom } from '../data/extendedStay.js'
 import Terms from './components/terms'
 import BookingSummary from './components/bookingSummary'
 import HoldQueueNotice from './components/holdQueueNotice'
 import { useBookingQueue } from './components/useBookingQueue.js'
 import Footer from '../components/footer'
+import BookingTrustIcon from '../components/BookingTrustIcon.jsx'
 import { createBooking, createGroupBooking, STAY_SCHEDULES as timeOptions } from '../data/accommodationDB.js'
+import { useBookingPage, bookingStep, BOOKING_STEP_IDS } from '../data/bookingPage.js'
 
 // Paying is deliberately NOT one of these steps any more. It happens from My
 // Bookings, after the unit is held — see the comment on handleConfirm.
-const steps = [
-    {
-        id: 'step-schedule',
-        title: 'Dates & Schedule',
-        sub: 'Pick your check-in date and stay schedule, then set how many nights'
-            + ' you are staying. Every night is charged at the same rate.',
-    },
-    {
-        id: 'step-accommodation',
-        title: 'Accommodation',
-        sub: 'Select the unit that suits your group.',
-    },
-    {
-        id: 'step-guest',
-        title: 'Guest Information',
-        sub: 'Tell us who is booking so we can confirm your reservation.',
-    },
-    {
-        id: 'step-confirm',
-        title: 'Review & Reserve',
-        sub: 'Read our resort policy, then reserve your unit. You will have 10 minutes'
-            + ' to upload your down-payment receipt before the hold is released.',
-    },
-]
+//
+// The four steps' wording is in the database (data/bookingPage.js). Their
+// NUMBER and their ids are not: each id below is the DOM anchor of a block of
+// this form, which handleLeaveQueue scrolls to and each <section> points
+// aria-labelledby at. Staff edit what a step is called, never how many there
+// are — see the header of the booking page CMS migration.
+const [SCHEDULE_STEP, ACCOMMODATION_STEP, GUEST_STEP] = BOOKING_STEP_IDS
+
+// `index` is still the position on the page — it is what prints in the circle
+// and it is fixed by the form, not by the database. The id it looks its wording
+// up by comes from the same fixed list.
+// Guest-detail checks, shared between the missing-steps gate below and what
+// PaxInput shows under each field — one definition of "valid" so Confirm
+// never blocks on something the field itself already accepted, or the other
+// way around.
+const MOBILE_DIGITS = 11
+
+function isValidMobile(mobile){
+    return String(mobile ?? '').replace(/\D/g, '').length === MOBILE_DIGITS
+}
+
+// Loose on purpose: this only checks the address ends in a .com domain
+// (which covers @gmail.com along with every other .com provider) rather than
+// trying to verify the address is real.
+const EMAIL_COM_RE = /^[^\s@]+@[^\s@]+\.com$/i
+
+function isValidEmail(email){
+    return EMAIL_COM_RE.test(String(email ?? '').trim())
+}
 
 function StepHeader({ index }){
-    const step = steps[index]
+    const step = bookingStep(BOOKING_STEP_IDS[index])
     return(
         <header className="booking-step-header">
             <span className="booking-step-num" aria-hidden="true">{index + 1}</span>
             <div className="booking-step-heading">
                 <h2 className="booking-step-title" id={step.id}>{step.title}</h2>
-                <p className="booking-step-sub">{step.sub}</p>
+                {step.subtitle && <p className="booking-step-sub">{step.subtitle}</p>}
             </div>
         </header>
     )
@@ -62,6 +69,10 @@ function StepHeader({ index }){
 export default function Booking(){
     const location = useLocation()
     const navigate = useNavigate()
+    // The page's wording, live: a correction saved in the dashboard reaches a
+    // guest who already has this form open. Subscribing here is also what makes
+    // bookingStep() below re-read — it is a plain lookup against the same store.
+    const { page, activeTrust } = useBookingPage()
     const [selectedTime, setSelectedTime] = useState(null)
     const [dates, setDates] = useState({ checkIn: null, checkOut: null })
     // A cart, not a single pick: { [accommodationId]: quantity }, one entry
@@ -212,14 +223,29 @@ export default function Booking(){
         if (nextKids !== kids) setKids(nextKids)
     }
 
-    // A Sunday check-in used to force Day Time, because the only overnight
-    // stay it could make ended on maintenance Monday. That is no longer the
-    // only one it can make: a stay may run straight through a Monday now, so a
-    // Sunday arrival is fine as long as it stays two nights and checks out on
-    // the Tuesday. The calendar refuses a Monday check-out on its own, so
-    // there is nothing left for this to override.
+    // A check-in whose very next day is a closure forces Day Time — the
+    // overnight schedules check out the next day at minimum, which a closure
+    // there rules out (see TimeSelector, which greys those cards out for such
+    // a date). An overnight schedule already picked before the check-in moved
+    // to one of these dates is dropped here, so a disabled card can never sit
+    // there still "selected" underneath.
     function handleDatesChange(nextDates){
         setDates(nextDates)
+
+        // "Clear dates" comes through here as a check-in of null. The
+        // schedule has to clear with it — Day Time left selected would keep
+        // sameDayCheckout true, and the calendar would carry on rendering the
+        // "Same Day Check Out" placeholder in place of the check-out panel it
+        // should have gone back to.
+        if (nextDates.checkIn == null) {
+            setSelectedTime(null)
+            return
+        }
+
+        if (selectedTime !== null && schedule?.sameDay !== true
+            && minNightsFrom(nextDates.checkIn) == null) {
+            setSelectedTime(null)
+        }
     }
 
     // An overnight schedule needs a check-out STRICTLY after the check-in —
@@ -232,13 +258,35 @@ export default function Booking(){
     // One entry per step above — a step counts as done only once every
     // field it collects is filled in, so Reserve can be blocked until
     // all three are complete.
+    //
+    // Named by their CMS headings rather than by three more hardcoded strings:
+    // this alert tells a guest which step to go back to, and a step renamed in
+    // the dashboard would otherwise be pointed at under its old name.
     const missingSteps = [
         !(dates.checkIn && stayLengthSet && selectedTime !== null)
-            && 'Dates & Schedule',
-        cartUnitCount === 0 && 'Accommodation',
-        !(pax && guest.fullName.trim() && guest.mobile.trim() && guest.email.trim())
-            && 'Guest Information',
+            && bookingStep(SCHEDULE_STEP).title,
+        cartUnitCount === 0 && bookingStep(ACCOMMODATION_STEP).title,
+        !(pax && guest.fullName.trim() && isValidMobile(guest.mobile) && isValidEmail(guest.email))
+            && bookingStep(GUEST_STEP).title,
     ].filter(Boolean)
+
+    // What, specifically, is wrong with each guest field — PaxInput shows
+    // these as the red text under the box, and scrollToFirstIssue below uses
+    // them to pick which one to jump to.
+    const guestFieldErrors = {
+        fullName: guest.fullName.trim() ? null : 'Please enter your full name.',
+        mobile: !guest.mobile.trim()
+            ? 'Please enter your mobile number.'
+            : !isValidMobile(guest.mobile)
+                ? `Mobile number must contain ${MOBILE_DIGITS} digits (e.g. 0917 123 4567).`
+                : null,
+        email: !guest.email.trim()
+            ? 'Please enter your email address.'
+            : !isValidEmail(guest.email)
+                ? 'Please enter a valid email address (e.g. juan@gmail.com).'
+                : null,
+        pax: pax ? null : 'Please enter the number of guests.',
+    }
 
     // A group larger than the cart's COMBINED capacity is the one pax rule
     // that blocks the booking — that's how many people the selected units
@@ -344,7 +392,7 @@ export default function Booking(){
                 // a network or server error should leave the cart intact.
                 if (result.reason === 'unavailable') {
                     setCart({})
-                    document.getElementById('step-accommodation')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    document.getElementById(ACCOMMODATION_STEP)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                 }
                 return
             }
@@ -395,7 +443,7 @@ export default function Booking(){
             // the problem, and clearing all of it would throw away choices
             // that were fine. The message names which one ran out.
             if (result.reason === 'unavailable') {
-                document.getElementById('step-accommodation')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                document.getElementById(ACCOMMODATION_STEP)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
             }
             return
         }
@@ -407,9 +455,35 @@ export default function Booking(){
         })
     }
 
+    // The alert text at the bottom of the form already NAMES which step is
+    // incomplete — this is what takes the guest there, rather than leaving
+    // them to scroll up and hunt for the one field it meant. Schedule and
+    // Accommodation jump to the step (neither has a single field to blame);
+    // Guest Information jumps to the specific box, in the order it appears.
+    function scrollToFirstIssue(){
+        if (!(dates.checkIn && stayLengthSet && selectedTime !== null)) {
+            document.getElementById(SCHEDULE_STEP)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            return
+        }
+        if (cartUnitCount === 0) {
+            document.getElementById(ACCOMMODATION_STEP)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            return
+        }
+        const fieldId = guestFieldErrors.fullName ? 'guest-fullname'
+            : guestFieldErrors.mobile ? 'guest-mobile'
+            : guestFieldErrors.email ? 'guest-email'
+            : (guestFieldErrors.pax || capacityIssue) ? 'pax'
+            : null
+        document.getElementById(fieldId)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+
     function handleConfirm(){
         setAttemptedConfirm(true)
-        if (missingSteps.length > 0 || capacityIssue || submitting) return
+        if (submitting) return
+        if (missingSteps.length > 0 || capacityIssue) {
+            scrollToFirstIssue()
+            return
+        }
         return reserve()
     }
 
@@ -424,7 +498,7 @@ export default function Booking(){
         setQueueRequest(null)
         setBookingError(null)
         setCart({})
-        document.getElementById('step-accommodation')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        document.getElementById(ACCOMMODATION_STEP)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
 
     // Lost the place to the heartbeat (a slept phone, a backgrounded tab).
@@ -439,36 +513,23 @@ export default function Booking(){
         <main className="page booking-page">
             <div className="booking-shell">
                 <header className="booking-hero">
-                    <p className="booking-eyebrow">Camp Ba-long Reservations</p>
-                    <h1 className="book-title">Complete Your Booking</h1>
-                    <p className="booking-tagline">
-                        Reserve your stay in four simple steps — your unit is held
-                        first, then you settle the down payment from My Bookings
-                        within 10 minutes. We confirm once the receipt is verified.
-                    </p>
+                    {page.eyebrow && <p className="booking-eyebrow">{page.eyebrow}</p>}
+                    <h1 className="book-title">{page.title}</h1>
+                    {page.tagline && <p className="booking-tagline">{page.tagline}</p>}
 
-                    <ul className="booking-trust" aria-label="Booking assurances">
-                        <li className="booking-trust-item">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                <rect x="4" y="10" width="16" height="10" rx="2.5" />
-                                <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-                            </svg>
-                            Your unit is reserved before you pay a peso — for 10 minutes
-                        </li>
-                        <li className="booking-trust-item">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                <path d="M20 6 9 17l-5-5" />
-                            </svg>
-                            Every receipt is personally verified
-                        </li>
-                        <li className="booking-trust-item">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                <circle cx="12" cy="12" r="9" />
-                                <path d="M12 7v5l3 3" />
-                            </svg>
-                            Confirmation sent within 24 hours
-                        </li>
-                    </ul>
+                    {/* Emptied entirely from the dashboard, the list goes with
+                        it — a bordered strip with nothing in it reads as a
+                        loading failure. */}
+                    {activeTrust.length > 0 && (
+                        <ul className="booking-trust" aria-label="Booking assurances">
+                            {activeTrust.map((point) => (
+                                <li className="booking-trust-item" key={point.id}>
+                                    <BookingTrustIcon icon={point.icon} />
+                                    {point.text}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                 </header>
 
                 <div className="booking-layout">
@@ -537,6 +598,8 @@ export default function Booking(){
                                     guest={guest}
                                     onGuestChange={setGuest}
                                     rateGroup={rateGroup}
+                                    fieldErrors={guestFieldErrors}
+                                    showErrors={attemptedConfirm}
                                 />
 
                                 {/* Each ceiling is the party minus the other
@@ -605,7 +668,6 @@ export default function Booking(){
                                     onAgreeChange={setAgreed}
                                     onConfirm={handleConfirm}
                                     submitting={submitting}
-                                    confirmLabel="Reserve & Proceed to Payment"
                                 />
                             </div>
                         </section>
