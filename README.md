@@ -112,11 +112,15 @@ are therefore **half prepaid**; only the remaining half is settled on-site.
 ## How receipts work
 
 1. The guest picks a screenshot in the My Bookings payment panel.
-2. `uploadReceipt()` puts it in the private `receipts` bucket under a **random**
-   folder and returns the path. This runs *before* the row is touched, so a
-   failed upload is never recorded as a payment received.
-3. `pay_my_booking()` stores the path in `receipt_url` and appends an entry to
-   `receipt_uploads` stamped with the amount that was due at that moment.
+2. `uploadReceipt()` puts it in the private `receipts` bucket at
+   `<booking id>/<random>.jpg` and returns the path. This runs *before* the row
+   is touched, so a failed upload is never recorded as a payment received.
+3. `pay_my_booking()` checks that the path names a **real object** in the bucket
+   and sits under **this** booking's id, then stores it in `receipt_url` and
+   appends an entry to `receipt_uploads` stamped with the amount that was due at
+   that moment. Both checks matter: an unverified path used to buy permanent
+   exemption from the 10-minute sweep, and an unprefixed one could be replayed
+   from one booking onto another.
 4. Staff open the receipt viewer, which mints a **signed URL valid for 5
    minutes** — the image is never public.
 

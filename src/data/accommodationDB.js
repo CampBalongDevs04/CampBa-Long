@@ -1393,15 +1393,29 @@ function randomKey() {
 }
 
 // Put the guest's screenshot in the bucket and return its path, which is what
-// gets stored on the booking row. Called BEFORE the booking is created: an
-// upload that fails should leave no reservation behind, and a path that exists
-// with no booking is just an orphan file.
+// gets stored on the booking row. Called from payBooking()/payBookingGroup(),
+// so the reservation already exists and has an id to file the image under.
 //
-// The folder is random rather than derived from the booking code, because the
-// path is what a signed URL is minted from — a guessable one would let anybody
-// with a code ask for someone else's receipt.
-export async function uploadReceipt(file) {
+// THE PATH IS `<owner id>/<random>.jpg`, AND BOTH HALVES EARN THEIR PLACE
+// ----------------------------------------------------------------------
+// The id prefix is what pay_my_booking() checks: without it, any path that
+// named a real object was creditable against ANY booking, so one guest's
+// upload could be replayed onto someone else's reservation to mark it paid.
+//
+// The random half is still there for the original reason — the path is what a
+// signed URL is minted from, so a guessable one would let anybody ask for
+// someone else's receipt. A booking id is a uuid, not the human-facing
+// 'CBL-…' code a guest might share, so prefixing with it gives the server
+// something to verify without making the path guessable.
+export async function uploadReceipt(file, ownerId) {
     if (!file) return { ok: true, path: null }
+
+    // The server refuses a path that is not under a booking id, so an upload
+    // without one would only strand a file in the bucket.
+    if (!ownerId) {
+        console.error('Receipt upload skipped: no booking id to file it under.')
+        return { ok: false, message: 'Could not upload your receipt. Please refresh the page and try again.' }
+    }
 
     // Checked before the request rather than after it fails. Without keys the
     // upload is aimed at a placeholder host and comes back "Failed to fetch",
@@ -1413,7 +1427,7 @@ export async function uploadReceipt(file) {
     }
 
     const { extension, mime } = receiptFormat(file)
-    const path = `${randomKey()}/receipt.${extension}`
+    const path = `${ownerId}/${randomKey()}.${extension}`
 
     const { error } = await supabase.storage.from(RECEIPT_BUCKET).upload(path, file, {
         contentType: mime,
@@ -1528,9 +1542,13 @@ export async function createBooking(draft) {
         // quoted here it writes a line to the Postgres log and charges its own.
         p_price: price,
         p_entrance_total: entrance?.total ?? null,
-        // The storage path of the uploaded image. A non-null value is also what
-        // flips the booking to 'down-payment'. The marker is the fallback for a
-        // caller that only says a receipt exists without uploading one.
+        // Also ignored by the server now, and nothing in this app has sent a
+        // non-null value since payment moved to after the hold. It used to flip
+        // the new booking to 'down-payment' — which meant a crafted request
+        // could create a booking that was exempt from the ten-minute sweep from
+        // the moment it existed, holding a unit indefinitely without paying.
+        // A receipt can only be verified once there is a booking id to file it
+        // under, so it now arrives through pay_my_booking() instead.
         p_receipt_url: receiptPath ?? (hasReceipt ? RECEIPT_PENDING_MARKER : null),
         // Full breakdown, so my-booking and the admin export can show how the
         // entrance total was reached rather than just the figure.
@@ -1903,7 +1921,10 @@ export async function payBooking(bookingId, file) {
         return { ok: false, message: 'Choose a screenshot of your payment first.' }
     }
 
-    const upload = await uploadReceipt(file)
+    // Filed under the booking's own id — pay_my_booking() refuses a path that
+    // is not, which is what stops one booking's receipt being credited to
+    // another. See uploadReceipt().
+    const upload = await uploadReceipt(file, bookingId)
     if (!upload.ok) return upload
 
     const { data, error } = await supabase.rpc('pay_my_booking', {
@@ -1936,7 +1957,9 @@ export async function payBookingGroup(groupId, file) {
         return { ok: false, message: 'Choose a screenshot of your payment first.' }
     }
 
-    const upload = await uploadReceipt(file)
+    // Under the GROUP's id — a combined reservation's receipt belongs to the
+    // group row, not to any one member booking.
+    const upload = await uploadReceipt(file, groupId)
     if (!upload.ok) return upload
 
     const { data, error } = await supabase.rpc('pay_booking_group', {
