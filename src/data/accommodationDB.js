@@ -1512,6 +1512,20 @@ export async function createBooking(draft) {
         p_kids: kids,
         p_seniors: seniors,
         p_pwd: pwd,
+        // ADVISORY ONLY — the server does not read these any more.
+        //
+        // book_accommodation() computes the price from accommodation_rates ×
+        // nights and the entrance breakdown from stay_schedules.entrance_fee,
+        // and stores its own figures. It has to: these arguments arrive from a
+        // browser holding a publishable key, so a single crafted request used to
+        // be able to book a real unit for ₱1 (bookings.downpayment is generated
+        // from price, so the amount owed scaled down with it). See the header of
+        // *_server_side_pricing.sql.
+        //
+        // They are still SENT so that the parameters can stay on the function
+        // signature — dropping them would break every browser tab still holding
+        // the previous bundle. If the server's figure differs from the one
+        // quoted here it writes a line to the Postgres log and charges its own.
         p_price: price,
         p_entrance_total: entrance?.total ?? null,
         // The storage path of the uploaded image. A non-null value is also what
@@ -1612,6 +1626,11 @@ export async function createGroupBooking(draft) {
     const effectiveCheckOut = schedule?.sameDay ? checkIn : (checkOut ?? checkIn)
 
     const { data, error } = await supabase.rpc('book_stay_group', {
+        // `price` on each item is ADVISORY, exactly as in createBooking() above:
+        // book_stay_group() prices every member row through book_accommodation()
+        // and sums what was actually stored into the group's unit_subtotal. It
+        // used to sum these figures instead, which made the combined-reservation
+        // path a second way to book at a price of the caller's choosing.
         p_items: items.map((item) => ({ type_id: item.typeId, price: item.price })),
         p_schedule_key: scheduleKey,
         p_check_in: toISODate(checkIn),
@@ -1623,6 +1642,7 @@ export async function createGroupBooking(draft) {
         p_kids: kids,
         p_seniors: seniors,
         p_pwd: pwd,
+        // Advisory too — the group's entrance is recomputed server-side.
         p_entrance_total: entrance?.total ?? null,
         p_entrance_per_head: entrance?.perHead ?? 0,
         p_entrance_senior_discount: entrance?.seniorDiscount ?? 0,
