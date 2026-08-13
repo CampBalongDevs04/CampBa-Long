@@ -29,8 +29,8 @@
 //  WHY NOT A HEADLESS BROWSER
 //  --------------------------
 //  Prerendering the BODY too — running the app in Playwright and saving the
-//  resulting DOM — would be the fuller answer, and playwright-core is already
-//  a dependency. It is not what this does, deliberately: every page here reads
+//  resulting DOM — would be the fuller answer, and playwright-core is on hand
+//  as a devDependency. It is not what this does, deliberately: every page reads
 //  live availability, prices and menus out of Supabase, so a snapshotted body
 //  is a price list frozen at build time, served to guests until the next
 //  deploy. Stale prices are a worse problem than slow indexing. The head is
