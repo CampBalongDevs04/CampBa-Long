@@ -492,9 +492,12 @@ begin
     -- The perk applies to the reservation only if it applies to EVERY unit in
     -- it — one excluded unit in the cart and the whole booking loses it, which
     -- is what the booking page already quotes (see cartFreeEntranceEligible).
+    -- Aliased as item(value) rather than bare `item`: a set-returning function
+    -- with one output column can be referenced either way, and spelling out the
+    -- column is the reading that cannot be mistaken for a whole-row reference.
     select bool_and(coalesce(t.free_entrance_eligible, true)) into v_eligible
-    from jsonb_array_elements(p_items) as item
-    join public.accommodation_types t on t.id = item ->> 'type_id';
+    from jsonb_array_elements(p_items) as item(value)
+    join public.accommodation_types t on t.id = item.value ->> 'type_id';
 
     select * into v_entrance from public.entrance_breakdown(
         v_schedule.entrance_fee, p_pax, p_kids, p_seniors,

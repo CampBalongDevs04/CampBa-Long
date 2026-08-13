@@ -226,6 +226,12 @@ comment on table public.receipt_orphan_scans is
 
 alter table public.receipt_orphan_scans enable row level security;
 
+-- Said out loud rather than left to the project's default privileges, the same
+-- way *_guest_booking_ownership.sql spells out the revoke on bookings. A guest
+-- has no business knowing how much unreferenced material is in the bucket.
+revoke all on public.receipt_orphan_scans from anon;
+grant select on public.receipt_orphan_scans to authenticated;
+
 drop policy if exists "staff read orphan scans" on public.receipt_orphan_scans;
 create policy "staff read orphan scans" on public.receipt_orphan_scans
     for select to authenticated
