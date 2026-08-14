@@ -87,7 +87,7 @@ function getFitNote(pax, cartLines, options){
     }
 }
 
-export default function PaxInput({ pax, onPaxChange, cartLines, guest, onGuestChange, rateGroup, fieldErrors, showErrors }){
+export default function PaxInput({ pax, onPaxChange, cartLines, guest, onGuestChange, rateGroup, fieldErrors, showErrors, locked = false }){
     const options = getAccomodationOptions(rateGroup)
     const lines = cartLines ?? []
     const note = getFitNote(pax, lines, options)
@@ -182,13 +182,13 @@ export default function PaxInput({ pax, onPaxChange, cartLines, guest, onGuestCh
 
                 <div className="pax-field">
                     <label className="pax-field-label" htmlFor="pax">Number of Guests</label>
-                    <div className="pax-counter">
+                    <div className={`pax-counter${locked ? ' pax-counter-locked' : ''}`}>
                         <button
                             type="button"
                             className="pax-step"
                             aria-label="Remove one guest"
                             onClick={() => step(-1)}
-                            disabled={!pax || pax <= MIN_PAX}
+                            disabled={locked || !pax || pax <= MIN_PAX}
                         >
                             &minus;
                         </button>
@@ -203,7 +203,9 @@ export default function PaxInput({ pax, onPaxChange, cartLines, guest, onGuestCh
                             placeholder="0"
                             aria-label="Number of guests"
                             value={pax ?? ''}
+                            readOnly={locked}
                             onChange={(e) => {
+                                if (locked) return
                                 const value = e.target.value
                                 onPaxChange?.(value === '' ? null : clamp(Number(value)))
                             }}
@@ -215,7 +217,7 @@ export default function PaxInput({ pax, onPaxChange, cartLines, guest, onGuestCh
                             className="pax-step"
                             aria-label="Add one guest"
                             onClick={() => step(1)}
-                            disabled={pax != null && pax >= MAX_PAX}
+                            disabled={locked || (pax != null && pax >= MAX_PAX)}
                             title={capacityTitle}
                         >
                             +
@@ -228,6 +230,11 @@ export default function PaxInput({ pax, onPaxChange, cartLines, guest, onGuestCh
                             {limited ? `pax · fits ${rangeLabel}` : 'pax'}
                         </span>
                     </div>
+                    {locked && (
+                        <p className="pax-field-note">
+                            Automatically set to the whole-resort capacity for your chosen schedule.
+                        </p>
+                    )}
                     {paxRequiredError && <p className="pax-field-error" role="alert">{paxRequiredError}</p>}
                 </div>
             </div>

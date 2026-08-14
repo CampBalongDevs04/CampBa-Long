@@ -42,6 +42,12 @@
     scrollbar-width: none; /* arrows drive the carousel */
 }
 
+/* Rent Resort mode: a single card, centred rather than flush left against
+   empty space — see accomodationList.jsx. */
+.accomodation-track-centered{
+    justify-content: center;
+}
+
 .accomodation-track::-webkit-scrollbar{
     display: none;
 }
@@ -135,6 +141,17 @@
     text-align: center;
     font-size: 11px;
     font-weight: 600;
+    color: var(--forest);
+}
+
+/* Rent Resort mode: no +/- stepper, just a fixed "this is the pick" label
+   filling the row the stepper would otherwise occupy. */
+.accomodation-card-qty-locked{
+    flex: 1;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
     color: var(--forest);
 }
 

@@ -32,6 +32,7 @@ const DP = lazy(() => import('./items/overview-DOWNPAYMENT.jsx'))
 const FoodSpaAll = lazy(() => import('./items/foodSpa-ALL.jsx'))
 const Food = lazy(() => import('./items/foodSpa-Food.jsx'))
 const Spa = lazy(() => import('./items/foodSpa-Spa.jsx'))
+const Addons = lazy(() => import('./items/foodSpa-Addons.jsx'))
 const FoodSpa = lazy(() => import('./items/FoodSpa.jsx'))
 const FoodTab = lazy(() => import('./items/foodTab.jsx'))
 const FoodList = lazy(() => import('./items/foodList.jsx'))
@@ -253,13 +254,14 @@ function AdminDash() {
                     <div className ="services-section">
                         <LotusDividerIcon />
                         <h1 className ="services-title">Other Services</h1>
-                        <Suspense fallback={<TabsSkeleton count={3} />}>
+                        <Suspense fallback={<TabsSkeleton count={4} />}>
                             <FoodSpa active={activeServiceTab} onChange={setActiveServiceTab} />
                         </Suspense>
                         <Suspense fallback={<PanelSkeleton />}>
                             {activeServiceTab === 'all' && <FoodSpaAll />}
                             {activeServiceTab === 'food' && <Food />}
                             {activeServiceTab === 'spa' && <Spa />}
+                            {activeServiceTab === 'addons' && <Addons />}
                         </Suspense>
 
                     </div>

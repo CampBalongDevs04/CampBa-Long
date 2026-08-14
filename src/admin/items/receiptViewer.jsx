@@ -177,7 +177,8 @@ export default function ReceiptViewer({ booking, onClose, onApprove, onCancel })
 
     const foodOrders = booking.foodOrders ?? []
     const spaOrders = booking.spaOrders ?? []
-    const hasAddOns = foodOrders.length > 0 || spaOrders.length > 0
+    const itemOrders = booking.itemOrders ?? []
+    const hasAddOns = foodOrders.length > 0 || spaOrders.length > 0 || itemOrders.length > 0
 
     return (
         <div
@@ -279,9 +280,20 @@ export default function ReceiptViewer({ booking, onClose, onApprove, onCancel })
                                     ))}
                                 </div>
                             )}
+                            {itemOrders.length > 0 && (
+                                <div className="receipt-orders-group">
+                                    <p className="receipt-orders-title">Add-ons requested</p>
+                                    {itemOrders.map((order, index) => (
+                                        <div className="receipt-order-row" key={`item-${index}`}>
+                                            <span>{order.name} × {order.quantity}</span>
+                                            <span>{formatPeso(order.total)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                             <div className="receipt-order-row receipt-order-total">
                                 <span>Add-ons total</span>
-                                <span>{formatPeso(orderTotal(foodOrders) + orderTotal(spaOrders))}</span>
+                                <span>{formatPeso(orderTotal(foodOrders) + orderTotal(spaOrders) + orderTotal(itemOrders))}</span>
                             </div>
                         </div>
                     )}

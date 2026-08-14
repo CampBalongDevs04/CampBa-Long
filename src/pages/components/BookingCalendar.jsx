@@ -15,6 +15,7 @@ import {
     isPastDateKey,
     useMaintenanceDays,
 } from '../../data/maintenanceDays.js'
+import { isResortFreeOn, useAccommodationDB } from '../../data/accommodationDB.js'
 
 const MONTH_NAMES = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -91,7 +92,7 @@ function formatDate(date) {
     })
 }
 
-function CalendarPanel({ label, variant, selected, onSelect, minDate, maxDate, rangeStart, rangeEnd }) {
+function CalendarPanel({ label, variant, selected, onSelect, minDate, maxDate, rangeStart, rangeEnd, restrictToFree, scheduleKey, excludeTypeId }) {
     const today = startOfDay(new Date())
     const initialView = selected || minDate || today
     const [viewYear, setViewYear] = useState(initialView.getFullYear())
@@ -160,17 +161,34 @@ function CalendarPanel({ label, variant, selected, onSelect, minDate, maxDate, r
             : isMaintenanceDay(date)
         const isBeforeMin = minDate && date.getTime() <= minDate.getTime()
         const isPastMax = maxDate && date.getTime() >= maxDate.getTime()
-        const isDisabled = isPast || isClosed || isBeforeMin || isPastMax
+
+        // Rent Resort mode: only ask "is the whole resort free that day" once
+        // every other reason to skip the cell is ruled out — no sense paying
+        // for an availability check on a day that's already past, closed, or
+        // outside this panel's own range. `resortFree` is null while the
+        // answer is still in flight (isResortFreeOn mirrors the cards'
+        // "Availability TBA" state) or false once every type is fetched and
+        // at least one is fully booked that day.
+        const skipFreeCheck = isPast || isClosed || isBeforeMin || isPastMax
+        const resortFree = restrictToFree && !skipFreeCheck
+            ? isResortFreeOn(date, scheduleKey, excludeTypeId)
+            : null
+        const notFree = restrictToFree && !skipFreeCheck && resortFree !== true
+
+        const isDisabled = isPast || isClosed || isBeforeMin || isPastMax || notFree
         const isSelected = isSameDay(date, selected)
         const isInRange = rangeStart && rangeEnd &&
             date.getTime() > rangeStart.getTime() && date.getTime() < rangeEnd.getTime()
 
         const closedBecause = isClosed
             ? (variant === 'checkout' ? rangeClosureLabel(minDate, date) : cellClosureLabel(date))
-            : ''
+            : notFree
+                ? (resortFree === null ? 'still checking availability for renting the whole resort' : 'the resort already has a booking that day')
+                : ''
 
         const classNames = ['cal-cell', 'cal-day']
         if (isClosed) classNames.push('cal-maintenance')
+        if (notFree) classNames.push('cal-not-free')
         if (isDisabled) classNames.push('cal-disabled')
         if (isSelected) classNames.push('cal-selected')
         if (isInRange) classNames.push('cal-in-range')
@@ -181,10 +199,10 @@ function CalendarPanel({ label, variant, selected, onSelect, minDate, maxDate, r
                 key={day}
                 type="button"
                 className={classNames.join(' ')}
-                // A closed day stays focusable so its tooltip is reachable —
-                // "why can't I pick this?" is worth answering, where a past
-                // date needs no explanation.
-                disabled={isDisabled && !isClosed}
+                // A closed or not-yet-free day stays focusable so its tooltip
+                // is reachable — "why can't I pick this?" is worth answering,
+                // where a past date needs no explanation.
+                disabled={isDisabled && !isClosed && !notFree}
                 aria-disabled={isDisabled}
                 onClick={() => { if (!isDisabled) onSelect(date) }}
                 data-hint={closedBecause || undefined}
@@ -279,12 +297,22 @@ function SameDayPanel({ checkIn }) {
 // check-out date too, and two copies of the same fact would have drifted the
 // moment either one wrote — so the booking page owns the pair and this renders
 // what it is given.
-export default function BookingCalendar({ checkIn = null, checkOut = null, onChange, sameDayCheckout = false }) {
+export default function BookingCalendar({
+    checkIn = null, checkOut = null, onChange, sameDayCheckout = false,
+    restrictToFree = false, scheduleKey = null, excludeTypeId = null,
+}) {
     // Subscribed rather than read once: staff can change the closure from the
     // dashboard while this calendar is open, and the cells have to regrey
     // themselves rather than keep offering a date the database now refuses.
     const { days, dates } = useMaintenanceDays()
     const closure = closureLabel(days, dates)
+
+    // In Rent Resort mode, isResortFreeOn() answers are fetched lazily as
+    // cells render and land in the same availability cache every
+    // accommodation card reads — this re-renders the calendar once each
+    // answer comes back, the same way AccomodationList re-renders as its
+    // cards' availability arrives.
+    useAccommodationDB()
 
     // Day Time schedule: check-out always happens on the check-in date
     const effectiveCheckOut = sameDayCheckout ? checkIn : checkOut
@@ -322,6 +350,9 @@ export default function BookingCalendar({ checkIn = null, checkOut = null, onCha
                     onSelect={selectCheckIn}
                     rangeStart={checkIn}
                     rangeEnd={effectiveCheckOut}
+                    restrictToFree={restrictToFree}
+                    scheduleKey={scheduleKey}
+                    excludeTypeId={excludeTypeId}
                 />
                 {sameDayCheckout ? (
                     <SameDayPanel checkIn={checkIn} />
@@ -335,6 +366,9 @@ export default function BookingCalendar({ checkIn = null, checkOut = null, onCha
                         maxDate={checkIn ? stayLimitAfter(checkIn) : null}
                         rangeStart={checkIn}
                         rangeEnd={checkOut}
+                        restrictToFree={restrictToFree}
+                        scheduleKey={scheduleKey}
+                        excludeTypeId={excludeTypeId}
                     />
                 )}
             </div>

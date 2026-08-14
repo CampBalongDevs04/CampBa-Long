@@ -12,7 +12,7 @@
 // getAccomodationOptions in accomodationOptions.js): Day Time has its own
 // rates, while the two overnight schedules share the same "overnight" rates
 // and unit list.
-import { STAY_SCHEDULES } from '../../data/accommodationDB.js'
+import { STAY_SCHEDULES, isScheduleWindowElapsed } from '../../data/accommodationDB.js'
 import { addDays, minNightsFrom } from '../../data/extendedStay.js'
 import { describeClosureOn, useMaintenanceDays } from '../../data/maintenanceDays.js'
 import { useBookingPage } from '../../data/bookingPage.js'
@@ -51,7 +51,18 @@ export default function TimeSelector({ selectedTime, onSelectTime, checkIn }){
 
             <div className="time-choices">
                 {STAY_SCHEDULES.map((time, index) => {
-                    const isDisabled = overnightBlocked && time.sameDay !== true
+                    // A UI hint, not the rule itself: book_accommodation()
+                    // checks the identical window against the server's own
+                    // clock and refuses regardless of what this component
+                    // thinks the time is (a stale tab, a slow device clock).
+                    const elapsedToday = isScheduleWindowElapsed(time, checkIn)
+                    const closureBlocked = overnightBlocked && time.sameDay !== true
+                    const isDisabled = closureBlocked || elapsedToday
+                    const title = elapsedToday
+                        ? `Unavailable — today's ${time.time} window has already ended.`
+                        : closureBlocked
+                            ? `Unavailable — the resort is closed on ${closedOn} for maintenance, right after this check-in date.`
+                            : undefined
                     return (
                         <button
                             key={time.key}
@@ -59,7 +70,7 @@ export default function TimeSelector({ selectedTime, onSelectTime, checkIn }){
                             className={`time-card ${selectedTime === index ? 'selected' : ''} ${isDisabled ? 'time-card-disabled' : ''}`}
                             disabled={isDisabled}
                             aria-disabled={isDisabled}
-                            title={isDisabled ? `Unavailable — the resort is closed on ${closedOn} for maintenance, right after this check-in date.` : undefined}
+                            title={title}
                             onClick={() => { if (!isDisabled) onSelectTime(index) }}
                         >
                             <span className="time-card-circle"></span>

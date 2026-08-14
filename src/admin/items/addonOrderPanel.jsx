@@ -118,7 +118,9 @@ export default function AddonOrderPanel({ kind = 'all', emptyTitle, emptyText })
         )
     }
 
-    const grandTotal = entries.reduce((sum, entry) => sum + entry.foodTotal + entry.spaTotal, 0)
+    const grandTotal = entries.reduce(
+        (sum, entry) => sum + entry.foodTotal + entry.spaTotal + entry.itemsTotal, 0
+    )
 
     return (
         <div className="orderService-panel">
@@ -129,7 +131,7 @@ export default function AddonOrderPanel({ kind = 'all', emptyTitle, emptyText })
                 <span className="orderService-summary-total">{formatPeso(grandTotal)}</span>
             </div>
 
-            {entries.map(({ booking, food, spa, foodTotal, spaTotal }) => {
+            {entries.map(({ booking, food, spa, items, foodTotal, spaTotal, itemsTotal }) => {
                 const stage = getBookingStage(booking)
                 return (
                     <article key={booking.id} className="orderService-card">
@@ -148,10 +150,11 @@ export default function AddonOrderPanel({ kind = 'all', emptyTitle, emptyText })
 
                         <OrderGroup title="Food ordered" lines={food} total={foodTotal} />
                         <OrderGroup title="Spa availed" lines={spa} total={spaTotal} />
+                        <OrderGroup title="Add-ons requested" lines={items} total={itemsTotal} />
 
                         <p className="orderService-card-total">
                             <span>Add-ons on this booking</span>
-                            <strong>{formatPeso(foodTotal + spaTotal)}</strong>
+                            <strong>{formatPeso(foodTotal + spaTotal + itemsTotal)}</strong>
                         </p>
                     </article>
                 )

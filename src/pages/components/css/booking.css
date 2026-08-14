@@ -154,12 +154,53 @@ html{
     gap: 2px;
 }
 
+.booking-step-title-row{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+}
+
 .booking-step-title{
     margin: 0;
     font-size: 23px;
     font-weight: 700;
     letter-spacing: 0.4px;
     color: var(--forest);
+}
+
+/* Rent All Resort toggle, next to the "Dates & Schedule" title. Tinted leaf
+   green rather than white so it reads as its own control, not another trust
+   badge; the "on" state fills solid forest so the mode is unmistakable. */
+.booking-rentall-toggle{
+    flex-shrink: 0;
+    padding: 7px 18px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: var(--forest);
+    background-color: rgba(76, 107, 79, 0.14);
+    border: 1.5px solid var(--leaf);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.booking-rentall-toggle:hover{
+    background-color: rgba(76, 107, 79, 0.24);
+    border-color: var(--forest);
+}
+
+.booking-rentall-toggle.active{
+    color: #FFFFFF;
+    background-color: var(--forest);
+    border-color: var(--forest);
+}
+
+.booking-rentall-toggle.active:hover{
+    background-color: var(--forest-dark);
+    border-color: var(--forest-dark);
 }
 
 .booking-step-sub{

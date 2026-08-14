@@ -196,6 +196,26 @@ export function getSchedule(key) {
     return STAY_SCHEDULES.find((schedule) => schedule.key === key) ?? null
 }
 
+// Whether a same-day schedule's window has already ended for a check-in of
+// TODAY specifically — Day Time greys out once it hits 5pm, the same way it
+// already would tomorrow at 5pm. Exported so TimeSelector (greys the card)
+// and booking.jsx (clears a stale selection when the check-in date changes
+// out from under it) read one answer and can't drift apart.
+//
+// Only ever true for a sameDay schedule: an overnight one's window ends the
+// NEXT day at the earliest, so "today" can never be past its end while
+// check-in is still today.
+export function isScheduleWindowElapsed(schedule, checkIn, now = new Date()) {
+    if (!schedule || schedule.sameDay !== true || checkIn == null) return false
+    if (checkIn.getFullYear() !== now.getFullYear()
+        || checkIn.getMonth() !== now.getMonth()
+        || checkIn.getDate() !== now.getDate()) {
+        return false
+    }
+    const dayStart = new Date(checkIn.getFullYear(), checkIn.getMonth(), checkIn.getDate())
+    return now.getTime() >= dayStart.getTime() + schedule.endMinutes * 60000
+}
+
 // ------------------------------------------------------------- date helpers
 // Everything is handled at LOCAL midnight so a 'YYYY-MM-DD' from an <input
 // type="date"> and a Date from the calendar widget land on the same day. The
@@ -561,6 +581,7 @@ function fromRow(row) {
 
         foodOrders: row.food_orders ?? [],
         spaOrders: row.spa_orders ?? [],
+        itemOrders: row.item_orders ?? [],
         addonsTotal: addonsTotal(row),
         // Everything this stay costs. The down payment is half of it and the
         // rest is settled on-site, so both figures come off this one number.
@@ -604,7 +625,7 @@ function paymentDueAt(row) {
 function addonsTotal(row) {
     const sum = (orders) =>
         (orders ?? []).reduce((total, order) => total + Number(order.total ?? 0), 0)
-    return sum(row.food_orders) + sum(row.spa_orders)
+    return sum(row.food_orders) + sum(row.spa_orders) + sum(row.item_orders)
 }
 
 // The staff path reads the table and gets the storage path with each entry; the
@@ -707,6 +728,7 @@ function fromGroupRow(row) {
 
         foodOrders: row.food_orders ?? [],
         spaOrders: row.spa_orders ?? [],
+        itemOrders: row.item_orders ?? [],
         receipts: receiptList(row),
         paidSubmitted: receiptList(row).reduce((sum, entry) => sum + entry.amount, 0),
         createdAt: row.created_at,
@@ -925,7 +947,8 @@ function sameBookings(a, b) {
             booking.downpayment === other.downpayment &&
             booking.paidSubmitted === other.paidSubmitted &&
             booking.foodOrders.length === other.foodOrders.length &&
-            booking.spaOrders.length === other.spaOrders.length
+            booking.spaOrders.length === other.spaOrders.length &&
+            booking.itemOrders.length === other.itemOrders.length
         )
     })
 }
@@ -1229,6 +1252,27 @@ export function getAvailability(idOrPrefix, checkIn = new Date(), checkOut = nul
 
     fetchAvailability(checkIn, checkOut, scheduleKey)
     return null
+}
+
+// Whether EVERY other active type is fully free on one date — what "Rent All
+// Resort" needs, since renting the whole resort only makes sense on a day
+// nothing else is booked. Built on the same cached per-date RPC every card
+// already uses (getAvailability), so this costs nothing new: one call for the
+// date (all types come back together), read back per type.
+//
+// `excludeTypeId` leaves the rent-all card itself out of its own check — it
+// owns no physical units to conflict with. Returns null while any type's
+// answer is still in flight (same "don't know yet" the cards already show as
+// "Availability TBA"), so a caller can tell "not free" from "not answered".
+export function isResortFreeOn(date, scheduleKey, excludeTypeId = null){
+    let allFree = true
+    for (const type of ACCOMMODATION_TYPES){
+        if (type.id === excludeTypeId) continue
+        const availability = getAvailability(type.id, date, null, scheduleKey)
+        if (availability == null) return null
+        if (availability.available < availability.total) allFree = false
+    }
+    return allFree
 }
 
 // --- local computations over the rows this session can see -----------------
@@ -2128,6 +2172,10 @@ export function addSpaOrder(bookingId, order) {
     return addAddon(bookingId, 'spa', order)
 }
 
+export function addItemOrder(bookingId, order) {
+    return addAddon(bookingId, 'item', order)
+}
+
 // Same as addAddon() above, for a combined reservation — the order goes on
 // the group's own row, not any one of its units.
 async function addGroupAddon(groupId, kind, order) {
@@ -2155,6 +2203,10 @@ export function addFoodOrderToGroup(groupId, order) {
 
 export function addSpaOrderToGroup(groupId, order) {
     return addGroupAddon(groupId, 'spa', order)
+}
+
+export function addItemOrderToGroup(groupId, order) {
+    return addGroupAddon(groupId, 'item', order)
 }
 
 // ------------------------------------------------------------ derived status
@@ -2258,10 +2310,16 @@ export function getBookingStats() {
 // Both read the ADMIN list, so they answer with nothing at all without a staff
 // session — the same reason the overview tabs come up empty rather than wrong.
 
+// Which field on a booking each kind's lines live in — one place, so adding
+// a fourth kind later is this one line plus a catalog table, not a hunt
+// through every ternary that used to hardcode 'food' vs 'spa'.
+const ADDON_KIND_FIELDS = { food: 'foodOrders', spa: 'spaOrders', item: 'itemOrders' }
+const ADDON_KINDS = Object.keys(ADDON_KIND_FIELDS)
+
 // A booking's add-on lines are ordered oldest-first on the row; the dashboard
 // wants the newest order at the top.
 function addonLines(booking, kind) {
-    const orders = kind === 'spa' ? booking.spaOrders : booking.foodOrders
+    const orders = booking[ADDON_KIND_FIELDS[kind]]
     return (orders ?? []).map((order, index) => ({
         // Two guests can order the same dish in the same second, and one guest
         // can order it twice — the booking and the line's own position are what
@@ -2302,36 +2360,40 @@ function addonableBookings() {
 }
 
 // Every add-on line across every booking, newest first.
-// `kind` is 'all' | 'food' | 'spa'.
+// `kind` is 'all' | 'food' | 'spa' | 'item'.
 export function listAddonOrders(kind = 'all') {
+    const kinds = kind === 'all' ? ADDON_KINDS : [kind]
     const lines = []
     for (const booking of addonableBookings()) {
         if (getBookingStage(booking) === 'cancelled') continue
-        if (kind !== 'spa') lines.push(...addonLines(booking, 'food'))
-        if (kind !== 'food') lines.push(...addonLines(booking, 'spa'))
+        for (const oneKind of kinds) lines.push(...addonLines(booking, oneKind))
     }
     return lines.sort((a, b) => new Date(b.orderedAt ?? 0) - new Date(a.orderedAt ?? 0))
 }
 
 // The same lines grouped back under the booking that placed them — one card per
 // guest rather than one row per dish. Bookings with no add-ons of the requested
-// kind drop out entirely, which is what makes the dashboard's Food and Spa tabs
-// different lists rather than the same list with empty cards in it.
+// kind drop out entirely, which is what makes the dashboard's Food, Spa and
+// Add-ons tabs different lists rather than the same list with empty cards in it.
 export function listBookingsWithAddons(kind = 'all') {
+    const kinds = kind === 'all' ? ADDON_KINDS : [kind]
     return addonableBookings()
         .filter((booking) => getBookingStage(booking) !== 'cancelled')
         .map((booking) => {
-            const food = kind === 'spa' ? [] : addonLines(booking, 'food')
-            const spa = kind === 'food' ? [] : addonLines(booking, 'spa')
+            const food = kinds.includes('food') ? addonLines(booking, 'food') : []
+            const spa = kinds.includes('spa') ? addonLines(booking, 'spa') : []
+            const items = kinds.includes('item') ? addonLines(booking, 'item') : []
             return {
                 booking,
                 food,
                 spa,
+                items,
                 foodTotal: food.reduce((sum, line) => sum + line.total, 0),
                 spaTotal: spa.reduce((sum, line) => sum + line.total, 0),
+                itemsTotal: items.reduce((sum, line) => sum + line.total, 0),
             }
         })
-        .filter((entry) => entry.food.length > 0 || entry.spa.length > 0)
+        .filter((entry) => entry.food.length > 0 || entry.spa.length > 0 || entry.items.length > 0)
 }
 
 // Add-on lines rolled up per catalog item: how many were ordered, what they

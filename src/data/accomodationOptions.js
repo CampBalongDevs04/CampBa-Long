@@ -139,6 +139,35 @@ const FALLBACK_RATES = {
 //             whole unit. Worth saying out loud, never worth blocking.
 //   'over'  — more heads than maxPax. NOT bookable: that's how many people the
 //             unit physically holds.
+// The "Rent All Resort" card has no dedicated id or flag of its own — it's
+// just an accommodation_types row staff added through the dashboard, whose id
+// was slugified from whatever they typed. Matched by name instead of a
+// hardcoded id so this survives that row's id being whatever it happens to
+// be; if staff ever rename it to something without "rent all" in it, the
+// Rent Resort toggle simply stops finding it rather than pointing at the
+// wrong card.
+export function isRentAllOption(item){
+    return item != null && /rent all/i.test(item.name)
+}
+
+export function findRentAllOption(options){
+    return options.find(isRentAllOption) ?? null
+}
+
+// The number Rent Resort mode auto-fills Number of Guests with. Prefers the
+// rate's structured `maxPax`, but that field is easy for staff to leave blank
+// when they set up a rate — they typed "60 Pax" into the free-text label and
+// never touched the separate Max Pax box next to it. Falling back to the
+// largest number IN that label (so "60 Pax" still yields 60, and a range like
+// "8-10 Pax" yields 10) means the auto-fill works off what staff actually
+// entered, not just the field they happened to also fill in.
+export function rentAllCapacity(option){
+    if (!option) return null
+    if (option.maxPax != null) return option.maxPax
+    const matches = String(option.pax ?? '').match(/\d+/g)
+    return matches ? Math.max(...matches.map(Number)) : null
+}
+
 export function getPaxFit(pax, option){
     if (!pax || !option || option.maxPax == null) return 'fit'
     if (pax > option.maxPax) return 'over'
