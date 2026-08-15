@@ -216,6 +216,7 @@ system's colors, radii, shadows, and breakpoints.
 | `BookingSkeleton` | List of reservation cards | `count` |
 | `SummarySkeleton` | Sticky booking-summary sidebar | — |
 | `StatCardsSkeleton` | Admin stat-card row | `count` |
+| `StatBoardSkeleton` | Overview stat board (revenue panel + counts + occupancy) | — |
 | `TabsSkeleton` | Pill tab bar | `count` |
 | `PanelSkeleton` | Cream panel, centered placeholder | — |
 

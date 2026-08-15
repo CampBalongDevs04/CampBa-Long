@@ -60,8 +60,10 @@ insert into public.staff (user_id, full_name)
 select id, 'Their Name' from auth.users where email = 'them@example.com';
 ```
 
-They can now sign in at `/admindash2345`. An account that signs in without a
-staff row is rejected with "This account is not authorised for the dashboard."
+They can now sign in at the dashboard URL — whichever path `VITE_ADMIN_PATH`
+in `.env` is set to; it is deliberately not written down in the repo. An
+account that signs in without a staff row is rejected with "This account is
+not authorised for the dashboard."
 
 ## How the screens stay fresh
 
@@ -165,9 +167,16 @@ The guest's proof-of-payment screenshot goes into the private `receipts`
 storage bucket, and `bookings.receipt_url` holds its **path** inside that
 bucket — not a public URL.
 
-* `uploadReceipt(file)` runs *before* `createBooking()`, so an upload that fails
-  never leaves a reservation waiting on a review that cannot happen. The folder
-  name is random, because the path is what a signed URL is minted from.
+* `uploadReceipt(file, ownerId)` runs *before* the `pay_my_booking()` /
+  `pay_booking_group()` call, so an upload that fails never leaves a reservation
+  waiting on a review that cannot happen. The path is
+  `<booking or group id>/<random>.jpg`: the id prefix is what the server checks,
+  so one booking's receipt cannot be credited to another, and the random half
+  keeps the path unguessable because it is what a signed URL is minted from.
+* The server requires the object to **exist** in the bucket before it credits
+  anything. Without that check, any string at all set `receipt_url`, which
+  exempted the booking from `expire_stale_bookings()` for good — see
+  `*_verify_receipt_objects.sql`.
 * Anyone may upload (a guest is anonymous at that point) but only a staff
   session may read, via `getReceiptUrl(path)` → a signed URL valid for five
   minutes. The admin `ReceiptViewer` shows it next to the expected down payment,

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import '../css/receipt-viewer.css'
 import {
     getReceiptUrl,
@@ -48,6 +48,23 @@ function formatDateTime(iso) {
     })
 }
 
+// When the reservation itself was made — as opposed to formatDateTime() above,
+// which is when a screenshot arrived. Carries the year, unlike that one:
+// receipts are read close to when they land, but a booking can be reopened
+// long after, and "Aug 11" alone would be ambiguous by then.
+function formatBookedAt(iso) {
+    if (!iso) return '—'
+    const date = new Date(iso)
+    if (Number.isNaN(date.getTime())) return '—'
+    return date.toLocaleString('en-PH', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+    })
+}
+
 function stayLabel(booking) {
     const from = formatDate(booking.checkIn)
     const to = formatDate(booking.checkOut)
@@ -73,15 +90,22 @@ export default function ReceiptViewer({ booking, onClose, onApprove, onCancel })
     // after paying owes the difference and sends a second one, so showing only
     // the latest would leave staff verifying a part-payment against the full
     // amount with no way to see where the rest went.
-    const receipts = useMemo(() => {
-        const withPaths = (booking?.receipts ?? []).filter((entry) => entry.path)
-        if (withPaths.length > 0) return withPaths
-        // Bookings taken before receipts became a list carry a single path on
-        // the row and no history to go with it.
-        return booking?.receiptPath
+    //
+    // Deliberately NOT wrapped in useMemo. Nothing depends on this array's
+    // identity — pathKey below is the stable dependency, and it is a string —
+    // so memoising it bought nothing, while the hand-written dependency list
+    // ([booking?.receipts, booking?.receiptPath]) was narrower than the one
+    // React Compiler infers from the body (booking). Facing that mismatch the
+    // compiler refuses to touch the component at all, so one useMemo that was
+    // never load-bearing was costing the whole viewer its optimization.
+    const withPaths = (booking?.receipts ?? []).filter((entry) => entry.path)
+    // Bookings taken before receipts became a list carry a single path on the
+    // row and no history to go with it.
+    const receipts = withPaths.length > 0
+        ? withPaths
+        : booking?.receiptPath
             ? [{ path: booking.receiptPath, amount: null, uploadedAt: null }]
             : []
-    }, [booking?.receipts, booking?.receiptPath])
 
     // A stable dependency. The booking object is rebuilt on every store poll, so
     // depending on the array itself would re-mint every signed URL twice a
@@ -153,7 +177,8 @@ export default function ReceiptViewer({ booking, onClose, onApprove, onCancel })
 
     const foodOrders = booking.foodOrders ?? []
     const spaOrders = booking.spaOrders ?? []
-    const hasAddOns = foodOrders.length > 0 || spaOrders.length > 0
+    const itemOrders = booking.itemOrders ?? []
+    const hasAddOns = foodOrders.length > 0 || spaOrders.length > 0 || itemOrders.length > 0
 
     return (
         <div
@@ -194,6 +219,10 @@ export default function ReceiptViewer({ booking, onClose, onApprove, onCancel })
                 <div className="receipt-body">
                     <dl className="receipt-facts">
                         <div className="receipt-fact">
+                            <dt>Booked on</dt>
+                            <dd>{formatBookedAt(booking.createdAt)}</dd>
+                        </div>
+                        <div className="receipt-fact">
                             <dt>Expected down payment</dt>
                             <dd className="receipt-fact-strong">{formatPeso(expected)}</dd>
                         </div>
@@ -221,6 +250,10 @@ export default function ReceiptViewer({ booking, onClose, onApprove, onCancel })
                             <dt>Mobile</dt>
                             <dd>{booking.guest?.mobile || '—'}</dd>
                         </div>
+                        <div className="receipt-fact">
+                            <dt>Email</dt>
+                            <dd>{booking.guest?.email || '—'}</dd>
+                        </div>
                     </dl>
 
                     {hasAddOns && (
@@ -247,9 +280,20 @@ export default function ReceiptViewer({ booking, onClose, onApprove, onCancel })
                                     ))}
                                 </div>
                             )}
+                            {itemOrders.length > 0 && (
+                                <div className="receipt-orders-group">
+                                    <p className="receipt-orders-title">Add-ons requested</p>
+                                    {itemOrders.map((order, index) => (
+                                        <div className="receipt-order-row" key={`item-${index}`}>
+                                            <span>{order.name} × {order.quantity}</span>
+                                            <span>{formatPeso(order.total)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                             <div className="receipt-order-row receipt-order-total">
                                 <span>Add-ons total</span>
-                                <span>{formatPeso(orderTotal(foodOrders) + orderTotal(spaOrders))}</span>
+                                <span>{formatPeso(orderTotal(foodOrders) + orderTotal(spaOrders) + orderTotal(itemOrders))}</span>
                             </div>
                         </div>
                     )}

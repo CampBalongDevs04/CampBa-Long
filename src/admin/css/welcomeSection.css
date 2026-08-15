@@ -1,0 +1,194 @@
+/* ============================================================================
+   CMS → Welcome Section. The panel, a preview of the block's copy, and the two
+   lists under it: the photo collage and the green tile panel.
+   ========================================================================== */
+
+.welcome-cms-panel {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--cream, #F5F1E4);
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 10px 20px -14px rgba(10, 22, 14, 0.5);
+    font-family: 'Jost', sans-serif;
+    color: var(--forest-dark, #16291E);
+}
+
+/* ---------- Copy preview ---------- */
+
+/* Centred and in the page's own fonts, because the thing being checked is how
+   the wording reads — a line that is too long for the gold rule, a stray
+   bullet — and none of that shows in a plain form field. */
+.welcome-cms-preview {
+    margin-bottom: 22px;
+    padding: 20px 18px;
+    text-align: center;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    border-radius: 14px;
+}
+
+.welcome-cms-title {
+    margin: 0 0 6px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--forest-dark, #16291E);
+}
+
+.welcome-cms-tagline,
+.welcome-cms-description {
+    margin: 0 auto;
+    max-width: 62ch;
+    font-size: 0.82rem;
+    line-height: 1.55;
+    color: #5b5b4c;
+}
+
+.welcome-cms-message {
+    margin: 12px 0 8px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--gold, #C6A15B);
+}
+
+/* ---------- The two lists ---------- */
+
+.welcome-cms-subbar {
+    margin-top: 4px;
+}
+
+.welcome-cms-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.welcome-cms-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    border-radius: 12px;
+}
+
+.welcome-cms-photo {
+    flex: 0 0 auto;
+    width: 76px;
+    height: 56px;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(198, 161, 91, 0.15);
+    font-size: 0.68rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: rgba(10, 22, 14, 0.42);
+}
+
+.welcome-cms-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* The icon in the dark circle it sits in on the page, so a pale upload that
+   will vanish against it is obvious here rather than after publishing. */
+.welcome-cms-icon {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    box-sizing: border-box;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--forest, #2f5741);
+    box-shadow: inset 0 0 0 1px rgba(217, 189, 132, 0.5);
+}
+
+.welcome-cms-icon svg {
+    width: 100%;
+    height: 100%;
+    stroke: var(--cream, #F5F1E4);
+    fill: none;
+}
+
+.welcome-cms-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+}
+
+.welcome-cms-copy {
+    flex: 1 1 200px;
+    min-width: 0;
+}
+
+.welcome-cms-copy h4 {
+    margin: 0 0 3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.welcome-cms-copy p {
+    margin: 0;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: rgba(10, 22, 14, 0.58);
+}
+
+/* "List only": shown, but past the third photo, so it is in the numbered list
+   and not in the collage. Neutral rather than a warning — it is a fact about
+   the layout, not a mistake. */
+.welcome-cms-tag {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(198, 161, 91, 0.18);
+    border: 1px solid rgba(198, 161, 91, 0.45);
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: #8a6a1f;
+}
+
+/* Amber, not red: nothing is broken, a step has not been taken. */
+.welcome-cms-warning {
+    margin: 5px 0 0;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #8a6a1f;
+}
+
+@media (max-width: 720px) {
+    .welcome-cms-panel {
+        padding: 16px;
+    }
+
+    .welcome-cms-row {
+        flex-wrap: wrap;
+    }
+
+    .welcome-cms-title {
+        font-size: 1.25rem;
+    }
+}

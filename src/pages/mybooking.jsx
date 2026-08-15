@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import './components/css/mybooking.css'
 import Footer from '../components/footer'
+import Seo from '../components/Seo.jsx'
 import BookingPayment from './components/bookingPayment.jsx'
 import { saveReceiptImage } from './components/receiptImage.js'
 import { useBookings } from '../data/useBookings.js'
@@ -10,6 +11,8 @@ import {
     bookingsPersistOnThisDevice,
     forgetMyBookings,
     wasCancelledByPaymentTimeout,
+    canGuestCancel,
+    hasPaidSomething,
     PAYMENT_WINDOW_MINUTES,
     useMyBookingGroups,
     cancelBookingGroup,
@@ -18,6 +21,8 @@ import {
     groupUnitCounts,
 } from '../data/accommodationDB.js'
 import { splitFreeEntrance } from '../data/entranceFee.js'
+import { countNights } from '../data/extendedStay.js'
+import { useMyBookingPage, fillTokens, unitTokens } from '../data/myBookingPage.js'
 
 function formatDate(iso){
     if (!iso) return '—'
@@ -53,6 +58,31 @@ const STATUS_LABELS = {
     cancelled: 'Cancelled',
 }
 
+// What stands where the Cancel button used to, on a booking that can no longer
+// be called off from here. Two different facts, and a guest is owed whichever
+// one applies:
+//
+//   • The down payment is already with the resort. Cancelling from a phone
+//     would release the unit while the money is still held against a stay that
+//     no longer exists, so this one goes through a person — which is what
+//     "Cancellation is no longer allowed once the down payment has been made"
+//     on the booking page has always meant.
+//   • The stay is simply over.
+//
+// Said out loud rather than left as a gap. A button that quietly disappears
+// reads as a page that failed to load, and the guest's next move — message the
+// resort — is exactly what an empty space cannot tell them.
+function NoCancelNote({ booking, thing }){
+    return (
+        <p className="booking-card-nocancel" role="note">
+            {hasPaidSomething(booking)
+                ? `Your down payment is with us, so this ${thing} can no longer be cancelled`
+                  + ' here. Message the resort if you need to change it.'
+                : 'This stay is over, so it can no longer be cancelled.'}
+        </p>
+    )
+}
+
 function foodOrderSummary(booking){
     const orders = booking.foodOrders ?? []
     if (orders.length === 0) return 'none'
@@ -73,16 +103,42 @@ function spaOrderTotal(booking){
     return (booking.spaOrders ?? []).reduce((sum, order) => sum + order.total, 0)
 }
 
+function itemOrderSummary(booking){
+    const orders = booking.itemOrders ?? []
+    if (orders.length === 0) return 'none'
+    return orders.map((order) => `${order.name} x${order.quantity}`).join(', ')
+}
+
+function itemOrderTotal(booking){
+    return (booking.itemOrders ?? []).reduce((sum, order) => sum + order.total, 0)
+}
+
+// How many nights this booking was BILLED for — the same count the booking page
+// multiplied the rates by, recovered from the two dates the row stores.
+function stayNights(booking){
+    if (booking.sameDayCheckout) return 1
+    return Math.max(1, countNights(booking.checkIn, booking.checkOut))
+}
+
 function stayLabel(booking){
     if (booking.sameDayCheckout) return '1 day use'
     if (!booking.checkIn || !booking.checkOut) return 'Stay length TBA'
-    const nights = Math.max(1, Math.round(
-        (new Date(booking.checkOut) - new Date(booking.checkIn)) / 86400000
-    ))
+    const nights = stayNights(booking)
     return `${nights} night${nights > 1 ? 's' : ''} stay`
 }
 
+// `entrance.perHead` is stored as what one full-fare head owes FOR THE WHOLE
+// STAY (the nightly rate already multiplied by the nights — see
+// data/extendedStay.js). On a one-night booking that is the nightly rate and
+// needs no explaining; on a longer one, "₱1,050/head" only makes sense with
+// the nights it covers said next to it.
+function perHeadLabel(booking, formatted){
+    const nights = stayNights(booking)
+    return nights > 1 ? `${formatted}/head for ${nights} nights` : `${formatted}/head`
+}
+
 function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, payNow }){
+    const { page: copy } = useMyBookingPage()
     const status = getBookingStage(booking)
     const { start, end } = splitTimes(booking.schedule)
     const paymentKnown = booking.downpayment != null
@@ -166,8 +222,18 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, 
                         {booking.kids > 0 && (
                             <p className="field-sub">{booking.kids} kids (7 &amp; below, no entrance fee)</p>
                         )}
+                        {/* No percentage on the line below, on purpose. This card
+                            shows a booking that was priced when it was made, and
+                            the senior rate can change afterwards — quoting today's
+                            rate against an older booking would describe it
+                            wrongly. What that booking actually got is the peso
+                            figure in the entrance breakdown further down, which is
+                            stored on the row itself. */}
                         {booking.seniors > 0 && (
-                            <p className="field-sub">{booking.seniors} senior citizens (10% off, ID required)</p>
+                            <p className="field-sub">{booking.seniors} senior citizens — discount claimed at the resort, bring a valid ID</p>
+                        )}
+                        {booking.pwd > 0 && (
+                            <p className="field-sub">{booking.pwd} PWD guests — discount claimed at the resort, bring a valid PWD ID</p>
                         )}
                     </div>
                 </div>
@@ -215,7 +281,7 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, 
                                 <p className="field-label">Entrance Fee</p>
                                 <p className="field-value">{formatPeso(booking.entrance.total)}</p>
                                 <p className="field-sub">
-                                    {formatPeso(booking.entrance.perHead)}/head, half prepaid
+                                    {perHeadLabel(booking, formatPeso(booking.entrance.perHead))}, half prepaid
                                     {kidsApplied > 0
                                         ? ` • free entrance (${kidsApplied} pax, kids 7 & below) −${formatPeso(kidsFree)}`
                                         : ''}
@@ -249,13 +315,16 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, 
                     </p>
                     <p className="field-sub">Payment: Down Payment</p>
                     <p className="field-sub">
-                        Schedule: {booking.schedule?.description ?? 'none'} • Spa: {spaOrderSummary(booking)} • Food: {foodOrderSummary(booking)}
+                        Schedule: {booking.schedule?.description ?? 'none'} • Spa: {spaOrderSummary(booking)} • Food: {foodOrderSummary(booking)} • Add-ons: {itemOrderSummary(booking)}
                     </p>
                     {booking.spaOrders?.length > 0 && (
                         <p className="field-sub">Spa total: {formatPeso(spaOrderTotal(booking))}</p>
                     )}
                     {booking.foodOrders?.length > 0 && (
                         <p className="field-sub">Food total: {formatPeso(foodOrderTotal(booking))}</p>
+                    )}
+                    {booking.itemOrders?.length > 0 && (
+                        <p className="field-sub">Add-ons total: {formatPeso(itemOrderTotal(booking))}</p>
                     )}
                 </div>
             </div>
@@ -299,22 +368,23 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, 
                     >
                         Delete Booking
                     </button>
-                ) : (
+                ) : canGuestCancel(booking) ? (
                     <button
                         type="button"
                         className="booking-card-cancel"
                         onClick={() => onCancel(booking.id)}
-                        disabled={status === 'completed'}
                     >
                         Cancel Booking
                     </button>
+                ) : (
+                    <NoCancelNote booking={booking} thing="booking" />
                 )}
                 <button
                     type="button"
                     className="booking-card-receipt"
                     onClick={() => onSaveReceipt(booking)}
                 >
-                    Save Receipt
+                    {copy.saveReceiptLabel}
                 </button>
                 <button
                     type="button"
@@ -335,6 +405,7 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, 
 // (the header's unit id, the singular accomodationName) has no single answer
 // here — it reads better written straight through than threaded with ternaries.
 function GroupBookingCard({ group, onCancel, onDelete, onSaveReceipt, payNow }){
+    const { page: copy } = useMyBookingPage()
     const status = getBookingStage(group)
     const { start, end } = splitTimes(group.schedule)
     const outstanding = Math.max(
@@ -415,8 +486,14 @@ function GroupBookingCard({ group, onCancel, onDelete, onSaveReceipt, payNow }){
                         {group.kids > 0 && (
                             <p className="field-sub">{group.kids} kids (7 &amp; below, no entrance fee)</p>
                         )}
+                        {/* Same reasoning as the single-booking card: the rate
+                            that priced this reservation is whatever it was on
+                            the day, not today's. */}
                         {group.seniors > 0 && (
-                            <p className="field-sub">{group.seniors} senior citizens (10% off, ID required)</p>
+                            <p className="field-sub">{group.seniors} senior citizens — discount claimed at the resort, bring a valid ID</p>
+                        )}
+                        {group.pwd > 0 && (
+                            <p className="field-sub">{group.pwd} PWD guests — discount claimed at the resort, bring a valid PWD ID</p>
                         )}
                     </div>
                 </div>
@@ -473,7 +550,7 @@ function GroupBookingCard({ group, onCancel, onDelete, onSaveReceipt, payNow }){
                                 <p className="field-label">Entrance Fee</p>
                                 <p className="field-value">{formatPeso(group.entrance.total)}</p>
                                 <p className="field-sub">
-                                    {formatPeso(group.entrance.perHead)}/head, half prepaid
+                                    {perHeadLabel(group, formatPeso(group.entrance.perHead))}, half prepaid
                                     {kidsApplied > 0
                                         ? ` • free entrance (${kidsApplied} pax, kids 7 & below) −${formatPeso(kidsFree)}`
                                         : ''}
@@ -507,13 +584,16 @@ function GroupBookingCard({ group, onCancel, onDelete, onSaveReceipt, payNow }){
                     </p>
                     <p className="field-sub">Payment: Down Payment</p>
                     <p className="field-sub">
-                        Schedule: {group.schedule?.description ?? 'none'} • Spa: {spaOrderSummary(group)} • Food: {foodOrderSummary(group)}
+                        Schedule: {group.schedule?.description ?? 'none'} • Spa: {spaOrderSummary(group)} • Food: {foodOrderSummary(group)} • Add-ons: {itemOrderSummary(group)}
                     </p>
                     {group.spaOrders?.length > 0 && (
                         <p className="field-sub">Spa total: {formatPeso(spaOrderTotal(group))}</p>
                     )}
                     {group.foodOrders?.length > 0 && (
                         <p className="field-sub">Food total: {formatPeso(foodOrderTotal(group))}</p>
+                    )}
+                    {group.itemOrders?.length > 0 && (
+                        <p className="field-sub">Add-ons total: {formatPeso(itemOrderTotal(group))}</p>
                     )}
                 </div>
             </div>
@@ -556,22 +636,23 @@ function GroupBookingCard({ group, onCancel, onDelete, onSaveReceipt, payNow }){
                     >
                         Delete Booking
                     </button>
-                ) : (
+                ) : canGuestCancel(group) ? (
                     <button
                         type="button"
                         className="booking-card-cancel"
                         onClick={() => onCancel(group.id)}
-                        disabled={status === 'completed'}
                     >
                         Cancel Reservation
                     </button>
+                ) : (
+                    <NoCancelNote booking={group} thing="reservation" />
                 )}
                 <button
                     type="button"
                     className="booking-card-receipt"
                     onClick={() => onSaveReceipt(group)}
                 >
-                    Save Receipt
+                    {copy.saveReceiptLabel}
                 </button>
             </div>
         </article>
@@ -583,6 +664,9 @@ function MyBooking() {
     const location = useLocation()
     const { bookings, cancelBooking, deleteBooking } = useBookings()
     const groups = useMyBookingGroups()
+    // Everything a guest reads on this page that is not their own booking —
+    // edited in CMS → My Booking (data/myBookingPage.js).
+    const { page: copy } = useMyBookingPage()
     const [error, setError] = useState(null)
     // False in a private window that blocks localStorage: the reservation is
     // real and staff have it, but this tab is the only thing holding the key
@@ -661,19 +745,17 @@ function MyBooking() {
     }
 
     return (
+        <>
+        <Seo path="/my-booking" />
         <main className="page my-booking-page">
             <div className="my-booking-shell">
                 <header className="my-booking-hero">
-                    <p className="my-booking-eyebrow">Camp Ba-long Reservations</p>
-                    <h1 className="my-booking-title">My Bookings</h1>
-                    <p className="my-booking-tagline">
-                        Review your reservation history and manage upcoming stays.
-                    </p>
-                    <p className="my-booking-privacy">
-                        Only the bookings made on this device appear here. Open the site on
-                        another phone or browser and you will see that device&apos;s bookings
-                        instead — your details are never shown to another guest.
-                    </p>
+                    {copy.eyebrow && <p className="my-booking-eyebrow">{copy.eyebrow}</p>}
+                    <h1 className="my-booking-title">{copy.title}</h1>
+                    {copy.tagline && <p className="my-booking-tagline">{copy.tagline}</p>}
+                    {copy.privacyNote && (
+                        <p className="my-booking-privacy">{copy.privacyNote}</p>
+                    )}
                     {!persistent && (
                         <p className="my-booking-warning" role="status">
                             This browser is not saving anything, so this list will be empty when
@@ -687,40 +769,46 @@ function MyBooking() {
                     <p className="my-booking-error" role="alert">{error}</p>
                 )}
 
-                {justBooked && (
-                    <section className="my-booking-confirmed" role="status">
-                        <p className="my-booking-confirmed-title">
-                            {payNowId
-                                ? `${justBooked.isGroup ? 'Units' : 'Unit'} held for booking ${justBooked.code}`
-                                : `Booking ${justBooked.code} received`}
-                        </p>
-                        <p className="my-booking-confirmed-text">
-                            {payNowId ? (
-                                <>
-                                    Your {justBooked.isGroup ? 'units are' : 'unit is'} reserved for the next{' '}
-                                    {PAYMENT_WINDOW_MINUTES} minutes. Send the{' '}
-                                    {formatPeso(justBooked.downpayment)} down payment and
-                                    upload the receipt below before the timer runs out, or
-                                    the booking is cancelled and the {justBooked.isGroup ? 'units are' : 'unit is'} released.
-                                    Ordering food or a spa treatment first adds them to
-                                    that amount.
-                                </>
-                            ) : (
-                                <>
-                                    Save a copy for check-in — it downloads as an image you
-                                    can keep in your photos.
-                                </>
+                {justBooked && (() => {
+                    /* One panel, two things it can be saying. `payNowId` is set
+                       only when the guest arrived here to pay, so that version
+                       is about a running clock; otherwise the money is already
+                       in and the panel is about keeping the receipt.
+
+                       The wording of both is staff's (CMS → My Booking → Save
+                       Receipt Note). What the browser knows — the booking's
+                       code, its down payment, the minutes on the hold, and
+                       whether this is one unit or several — goes in as tokens,
+                       because those change per booking and cannot be typed. */
+                    const tokens = {
+                        code: justBooked.code,
+                        amount: formatPeso(justBooked.downpayment),
+                        minutes: PAYMENT_WINDOW_MINUTES,
+                        ...unitTokens(justBooked.isGroup),
+                    }
+                    const title = payNowId ? copy.holdTitle : copy.savedTitle
+                    const text = payNowId ? copy.holdText : copy.savedText
+
+                    return (
+                        <section className="my-booking-confirmed" role="status">
+                            <p className="my-booking-confirmed-title">
+                                {fillTokens(title, tokens)}
+                            </p>
+                            {text && (
+                                <p className="my-booking-confirmed-text">
+                                    {fillTokens(text, tokens)}
+                                </p>
                             )}
-                        </p>
-                        <button
-                            type="button"
-                            className="my-booking-confirmed-save"
-                            onClick={() => handleSaveReceipt(justBooked)}
-                        >
-                            Save Receipt
-                        </button>
-                    </section>
-                )}
+                            <button
+                                type="button"
+                                className="my-booking-confirmed-save"
+                                onClick={() => handleSaveReceipt(justBooked)}
+                            >
+                                {copy.saveReceiptLabel}
+                            </button>
+                        </section>
+                    )
+                })()}
 
                 {entries.length === 0 ? (
                     <section className="my-booking-empty" aria-live="polite">
@@ -787,6 +875,7 @@ function MyBooking() {
 
             <Footer />
         </main>
+        </>
     )
 }
 

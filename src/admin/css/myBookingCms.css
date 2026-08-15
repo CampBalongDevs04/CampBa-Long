@@ -1,0 +1,224 @@
+/* ============================================================================
+   CMS → My Booking. The two panels behind that page's tabs — Hero & Notes and
+   Payment & QR.
+
+   Loaded ALONGSIDE bookingCms.css rather than instead of it: the panel card,
+   the preview frame and the editable rows are the same furniture as CMS →
+   Booking, and duplicating them here would be two copies to keep in step. What
+   is below is only what /my-booking has and /booking does not — the two notes
+   in their own colours, and the grid of QR cards.
+   ========================================================================== */
+
+/* ---------- The green "save your receipt" panel ---------- */
+
+/* Previewed in its own colour on purpose. Both versions of this panel are
+   edited on one screen and they say different things about the same booking;
+   green is how a staff member knows they are looking at the panel guests see
+   rather than at another dashboard box. Matches .my-booking-confirmed in
+   src/pages/components/css/mybooking.css. */
+.mybooking-cms-saved {
+    padding: 16px 18px;
+    background: rgba(61, 163, 93, 0.08);
+    border: 1px solid rgba(61, 163, 93, 0.4);
+    border-radius: 12px;
+    text-align: center;
+}
+
+.mybooking-cms-saved + .mybooking-cms-saved {
+    margin-top: 12px;
+}
+
+.mybooking-cms-saved-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #2E7D46;
+}
+
+.mybooking-cms-saved-text {
+    margin: 6px 0 0;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: rgba(10, 22, 14, 0.7);
+}
+
+/* The button inside the panel, as the page draws it — a label that has grown
+   too long to read on a phone is a thing to see, not to be told about. */
+.mybooking-cms-saved-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 10px;
+    padding: 8px 22px;
+    border-radius: 999px;
+    background: #16291E;
+    color: #F5F1E4;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+/* Which of the two versions this is. They differ by one condition — whether
+   the guest arrived here to pay — and nothing in the wording itself says so. */
+.mybooking-cms-variant {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: rgba(10, 22, 14, 0.5);
+}
+
+/* The placeholders, spelled out under the form's own preview. {amount} in a
+   note about money is the difference between a figure that follows the booking
+   and one frozen at whatever it was the day it was typed. */
+.mybooking-cms-tokens {
+    margin: 12px 0 0;
+    padding: 10px 14px;
+    background: rgba(198, 161, 91, 0.1);
+    border: 1px dashed rgba(198, 161, 91, 0.5);
+    border-radius: 10px;
+    font-size: 0.74rem;
+    line-height: 1.6;
+    color: rgba(10, 22, 14, 0.7);
+}
+
+.mybooking-cms-tokens code {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(22, 41, 30, 0.08);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.95em;
+}
+
+/* The upload warning as the payment panel prints it. Previewed in its own red
+   rather than as plain dashboard text: the whole point of the line is that it
+   is louder than what surrounds it, and that is not checkable in a preview
+   where everything looks the same. Matches .payment-upload-warning in
+   src/pages/components/css/payment.css. */
+.mybooking-cms-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin: 12px 0 0;
+    padding: 10px 13px;
+    border: 1px solid rgba(143, 58, 45, 0.35);
+    border-left: 3px solid #8F3A2D;
+    border-radius: 10px;
+    background: rgba(143, 58, 45, 0.07);
+    font-size: 0.8rem;
+    line-height: 1.55;
+}
+
+.mybooking-cms-warning-icon {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 17px;
+    height: 17px;
+    margin-top: 1px;
+    border-radius: 50%;
+    background: #8F3A2D;
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* ---------- The QR cards ---------- */
+
+/* The same grid /my-booking lays the cards out in, so "these two are side by
+   side and the third wrapped underneath" is visible here. */
+.mybooking-cms-qr-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 12px;
+}
+
+.mybooking-cms-qr-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 16px 14px;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    border-radius: 12px;
+    text-align: center;
+}
+
+/* A card whose row is hidden. Kept in the list rather than dropped, because a
+   method staff switched off is one they mean to switch back on. */
+.mybooking-cms-qr-card.crud-is-hidden {
+    opacity: 0.55;
+    border-style: dashed;
+}
+
+.mybooking-cms-qr-method {
+    margin: 0 0 8px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #16291E;
+}
+
+.mybooking-cms-qr-image {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    border-radius: 8px;
+}
+
+/* What the page shows in the frame of a method with no QR yet — the bank
+   transfer card has never had one. */
+.mybooking-cms-qr-none {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 120px;
+    height: 120px;
+    padding: 8px;
+    background: rgba(22, 41, 30, 0.04);
+    border: 1px dashed rgba(198, 161, 91, 0.55);
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-style: italic;
+    color: rgba(10, 22, 14, 0.5);
+}
+
+.mybooking-cms-qr-name {
+    margin: 10px 0 0;
+    font-size: 0.86rem;
+    font-weight: 600;
+}
+
+.mybooking-cms-qr-number {
+    margin: 2px 0 0;
+    font-size: 0.8rem;
+    letter-spacing: 0.4px;
+    color: rgba(10, 22, 14, 0.62);
+}
+
+/* A field staff have left empty. Named rather than left blank: an account with
+   no name under the QR is a guest with nothing to check their transfer
+   against. */
+.mybooking-cms-qr-missing {
+    font-style: italic;
+    color: rgba(138, 43, 43, 0.75);
+}
+
+.mybooking-cms-qr-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+@media (max-width: 720px) {
+    .mybooking-cms-qr-grid {
+        grid-template-columns: 1fr;
+    }
+}

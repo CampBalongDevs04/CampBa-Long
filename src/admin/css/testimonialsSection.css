@@ -1,0 +1,165 @@
+/* ============================================================================
+   CMS → Testimonials. The panel, a preview of the heading, and the reviews in
+   the order they scroll past on the home page.
+   ========================================================================== */
+
+.tst-cms-panel {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--cream, #F5F1E4);
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 10px 20px -14px rgba(10, 22, 14, 0.5);
+    font-family: 'Jost', sans-serif;
+    color: var(--forest-dark, #16291E);
+}
+
+/* ---------- Heading preview ---------- */
+/* Centred and in the page's own fonts, because what is being checked is how the
+   wording reads — a line too long for the rule, a stray bullet — and none of
+   that shows in a plain form field. The Edit button lives inside it: unlike the
+   other sections there is no second toolbar to hang it off, since the panel's
+   primary button belongs to "add a review". */
+
+.tst-cms-preview {
+    margin-bottom: 4px;
+    padding: 18px;
+    text-align: center;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    border-radius: 14px;
+}
+
+.tst-cms-title {
+    margin: 0 0 6px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.45rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.tst-cms-sub {
+    margin: 0 0 12px;
+    font-size: 0.82rem;
+    letter-spacing: 0.6px;
+    color: #5b5b4c;
+}
+
+/* ---------- Reviews ---------- */
+
+.tst-cms-subbar {
+    margin-top: 18px;
+}
+
+.tst-cms-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.tst-cms-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    /* The gold top border the real card carries, moved to the side: in a
+       vertical list an edge down the left is what separates one review from the
+       next. */
+    border-left: 3px solid var(--gold, #C6A15B);
+    border-radius: 14px;
+    padding: 16px 18px;
+}
+
+/* The same initials circle the home page draws, so a name that abbreviates
+   badly is caught here rather than on the front page. */
+.tst-cms-avatar {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--forest, #1E3A2B);
+    border: 2px solid var(--gold-soft, #D9BD84);
+    box-sizing: border-box;
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 1px;
+    color: var(--gold-soft, #D9BD84);
+}
+
+.tst-cms-copy {
+    flex: 1 1 260px;
+    min-width: 0;
+}
+
+.tst-cms-copy h4 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 0 0 4px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+}
+
+.tst-cms-comment {
+    margin: 6px 0 0;
+    max-width: 70ch;
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: rgba(10, 22, 14, 0.75);
+}
+
+.tst-cms-stay {
+    margin: 6px 0 0;
+    font-size: 0.74rem;
+    letter-spacing: 0.5px;
+    color: var(--leaf, #4C6B4F);
+}
+
+/* ---------- Stars ---------- */
+/* Two glyphs stacked, the gold one clipped to the rating's width, so half a
+   star is drawn as half a star rather than rounded to the nearest whole one. */
+
+.tst-cms-stars {
+    display: inline-flex;
+    gap: 2px;
+    font-size: 0.88rem;
+    line-height: 1;
+    color: rgba(198, 161, 91, 0.35);
+}
+
+.tst-cms-star {
+    position: relative;
+    display: inline-block;
+}
+
+.tst-cms-star-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    overflow: hidden;
+    color: var(--gold, #C6A15B);
+}
+
+@media (max-width: 720px) {
+    .tst-cms-panel {
+        padding: 16px;
+    }
+
+    .tst-cms-title {
+        font-size: 1.25rem;
+    }
+
+    .tst-cms-card {
+        flex-wrap: wrap;
+    }
+}

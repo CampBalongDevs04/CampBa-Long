@@ -35,3 +35,11 @@ src/components/psw.md
 .agents/
 .claude/
 skills-lock.json
+
+# Supabase CLI scratch state: which project this machine is linked to, and the
+# server versions it last saw. Rewritten by `supabase link` and most other CLI
+# commands, so tracking it means diffs nobody asked for. Nothing here is needed
+# to build — the app reads .env. A fresh clone re-creates it with
+# `supabase link --project-ref <ref>`. Migrations stay tracked.
+supabase/.temp/
+supabase/pw.md

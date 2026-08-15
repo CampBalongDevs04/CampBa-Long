@@ -18,24 +18,6 @@ import {
     savePromoMarquee,
 } from '../../data/promoMarquee.js'
 
-// Units → Manage Accommodations. What the resort sells, and what it costs.
-//
-// TWO THINGS ARE BEING EDITED, NOT ONE
-// ------------------------------------
-// An accommodation (the Teepee, and that there are two of them) and a RATE
-// (what one Teepee costs under one stay schedule) are separate rows, because
-// the same Teepee is ₱900 for Day Time and ₱1,700 overnight. So each card here
-// has its own Edit, and a price line under it for each schedule group with its
-// own. Removing a rate is how a unit stops being offered under that schedule —
-// which is exactly why the Cottage is day-only and the tents overnight-only.
-//
-// Everything saved here reaches the booking page immediately: it builds its
-// cards from these same rows (see data/accomodationOptions.js), so there is no
-// second list to keep in step.
-
-// The rate groups the stay schedules actually use, with the schedules that fall
-// under each. Read from STAY_SCHEDULES rather than listed, so adding a fourth
-// schedule later needs no change here.
 const RATE_GROUPS = [...new Set(STAY_SCHEDULES.map((schedule) => schedule.rateGroup))].map(
     (group) => ({
         id: group,
@@ -73,9 +55,7 @@ function typeFields(values) {
                 ? 'Unit ids are built from it: AHS → AHS-01, AHS-02.'
                 : 'Fixed once units exist — bookings point at ids built from it.',
         },
-        // The units that shipped with the site have a bundled photo, which is
-        // what fills the frame until staff upload their own. An upload wins
-        // over it everywhere the unit is shown — see resolveAccommodationImage.
+        
         {
             name: 'imageUrl',
             label: 'Photo',
@@ -84,9 +64,7 @@ function typeFields(values) {
             preview: resolveAccommodationImage(values.id, values.imageUrl),
             help: 'Shown on the booking page and the home page card. JPG, PNG or WebP, up to 5 MB.',
         },
-        // The rest of the carousel. This is where the inside of the unit goes —
-        // the bedding, the deck, the view — which the card's single photo has
-        // never had room for.
+        
         {
             name: 'gallery',
             label: 'Gallery',
@@ -96,8 +74,7 @@ function typeFields(values) {
                 + 'view, the setup. The main photo above is always the first slide; these '
                 + 'follow in this order.',
         },
-        // The home page card is built from these two. Without them a new
-        // accommodation still gets a card — it just has nothing to say on it.
+      
         {
             name: 'description',
             label: 'Description',
@@ -118,14 +95,6 @@ function typeFields(values) {
     ]
 }
 
-// The promo is a SECOND price beside the standing one, not a replacement for
-// it. Staff used to run a promo by typing the discounted figure over the price
-// and typing the old one back afterwards — which meant the original was gone
-// while the promo ran (nothing to strike through on the card) and the way back
-// depended on remembering it. Here the price field stays the standing rate all
-// year, the promo sits under it, and the checkbox is the whole of starting and
-// ending one. Raising the standing rate later is then just an edit of the price
-// field, promo running or not.
 function rateFields(values) {
     return [
         [
@@ -177,10 +146,7 @@ function rateFields(values) {
     ]
 }
 
-// The scrolling banner above the accommodations on the home page. Its copy is
-// written here rather than derived from the promos on the rates: a promo is a
-// message before it is arithmetic ("book 2 nights, get a free tent"), and the
-// wording is the part the resort wants to choose.
+
 function bannerFields() {
     return [
         {

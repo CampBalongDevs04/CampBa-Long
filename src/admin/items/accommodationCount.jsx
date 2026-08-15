@@ -15,9 +15,18 @@ const UNIT_STATUS = {
     booked: { label: 'Booked', className: 'is-booked' },
 }
 
+function groupByPool(types) {
+    const groups = new Map()
+    for (const type of types) {
+        const key = type.poolId ?? type.id
+        if (!groups.has(key)) groups.set(key, [])
+        groups.get(key).push(type)
+    }
+    return [...groups.values()].sort((a, b) => (a.length > 1) - (b.length > 1))
+}
+
 export default function AccommodationCount() {
-    // Live view of the same database the booking page writes to: a guest
-    // confirming a stay shows up here without a refresh.
+    
     useAccommodationDB()
     const [selectedDate, setSelectedDate] = useState(() => toISODate(new Date()))
     const isToday = selectedDate === toISODate(new Date())
@@ -38,12 +47,16 @@ export default function AccommodationCount() {
             </div>
 
             <div className="accommodation-holder">
-                {ACCOMMODATION_TYPES.map((type) => {
-                    // Per-unit breakdown for the selected day: a unit can be
-                    // taken for only part of it (Day Time 10-5) and still be
-                    // free that evening, so each booked block is listed with
-                    // its hours instead of blacking out the whole day.
-                    const units = listUnitIds(type.id).map((id) => ({
+                {
+
+                }
+                {groupByPool(ACCOMMODATION_TYPES).map((group) => {
+                    const pooled = group.length > 1
+                    const name = group.map((type) => type.name).join(' · ')
+                    const image = group.find((type) => type.image)?.image ?? null
+
+                    
+                    const units = listUnitIds(group[0].id).map((id) => ({
                         id,
                         ...getUnitDayDetail(id, selectedDate),
                     }))
@@ -51,11 +64,14 @@ export default function AccommodationCount() {
                     const pendingCount = units.filter((unit) => unit.status === 'pending').length
 
                     return (
-                        <div className="accommodation-card" key={type.prefix}>
+                        <div
+                            className={`accommodation-card${pooled ? ' accommodation-card-pooled' : ''}`}
+                            key={group[0].poolId ?? group[0].id}
+                        >
                             <div className="accommodation-card-header">
                                 <div className="accommodation-card-image">
-                                    {type.image ? (
-                                        <img src={type.image} alt={type.name} />
+                                    {image ? (
+                                        <img src={image} alt={name} />
                                     ) : (
                                         <span className="accommodation-card-image-placeholder">
                                             No Image
@@ -63,9 +79,9 @@ export default function AccommodationCount() {
                                     )}
                                 </div>
                                 <div className="accommodation-card-info">
-                                    <p className="accommodation-card-name">{type.name}</p>
+                                    <p className="accommodation-card-name">{name}</p>
                                     <p className="accommodation-card-count">
-                                        {availableCount} <span>/ {type.total} available</span>
+                                        {availableCount} <span>/ {units.length} available</span>
                                     </p>
                                     {pendingCount > 0 && (
                                         <p className="accommodation-card-pending">

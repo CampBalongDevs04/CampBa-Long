@@ -4,6 +4,8 @@ import Payment from './payment.jsx'
 import PaymentCountdown from './paymentCountdown.jsx'
 import { formatCountdown, usePaymentWindow } from './usePaymentWindow.js'
 import { payBooking, getBookingStage, DOWNPAYMENT_RATE } from '../../data/accommodationDB.js'
+import { countNights } from '../../data/extendedStay.js'
+import { useMyBookingPage, fillTokens } from '../../data/myBookingPage.js'
 
 // The payment panel inside a My Bookings card. Paying used to be step 4 of the
 // booking form, before the reservation existed; it lives here now, next to the
@@ -100,6 +102,10 @@ export default function BookingPayment({
     const [receipt, setReceipt] = useState(null)
     const [status, setStatus] = useState('idle')   // idle | sending | sent
     const [error, setError] = useState(null)
+    // The wording of the note above the QR codes, edited in
+    // CMS → My Booking → Payment & QR. Its {amount} is filled in below, once
+    // what is outstanding has been worked out.
+    const { page: copy } = useMyBookingPage()
 
     const stage = getBookingStage(booking)
     // Ten minutes to pay, counted against the resort's clock. `tracked` is true
@@ -116,17 +122,27 @@ export default function BookingPayment({
     const open = toggled ?? (autoOpen || payWindow.tracked)
     const foodTotal = round2(orderTotal(booking.foodOrders))
     const spaTotal = round2(orderTotal(booking.spaOrders))
+    const itemsTotal = round2(orderTotal(booking.itemOrders))
     // A single-unit booking has `price`; a combined reservation has
     // `unitSubtotal` instead (the sum across every unit) — never both.
     const unitRate = booking.price ?? booking.unitSubtotal ?? 0
     const entranceTotal = booking.entrance?.total ?? 0
+    // Both figures above are for the WHOLE stay: an extended booking's `price`
+    // is the nightly rate already multiplied by its nights, and the entrance
+    // breakdown was scaled the same way when the booking was created (see
+    // data/extendedStay.js). Nothing here multiplies — it only needs to say
+    // how many nights the numbers already cover.
+    const nights = booking.sameDayCheckout
+        ? 1
+        : Math.max(1, countNights(booking.checkIn, booking.checkOut))
+    const nightsNote = nights > 1 ? ` for ${nights} nights` : ''
 
     // The two halves of what this stay costs, kept apart on purpose. Entrance
     // fees belong with the unit — they are settled together when the booking is
     // paid — while food and spa can be ordered at any time, including after
     // that payment has gone through. Both are charged at the same 50%.
     const bookingBase = round2(unitRate + entranceTotal)
-    const addonsBase = round2(foodTotal + spaTotal)
+    const addonsBase = round2(foodTotal + spaTotal + itemsTotal)
     const stayTotal = round2(booking.stayTotal ?? bookingBase + addonsBase)
 
     const dueNow = round2(booking.downpayment ?? stayTotal * DOWNPAYMENT_RATE)
@@ -246,13 +262,13 @@ export default function BookingPayment({
                         >
                             <ChargeRow
                                 label="Accommodation"
-                                sub={accommodationLabel}
+                                sub={`${accommodationLabel}${nightsNote}`}
                                 value={(booking.price ?? booking.unitSubtotal) != null ? formatPeso(unitRate) : 'Price TBA'}
                             />
                             {entranceTotal > 0 && (
                                 <ChargeRow
                                     label="Entrance fees"
-                                    sub={`${formatPeso(booking.entrance.perHead)}/head`}
+                                    sub={`${formatPeso(booking.entrance.perHead)}/head${nightsNote}`}
                                     value={formatPeso(entranceTotal)}
                                 />
                             )}
@@ -276,7 +292,7 @@ export default function BookingPayment({
 
                         {addonsBase > 0 && (
                             <ChargeGroup
-                                title="Food & spa"
+                                title="Food, spa & add-ons"
                                 note={
                                     bookingPaid
                                         ? `Ordered after your booking was paid, so this ${RATE_LABEL} is asked for on its own — your booking payment stays as it is.`
@@ -297,13 +313,19 @@ export default function BookingPayment({
                                         value={formatPeso(spaTotal)}
                                     />
                                 )}
+                                {itemsTotal > 0 && (
+                                    <ChargeRow
+                                        label="Add-ons"
+                                        sub={`${booking.itemOrders.length} item${booking.itemOrders.length > 1 ? 's' : ''}`}
+                                        value={formatPeso(itemsTotal)}
+                                    />
+                                )}
                                 <ChargeRow
                                     label="Add-ons subtotal"
-                                    sub={
-                                        foodTotal > 0 && spaTotal > 0
-                                            ? `${formatPeso(foodTotal)} + ${formatPeso(spaTotal)}`
-                                            : null
-                                    }
+                                    sub={(() => {
+                                        const parts = [foodTotal, spaTotal, itemsTotal].filter((part) => part > 0)
+                                        return parts.length > 1 ? parts.map(formatPeso).join(' + ') : null
+                                    })()}
                                     value={formatPeso(addonsBase)}
                                     tone="subtotal"
                                 />
@@ -457,12 +479,18 @@ export default function BookingPayment({
                                 inputId={`receipt-upload-${booking.id}`}
                                 note={
                                     <>
-                                        <strong className="payment-note-heading">
-                                            Send {formatPeso(outstanding)}.
-                                        </strong>{' '}
-                                        Scan the QR of your preferred method, then upload the
-                                        screenshot as proof. Your unit stays held while we
-                                        verify it.
+                                        {copy.payNoteHeading && (
+                                            <>
+                                                <strong className="payment-note-heading">
+                                                    {fillTokens(copy.payNoteHeading, {
+                                                        amount: formatPeso(outstanding),
+                                                    })}
+                                                </strong>{' '}
+                                            </>
+                                        )}
+                                        {fillTokens(copy.payNoteText, {
+                                            amount: formatPeso(outstanding),
+                                        })}
                                     </>
                                 }
                             />

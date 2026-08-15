@@ -63,8 +63,25 @@ export const supabase = createClient(
     key || 'unconfigured',
     {
         auth: {
-            persistSession: true,
+            // The staff session lives in memory and nowhere else: reloading the
+            // dashboard, opening it in a second tab or coming back to the
+            // browser tomorrow all ask for the password again. A resort computer
+            // left open on the bookings table is the case this is aimed at, and
+            // nothing else on the site signs anyone in — guests reach their own
+            // bookings through the anon key and the RPCs.
+            persistSession: false,
+            // Still refreshed while the tab is open, so a long shift on the
+            // dashboard is not interrupted by an expired token.
             autoRefreshToken: true,
         },
     },
 )
+
+// Sessions earlier builds wrote to localStorage are never read again now that
+// persistSession is off. Clearing them stops a refresh token this app can no
+// longer use from sitting in a staff browser for good.
+if (typeof localStorage !== 'undefined') {
+    for (const storageKey of Object.keys(localStorage)) {
+        if (/^sb-.+-auth-token/.test(storageKey)) localStorage.removeItem(storageKey)
+    }
+}

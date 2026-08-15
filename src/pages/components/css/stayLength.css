@@ -1,0 +1,162 @@
+/* Length of stay — the nights stepper that sits under the calendar.
+   Shares the visual language of the kids/senior steppers, in a bordered card
+   because it is a pricing control, not just another headcount. */
+.stay-length{
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    width: fit-content;
+    max-width: 100%;
+    margin-top: 18px;
+    padding: 16px 18px;
+    background: var(--cream);
+    border: 1px solid var(--gold-soft);
+    border-radius: 14px;
+    font-family: 'Cormorant Garamond', serif;
+    color: var(--ink);
+}
+
+/* No check-in date yet, or no overnight stay can start on the one picked. */
+.stay-length-disabled{
+    opacity: 0.55;
+}
+
+.stay-length-head{
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.stay-length-label{
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--leaf);
+}
+
+.stay-length-sub{
+    font-size: 14px;
+    font-style: italic;
+    color: var(--ink);
+}
+
+.stay-length-counter{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.stay-length-step{
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--forest);
+    background-color: var(--cream);
+    border: 1px solid var(--gold-soft);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stay-length-step:hover:not(:disabled){
+    border-color: var(--gold);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.stay-length-step:disabled{
+    opacity: 0.4;
+    cursor: default;
+}
+
+/* Read-only value — a span, so the nights can only move through the stepper
+   or the chips, and never land on something the Monday cap disallows. */
+.stay-length-count{
+    box-sizing: border-box;
+    min-width: 96px;
+    padding: 6px 10px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--forest);
+    background-color: var(--cream);
+    border: 1px solid var(--gold-soft);
+    border-radius: 10px;
+    user-select: none;
+}
+
+.stay-length-choices{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.stay-length-chip{
+    min-width: 38px;
+    padding: 5px 10px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--forest);
+    background-color: transparent;
+    border: 1px solid var(--gold-soft);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.stay-length-chip:hover:not(:disabled){
+    border-color: var(--gold);
+}
+
+.stay-length-chip.selected{
+    color: var(--cream);
+    background-color: var(--forest);
+    border-color: var(--forest);
+}
+
+/* This length isn't reachable from the current check-in — a maintenance day
+   sits inside it. Still shown, not hidden: same reasoning as
+   .stay-length-step:disabled below, just for the chips. */
+.stay-length-chip:disabled{
+    opacity: 0.4;
+    cursor: default;
+}
+
+.stay-length-note{
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0;
+    max-width: 46ch;
+    font-size: 14px;
+    color: var(--ink);
+}
+
+.stay-length-note-dot{
+    flex-shrink: 0;
+    align-self: center;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--gold);
+}
+
+/* One flex item holding the whole message, so the text wraps as a paragraph
+   instead of each <strong> run becoming its own flex column. */
+.stay-length-note-body{
+    flex: 1;
+}
+
+.stay-length-note strong{
+    font-weight: 700;
+    color: var(--forest);
+}

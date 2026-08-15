@@ -55,6 +55,41 @@ function formatRange(booking) {
     return from === to ? from : `${from} → ${to}`
 }
 
+// When the reservation was MADE, not the stay it's for — the Stay column
+// covers that separately, and the two can land on different days (a guest
+// booking today for a date next week). Year is left off on purpose: this sits
+// in a table row next to a Stay column that already carries it, and repeating
+// it here would just be noise in an already-narrow column.
+function formatBookedTime(iso) {
+    if (!iso) return '—'
+    const date = new Date(iso)
+    if (Number.isNaN(date.getTime())) return '—'
+    const day = date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
+    const time = date.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })
+    return `${day} · ${time}`
+}
+
+// Who is in the party, for the Guests column: total pax, then the two counts
+// that change what happens at the desk.
+//
+// The SENIOR and PWD counts are the reason this column exists. The senior discount is no
+// longer applied by the system — the resort gives it in person against a Senior
+// Citizen ID (see SENIOR_DISCOUNT_RATE in data/entranceFee.js) — so whoever is
+// settling the balance has to be able to see how many seniors the booking
+// declared. It was on the booking row all along and shown nowhere staff look.
+//
+// Kids ride along because they are the other count that alters the money and
+// they cost nothing to show once the column exists.
+function guestsLabel(booking) {
+    if (!booking.pax) return '—'
+    const extras = [
+        booking.seniors > 0 ? `${booking.seniors} senior${booking.seniors > 1 ? 's' : ''}` : null,
+        booking.pwd > 0 ? `${booking.pwd} PWD` : null,
+        booking.kids > 0 ? `${booking.kids} kid${booking.kids > 1 ? 's' : ''}` : null,
+    ].filter(Boolean)
+    return extras.length ? `${booking.pax} pax · ${extras.join(', ')}` : `${booking.pax} pax`
+}
+
 // The unit the database assigned, e.g. "A-House Small · AHS-02". Tent pitching
 // has no unit to assign, so it falls back to the type name alone. A combined
 // reservation has several, so it gets the same "Teepee ×2, A-House Small"
@@ -88,7 +123,14 @@ export default function BookingsManage() {
             // Units occupancy board still needs it there.
             ...bookings.filter((booking) => booking.groupId == null).map((booking) => ({ ...booking, stage: getBookingStage(booking) })),
             ...groups.map((group) => ({ ...group, stage: getBookingStage(group) })),
-        ],
+        // `bookings` and `groups` each arrive newest-first on their own (see
+        // loadStaffBookings()/loadStaffBookingGroups() in accommodationDB.js),
+        // but concatenating them just puts every single booking before every
+        // group regardless of which is actually newer — a group placed a
+        // minute ago would sink beneath a single booking from yesterday. One
+        // sort across the combined list is what keeps "newest first" true for
+        // the table as a whole rather than for each kind separately.
+        ].sort((a, b) => new Date(b.createdAt ?? 0) - new Date(a.createdAt ?? 0)),
         [bookings, groups],
     )
 
@@ -182,6 +224,8 @@ export default function BookingsManage() {
                                 <tr>
                                     <th>Booking ID</th>
                                     <th>Guest</th>
+                                    <th>Time</th>
+                                    <th>Guests</th>
                                     <th>Unit</th>
                                     <th>Stay</th>
                                     <th>Schedule</th>
@@ -200,9 +244,15 @@ export default function BookingsManage() {
                                         <tr key={b.id}>
                                             {/* Staff quote the CBL-… code to guests, not the uuid. */}
                                             <td className="col-id">{b.code ?? b.id}</td>
-                                            <td>{b.guest?.fullName || '—'}</td>
-                                            <td>{unitLabel(b)}</td>
-                                            <td>{formatRange(b)}</td>
+                                            {/* col-name / col-unit / col-stay: the free-text
+                                                columns. They are the ones allowed to wrap once
+                                                the panel is wide enough to fit the whole table —
+                                                see the @container block in bookings-manage.css. */}
+                                            <td className="col-name">{b.guest?.fullName || '—'}</td>
+                                            <td>{formatBookedTime(b.createdAt)}</td>
+                                            <td className="col-guests">{guestsLabel(b)}</td>
+                                            <td className="col-unit">{unitLabel(b)}</td>
+                                            <td className="col-stay">{formatRange(b)}</td>
                                             <td>{b.schedule?.time ?? '—'}</td>
                                             <td>
                                                 <span className={`bookings-badge ${payment.className || ''}`}>
@@ -267,7 +317,13 @@ export default function BookingsManage() {
                                                         {b.receiptPath ? 'Review' : 'Approve'}
                                                     </button>
                                                 )}
-                                                {b.stage !== 'cancelled' && b.payment !== 'paid-full' && (
+                                                {/* Not offered on a pending row: Mark Paid would
+                                                    let staff wave a booking through as fully paid
+                                                    without ever opening the receipt Review sits
+                                                    right above it for. The reservation only leaves
+                                                    "pending" once that first receipt has actually
+                                                    been approved. */}
+                                                {b.stage !== 'cancelled' && b.stage !== 'pending' && b.payment !== 'paid-full' && (
                                                     <button
                                                         type="button"
                                                         className="bookings-action"
@@ -280,7 +336,7 @@ export default function BookingsManage() {
                                                     <button
                                                         type="button"
                                                         className="bookings-action bookings-action-danger"
-                                                        onClick={() => (b.isGroup ? cancelBookingGroup(b.id) : cancelBooking(b.id))}
+                                                        onClick={() => (b.isGroup ? cancelBookingGroup(b.id, { asStaff: true }) : cancelBooking(b.id, { asStaff: true }))}
                                                     >
                                                         Cancel
                                                     </button>
@@ -303,7 +359,7 @@ export default function BookingsManage() {
                     booking={reviewing}
                     onClose={() => setReviewingId(null)}
                     onApprove={(booking) => (booking.isGroup ? confirmBookingGroup(booking.id) : confirmBooking(booking.id))}
-                    onCancel={(booking) => (booking.isGroup ? cancelBookingGroup(booking.id) : cancelBooking(booking.id))}
+                    onCancel={(booking) => (booking.isGroup ? cancelBookingGroup(booking.id, { asStaff: true }) : cancelBooking(booking.id, { asStaff: true }))}
                 />
             )}
         </div>

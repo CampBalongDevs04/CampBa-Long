@@ -42,6 +42,12 @@
     scrollbar-width: none; /* arrows drive the carousel */
 }
 
+/* Rent Resort mode: a single card, centred rather than flush left against
+   empty space — see accomodationList.jsx. */
+.accomodation-track-centered{
+    justify-content: center;
+}
+
 .accomodation-track::-webkit-scrollbar{
     display: none;
 }
@@ -135,6 +141,17 @@
     text-align: center;
     font-size: 11px;
     font-weight: 600;
+    color: var(--forest);
+}
+
+/* Rent Resort mode: no +/- stepper, just a fixed "this is the pick" label
+   filling the row the stepper would otherwise occupy. */
+.accomodation-card-qty-locked{
+    flex: 1;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
     color: var(--forest);
 }
 
@@ -234,6 +251,18 @@
     color: #3DA35D;
 }
 
+/* What the per-night price above comes to for an extended stay. Only rendered
+   when the stay runs more than one night. */
+.accomodation-card-nights{
+    font-size: 11px;
+    color: var(--leaf);
+}
+
+.accomodation-card-nights strong{
+    font-weight: 700;
+    color: var(--forest);
+}
+
 .accomodation-card-available{
     font-size: 11px;
     font-style: italic;
@@ -279,6 +308,41 @@
 
 .accomodation-card.fully-booked .accomodation-card-available{
     color: #9b3c2d;
+    font-weight: 600;
+    font-style: normal;
+}
+
+/* A live, unpaid hold rather than a real booking (see useHoldCountdown.js) —
+   gold rather than the red above, so a card that is usually free again in
+   minutes doesn't read as permanently gone the way a genuinely sold-out one
+   does. One class more specific than the rule above (four vs. three), so it
+   wins on its own without needing `!important` or source order. */
+.accomodation-card.fully-booked .accomodation-card-available .accomodation-card-held{
+    color: var(--gold);
+}
+
+/* Nothing of THIS card is booked or even cancelled — a sibling card sharing
+   the same physical slots (Small Tent / Big Tent / Tent Pitching) just used
+   up what was left, in this guest's own cart. A dark wash over the whole
+   card, rather than the paler fully-booked fade, reads as "someone's holding
+   this" vs. "gone" — accurate, since it's the guest's own other pick holding
+   it, one qty change away from freeing back up. */
+.accomodation-card.pool-locked{
+    cursor: not-allowed;
+}
+
+.accomodation-card.pool-locked::after{
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: 12px;
+    background: rgba(10, 15, 10, 0.55);
+    pointer-events: none;
+}
+
+.accomodation-card.pool-locked .accomodation-card-available{
+    color: #e8e2d0;
     font-weight: 600;
     font-style: normal;
 }

@@ -1,0 +1,330 @@
+/* ============================================================================
+   CMS → Spa Service. The four panels behind that page's tabs — Banner, How to
+   Reserve, Gallery and Hilot Section — and the live previews inside them.
+
+   One stylesheet for all four rather than one each, because they are one
+   screen's worth of furniture: the same panel card, the same row of editable
+   items, the same "this is what the page says right now" preview. Adapted from
+   menuBanner.css, which does the same job for /menu.
+   ========================================================================== */
+
+.spa-cms-panel {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--cream, #F5F1E4);
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 10px 20px -14px rgba(10, 22, 14, 0.5);
+    font-family: 'Jost', sans-serif;
+    color: var(--forest-dark, #16291E);
+}
+
+.spa-cms-subbar {
+    margin-top: 18px;
+}
+
+/* ---------- Banner preview ---------- */
+
+/* The banner as /spa lays it out — copy over the backdrop that is actually
+   live. Deliberately a still: this answers "what does it say right now", not
+   "how does it animate". */
+.spa-cms-stage {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 30px 26px;
+    border-radius: 14px;
+    overflow: hidden;
+    background-size: cover;
+    background-position: center;
+    border: 1px solid rgba(198, 161, 91, 0.35);
+}
+
+.spa-cms-stage::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.58), rgba(0, 0, 0, 0.22));
+}
+
+.spa-cms-stage-copy {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.spa-cms-title {
+    margin: 0;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.9rem;
+    line-height: 1.02;
+    color: #F5F1E4;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.spa-cms-subtitle {
+    margin: 10px 0 0;
+    max-width: 52ch;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: rgba(245, 241, 228, 0.9);
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.spa-cms-button {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 7px 15px;
+    border-radius: 20px;
+    background: #C6A15B;
+    border: 1px solid #C6A15B;
+    color: #16291E;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+}
+
+/* The button and where it goes, in one chip: a label with no working link is a
+   failure staff cannot see on the site itself. */
+.spa-cms-button em {
+    font-style: normal;
+    font-weight: 400;
+    letter-spacing: 0.4px;
+    text-transform: none;
+    opacity: 0.72;
+}
+
+.spa-cms-bg-note {
+    margin-top: 8px;
+}
+
+/* ---------- How to Reserve preview ---------- */
+
+.spa-cms-howto-preview {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 16px;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    border-radius: 12px;
+}
+
+.spa-cms-howto-photo {
+    flex: 0 0 auto;
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(22, 41, 30, 0.08);
+}
+
+.spa-cms-howto-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.spa-cms-howto-copy {
+    min-width: 0;
+}
+
+.spa-cms-howto-copy h4 {
+    margin: 0 0 3px;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.spa-cms-howto-sub {
+    margin: 0;
+    font-size: 0.78rem;
+    color: rgba(10, 22, 14, 0.62);
+}
+
+/* ---------- Editable lists: steps, inclusions ---------- */
+
+.spa-cms-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.spa-cms-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    border-radius: 12px;
+}
+
+.spa-cms-row-index,
+.spa-cms-row-tick {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(22, 41, 30, 0.9);
+    border: 1px solid rgba(217, 189, 132, 0.5);
+    color: #F5F1E4;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.spa-cms-row-text {
+    flex: 1 1 200px;
+    min-width: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+}
+
+/* ---------- Gallery preview ---------- */
+
+.spa-cms-gallery-preview {
+    padding: 16px;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    border-radius: 12px;
+}
+
+.spa-cms-gallery-title {
+    margin: 0;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.spa-cms-gallery-sub {
+    margin: 6px 0 0;
+    max-width: 70ch;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: rgba(10, 22, 14, 0.62);
+}
+
+/* The strip as /spa shows it, and in the order it shows it. Scrolls inside its
+   own box rather than wrapping, so the row a staff member is reordering stays
+   one row and the panel below it does not jump up and down as photos are
+   added. */
+.spa-cms-gallery-strip {
+    display: flex;
+    gap: 10px;
+    margin: 14px 0 10px;
+    padding-bottom: 4px;
+    overflow-x: auto;
+}
+
+.spa-cms-gallery-strip img {
+    flex: 0 0 auto;
+    width: 108px;
+    height: 76px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    display: block;
+}
+
+/* The one-press "make this a real photo" offer, shared by all three tabs that
+   have one. Boxed rather than loose, because it explains a state — this photo
+   came with the site and is not editable yet — and that explanation is longer
+   than the note it becomes once imported. */
+.spa-cms-import {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px dashed rgba(198, 161, 91, 0.55);
+    border-radius: 10px;
+    background: rgba(198, 161, 91, 0.08);
+}
+
+.spa-cms-import .crud-bar-note {
+    flex: 1 1 320px;
+    min-width: 0;
+}
+
+/* ---------- Hilot preview ---------- */
+
+.spa-cms-hilot-preview {
+    padding: 20px 18px;
+    text-align: center;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    border-radius: 12px;
+}
+
+.spa-cms-hilot-eyebrow {
+    display: block;
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #C6A15B;
+}
+
+.spa-cms-hilot-title {
+    margin: 6px 0 0;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.45rem;
+    font-weight: 700;
+}
+
+.spa-cms-hilot-sub {
+    margin: 8px auto 0;
+    max-width: 62ch;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: rgba(10, 22, 14, 0.62);
+}
+
+/* Stands in for the treatment grid this heading introduces, so the preview
+   reads as a section rather than a floating title — and says once more where
+   the cards are actually edited. */
+.spa-cms-hilot-cards-note {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin: 14px 0 0;
+    padding: 14px;
+    border: 1px dashed rgba(198, 161, 91, 0.5);
+    border-radius: 10px;
+    font-size: 0.74rem;
+    letter-spacing: 0.4px;
+    color: rgba(10, 22, 14, 0.5);
+}
+
+.spa-cms-hilot-cards-note p {
+    margin: 0;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 720px) {
+    .spa-cms-panel {
+        padding: 16px;
+    }
+
+    .spa-cms-title {
+        font-size: 1.5rem;
+    }
+
+    .spa-cms-row {
+        flex-wrap: wrap;
+    }
+}

@@ -14,6 +14,12 @@
     flex-direction: column;
     gap: 22px;
     width: 100%;
+    /* A grid item's automatic minimum size is its content's min-content width,
+       and the widest coffee price table is ~400px of nowrap cells. Without
+       this the track refused to go below that and the whole dashboard scrolled
+       sideways on a phone — 472px of page in a 375px viewport. The table has
+       its own scroller (.foodlist-coffee-scroll) to do the giving-way. */
+    min-width: 0;
     box-sizing: border-box;
     background: var(--cream);
     border: 1px solid rgba(198, 161, 91, 0.35);
@@ -142,8 +148,16 @@
     color: var(--forest-dark);
 }
 
+.foodlist-coffee-title-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
 .foodlist-coffee-title {
-    margin: 0 0 10px;
+    margin: 0;
     font-size: 0.88rem;
     font-weight: 600;
     letter-spacing: 1px;
@@ -214,11 +228,28 @@
     border-color: rgba(198, 161, 91, 0.5);
 }
 
+/* A gap, not a price — dashed and dim by default so it still reads as "no
+   price here" first, but on hover/focus it picks up the same gold highlight
+   as a real cell to say it is just as clickable, only what tapping it does
+   differs (opens a NEW row instead of that row's own). */
+.foodlist-coffee-cell-empty {
+    border-style: dashed;
+    border-color: rgba(198, 161, 91, 0.35);
+    color: rgba(10, 22, 14, 0.4);
+}
+
+.foodlist-coffee-cell-empty:hover,
+.foodlist-coffee-cell-empty:focus-visible {
+    border-style: solid;
+    color: inherit;
+}
+
 /* ---------- User orders panel (right) ---------- */
 .foodlist-orders {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    min-width: 0;
     box-sizing: border-box;
     background: var(--cream);
     border: 1px solid rgba(198, 161, 91, 0.35);
@@ -248,19 +279,23 @@
 
 .foodlist-order-top {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
     justify-content: space-between;
-    gap: 10px;
+    gap: 2px 10px;
     margin-bottom: 4px;
 }
 
 .foodlist-order-guest {
+    min-width: 0;
     font-size: 0.9rem;
     font-weight: 600;
     letter-spacing: 0.5px;
+    overflow-wrap: break-word;
 }
 
 .foodlist-order-date {
+    margin-left: auto;
     font-size: 0.75rem;
     color: rgba(10, 22, 14, 0.55);
     white-space: nowrap;
@@ -268,14 +303,17 @@
 
 .foodlist-order-line {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
     justify-content: space-between;
-    gap: 10px;
+    gap: 2px 10px;
 }
 
 .foodlist-order-item {
+    min-width: 0;
     font-size: 0.85rem;
     color: rgba(10, 22, 14, 0.75);
+    overflow-wrap: break-word;
 }
 
 .foodlist-order-qty {
@@ -284,6 +322,7 @@
 }
 
 .foodlist-order-total {
+    margin-left: auto;
     font-size: 0.85rem;
     font-weight: 600;
     letter-spacing: 0.5px;
@@ -324,12 +363,21 @@
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1080px) {
+    /* minmax(0, …) rather than 1fr for the same reason .foodlist-panel sets
+       min-width: 0 — a bare `1fr` track still floors at its content. */
     .foodlist-layout {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .foodlist-orders {
         position: static;
+    }
+
+    /* Nothing is pinned any more, so a scroll region inside the page scroll
+       just traps the wheel — let the orders run to their natural length. */
+    .foodlist-orders-rows {
+        max-height: none;
+        overflow-y: visible;
     }
 }
 
@@ -341,11 +389,40 @@
 
     .foodlist-row {
         flex-wrap: wrap;
-        gap: 12px;
+        gap: 10px 12px;
         padding: 12px 14px;
     }
 
+    /* Photo and copy take the first line; price and Edit share the second,
+       one at each end, instead of taking a full-width line each. */
     .foodlist-price {
+        margin-right: auto;
+    }
+
+    .foodlist-row .crud-row-actions {
+        width: auto;
         margin-left: auto;
+    }
+}
+
+@media (max-width: 560px) {
+    .foodlist-panel,
+    .foodlist-orders {
+        padding: 14px;
+        border-radius: 14px;
+    }
+
+    .foodlist-image {
+        width: 48px;
+        height: 48px;
+    }
+
+    .foodlist-coffee-group {
+        padding: 12px 14px 14px;
+    }
+
+    .foodlist-coffee-table th,
+    .foodlist-coffee-table td {
+        padding: 7px 8px;
     }
 }

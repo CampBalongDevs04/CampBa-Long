@@ -1,65 +1,29 @@
 import { useState } from 'react'
 import './css/location.css'
 import LotusDividerIcon from './LotusDividerIcon'
+import CmsIcon from './CmsIcon.jsx'
 import { Skeleton } from './skeletons/Skeleton.jsx'
-import addressSvg from '../assets/svg/address.svg'
-import phoneSvg from '../assets/svg/phone.svg'
-import emailSvg from '../assets/svg/email.svg'
-import adminSvg from '../assets/svg/admin.svg'
-import carSvg from '../assets/svg/car.svg'
-import transpoSvg from '../assets/svg/transpo.svg'
-import routeSvg from '../assets/svg/route.svg'
-import parkingSvg from '../assets/svg/parking.svg'
+import { useLocationSection } from '../data/locationSection.js'
 
-
-const contactDetails = [
-    {
-        icon: addressSvg,
-        label: 'Address',
-        lines: ['Brgy. Laguan', 'Liliw, Laguna', 'Philippines']
-    },
-    {
-        icon: phoneSvg,
-        label: 'Phone',
-        lines: ['+63 9xxx xxx xxx']
-    },
-    {
-        icon: emailSvg,
-        label: 'Email',
-        lines: ['campbalongnaturefarm@gmail.com']
-    },
-    {
-        icon: adminSvg,
-        label: 'Admin Hours',
-        lines: ['Monday(Resort maintenance) Tuesday – Sunday: 10:00 AM – 5:00 PM']
-    }
-]
-
-const locationFeatures = [
-    {
-        icon: carSvg,
-        title: 'Easy to Reach',
-        text: 'Conveniently located with easy access by car.'
-    },
-    {
-        icon: transpoSvg,
-        title: 'Public Transit',
-        text: 'Close to major jeepney JODA and Tricycle TODA.'
-    },
-    {
-        icon: parkingSvg,
-        title: 'Parking Available',
-        text: 'Free parking available for all guests.'
-    },
-    {
-        icon: routeSvg,
-        title: 'Scenic Route',
-        text: 'A relaxing drive surrounded by nature.'
-    }
-]
+// The heading, the contact card and the tiles under the map come from three
+// tables, written in the dashboard's CMS → Location — see
+// data/locationSection.js. Until they land (and on a database that predates
+// them) the store answers with the copy the site shipped with, so this block is
+// never blank and never half-built.
+//
+// THE MAP IS NOT CMS CONTENT
+// --------------------------
+// The embed below stays written here on purpose. It is not copy: it is a URL
+// carrying a place query, a latitude, a longitude and a zoom level, and one
+// wrong character in any of them fails silently — the frame shows the wrong
+// village, or nothing at all, and reads as a broken site rather than as a field
+// somebody needs to correct. The resort has not moved. The "Get Directions"
+// button beside it IS editable, because a label and a link are exactly the kind
+// of thing that changes.
 
 export default function Location(){
     const [mapLoaded, setMapLoaded] = useState(false)
+    const { section, activeDetails, activeFeatures } = useLocationSection()
 
     return(
         <>
@@ -67,28 +31,40 @@ export default function Location(){
 
                 <div className = "location-header">
                     <LotusDividerIcon />
-                    <p className = "location-eyebrow">Our Location</p>
-                    <h1 className = "location-title">We&rsquo;d Love to See You</h1>
-                    <p className = "location-sub">Visit us at Camp Ba-long. We&rsquo;re always happy to welcome you!</p>
+                    {section.eyebrow && <p className = "location-eyebrow">{section.eyebrow}</p>}
+                    {section.title && <h2 className="location-title">{section.title}</h2>}
+                    {section.subtitle && <p className = "location-sub">{section.subtitle}</p>}
                 </div>
 
                 <div className = "location-body">
 
                     <div className = "location-card">
-                        {contactDetails.map(({icon, label, lines}, index) => (
-                            <div className = "location-detail" key = {index}>
+                        {activeDetails.map((detail) => (
+                            <div className = "location-detail" key = {detail.id}>
                                 <span className = "location-detail-icon">
-                                    {icon && <img src = {icon} alt = "icon" />}
+                                    <CmsIcon iconKey = {detail.iconKey} iconUrl = {detail.iconUrl} alt = "" />
                                 </span>
                                 <div className = "location-detail-text">
-                                    <h3 className = "location-detail-label">{label}</h3>
-                                    {lines.map((line, i) => (
+                                    <h3 className = "location-detail-label">{detail.label}</h3>
+                                    {detail.lines.map((line, i) => (
                                         <p className = "location-information" key = {i}>{line}</p>
                                     ))}
                                 </div>
                             </div>
                         ))}
-                        <a className = "location-directions-btn" type = "button" href = "https://maps.app.goo.gl/69TemNpuTw41mkDo6">Get Directions</a>
+                        {/* No label means no button, the same rule the hero's
+                            two buttons follow — a blank one would just sit
+                            there. */}
+                        {section.directionsLabel && (
+                            <a
+                                className = "location-directions-btn"
+                                href = {section.directionsHref || '#'}
+                                target = "_blank"
+                                rel = "noopener noreferrer"
+                            >
+                                {section.directionsLabel}
+                            </a>
+                        )}
                     </div>
 
                     <div className = "location-map">
@@ -105,17 +81,24 @@ export default function Location(){
 
                 </div>
 
-                <div className = "location-features">
-                    {locationFeatures.map(({icon, title, text}, index) => (
-                        <div className = "location-feature" key = {index}>
-                            <span className = "location-feature-icon">
-                                {icon && <img src = {icon} alt = "icon" />}
-                            </span>
-                            <h3 className = "location-feature-title">{title}</h3>
-                            <p className = "location-feature-text">{text}</p>
-                        </div>
-                    ))}
-                </div>
+                {/* Gone entirely rather than left as an empty strip, for the
+                    same reason the hero's feature row is: staff who hid every
+                    tile hid the strip. */}
+                {activeFeatures.length > 0 && (
+                    <div className = "location-features">
+                        {activeFeatures.map((feature) => (
+                            <div className = "location-feature" key = {feature.id}>
+                                <span className = "location-feature-icon">
+                                    <CmsIcon iconKey = {feature.iconKey} iconUrl = {feature.iconUrl} alt = "" />
+                                </span>
+                                <h3 className = "location-feature-title">{feature.title}</h3>
+                                {feature.description && (
+                                    <p className = "location-feature-text">{feature.description}</p>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
 
             </section>
         </>

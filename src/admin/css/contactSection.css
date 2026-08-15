@@ -1,0 +1,276 @@
+/* ============================================================================
+   CMS → Contact. The panel, a two-column preview matching the page's own
+   layout, the phone/email/hours rows, and a note about the two things this tab
+   does not control.
+   ========================================================================== */
+
+.con-cms-panel {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--cream, #F5F1E4);
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 10px 20px -14px rgba(10, 22, 14, 0.5);
+    font-family: 'Jost', sans-serif;
+    color: var(--forest-dark, #16291E);
+}
+
+/* ---------- Preview ---------- */
+/* Two columns, because that is what the section is: words on the left, the form
+   on the right. A stacked preview would hide the thing most worth checking —
+   whether the paragraph and the form still balance. */
+
+.con-cms-preview {
+    padding: 20px 22px;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    border-radius: 14px;
+}
+
+.con-cms-head {
+    text-align: center;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(198, 161, 91, 0.25);
+}
+
+.con-cms-eyebrow {
+    margin: 0 0 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold, #C6A15B);
+}
+
+.con-cms-title {
+    margin: 0;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.con-cms-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+    margin-top: 18px;
+}
+
+.con-cms-info h5 {
+    margin: 0 0 6px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.con-cms-info-text {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: rgba(10, 22, 14, 0.68);
+}
+
+/* The cream panel, in its own colour so the note reads against the background
+   it actually sits on. */
+.con-cms-admin {
+    margin-top: 14px;
+    padding: 14px 16px;
+    background: var(--cream-2, #EFE9D6);
+    border-top: 3px solid var(--gold, #C6A15B);
+    border-radius: 12px;
+    text-align: center;
+}
+
+.con-cms-admin strong {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1rem;
+}
+
+.con-cms-admin p {
+    margin: 4px 0 0;
+    font-size: 0.78rem;
+    line-height: 1.55;
+    color: rgba(10, 22, 14, 0.7);
+}
+
+.con-cms-note {
+    text-align: left;
+}
+
+/* ---------- The form, as wording rather than as inputs ---------- */
+/* Deliberately not real fields: this is a picture of what a guest reads, and a
+   box staff could type into here would look like an enquiry they were filling
+   in. The wording is edited in the "Form wording" form. */
+
+.con-cms-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.con-cms-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.con-cms-field-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: rgba(10, 22, 14, 0.7);
+}
+
+.con-cms-field-box {
+    border: 1px dashed rgba(198, 161, 91, 0.5);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    color: rgba(10, 22, 14, 0.45);
+}
+
+.con-cms-submit {
+    align-self: flex-start;
+    margin-top: 4px;
+    border-radius: 999px;
+    background: var(--forest, #1E3A2B);
+    padding: 9px 22px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #F5F1E4;
+}
+
+.con-cms-sending {
+    margin: 0;
+    font-size: 0.7rem;
+    color: rgba(10, 22, 14, 0.5);
+}
+
+/* ---------- Rows ---------- */
+
+.con-cms-subbar {
+    margin-top: 18px;
+}
+
+.con-cms-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.con-cms-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    border-radius: 14px;
+    padding: 16px 18px;
+}
+
+.con-cms-row-icon {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(198, 161, 91, 0.16);
+    border: 1px solid rgba(198, 161, 91, 0.45);
+    color: var(--gold, #C6A15B);
+}
+
+.con-cms-row-icon svg,
+.con-cms-row-icon img {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    fill: none;
+}
+
+.con-cms-copy {
+    flex: 1 1 240px;
+    min-width: 0;
+}
+
+.con-cms-copy h4 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 0 0 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--gold, #C6A15B);
+}
+
+.con-cms-copy p {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-size: 0.86rem;
+    line-height: 1.5;
+    color: rgba(10, 22, 14, 0.78);
+}
+
+.con-cms-warning {
+    margin-top: 4px !important;
+    font-size: 0.76rem !important;
+    color: #9E3A2E !important;
+}
+
+/* ---------- "Two things this page does not control" ---------- */
+
+.con-cms-note-box {
+    margin-top: 18px;
+    padding: 16px 18px;
+    background: rgba(198, 161, 91, 0.1);
+    border: 1px solid rgba(198, 161, 91, 0.4);
+    border-radius: 12px;
+}
+
+.con-cms-note-box h4 {
+    margin: 0 0 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.con-cms-note-box p {
+    margin: 0 0 8px;
+    max-width: 70ch;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: rgba(10, 22, 14, 0.65);
+}
+
+.con-cms-note-box p:last-child {
+    margin-bottom: 0;
+}
+
+@media (max-width: 860px) {
+    .con-cms-columns {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .con-cms-panel {
+        padding: 16px;
+    }
+
+    .con-cms-title {
+        font-size: 1.2rem;
+    }
+
+    .con-cms-row {
+        flex-wrap: wrap;
+    }
+}

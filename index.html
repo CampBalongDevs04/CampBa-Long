@@ -1,12 +1,59 @@
 <!doctype html>
-<html lang="en">
+<!--
+  The tags below are the HOME page's, and they are also the defaults every
+  other page starts from.
+
+  Two different things rewrite them, and neither is optional:
+
+    components/Seo.jsx      on the client, when the guest navigates. It finds
+                            each tag by selector and replaces the content, so
+                            the head always holds exactly one of each.
+
+    scripts/prerender.mjs   at build time, writing dist/menu/index.html and the
+                            rest with that route's values already in place.
+                            This is the half that matters for sharing a link:
+                            Facebook, Messenger and Viber read og:title and
+                            og:image out of the raw HTML and never run the
+                            JavaScript that would otherwise fill them in.
+
+  So edit the copy in src/lib/seoConfig.js, not here. What is written below is
+  only what a request for "/" is served before React boots.
+-->
+<html lang="en-PH">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="./src/assets/images/logocamp.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="index.css" />
-    <title>campbalong</title>
-    
+
+    <title>Camp Ba-long Nature Farm &amp; Resort | Liliw, Laguna</title>
+    <meta name="description" content="Semi-exclusive camp site in Liliw, Laguna. Stay in teepees, A-houses and tents, book a day tour or overnight stay, and unwind with hilot massage." />
+    <link rel="canonical" href="https://www.example-campbalong.com/" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+
+    <!-- Open Graph. og:image has to be an absolute URL — a crawler reads it
+         with no page to resolve a relative path against, and drops the
+         preview image entirely when it cannot. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Camp Ba-long Nature Farm &amp; Resort" />
+    <meta property="og:title" content="Camp Ba-long Nature Farm &amp; Resort | Liliw, Laguna" />
+    <meta property="og:description" content="Semi-exclusive camp site in Liliw, Laguna. Stay in teepees, A-houses and tents, book a day tour or overnight stay, and unwind with hilot massage." />
+    <meta property="og:url" content="https://www.example-campbalong.com/" />
+    <meta property="og:locale" content="en_PH" />
+    <meta property="og:image" content="https://www.example-campbalong.com/og-image.png" />
+    <meta property="og:image:width" content="1366" />
+    <meta property="og:image:height" content="651" />
+    <meta property="og:image:alt" content="Camp Ba-long Nature Farm &amp; Resort in Liliw, Laguna" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Camp Ba-long Nature Farm &amp; Resort | Liliw, Laguna" />
+    <meta name="twitter:description" content="Semi-exclusive camp site in Liliw, Laguna. Stay in teepees, A-houses and tents, book a day tour or overnight stay, and unwind with hilot massage." />
+    <meta name="twitter:image" content="https://www.example-campbalong.com/og-image.png" />
+
+    <!-- Served from public/ rather than imported from src/assets/, so the URL
+         does not change every time the file does. A bookmarked icon and a
+         cached apple-touch-icon both outlive a deploy. -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <meta name="theme-color" content="#DCE7DE" />
   </head>
   <body>
     <div id="root"></div>

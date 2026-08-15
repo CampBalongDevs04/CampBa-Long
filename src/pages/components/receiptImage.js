@@ -9,6 +9,7 @@
 // the same on every browser and needs nothing that isn't already here.
 
 import { splitFreeEntrance } from '../../data/entranceFee.js'
+import { countNights } from '../../data/extendedStay.js'
 import { groupUnitsLabel } from '../../data/accommodationDB.js'
 
 // Layout is authored at this width and drawn at SCALE, so the file stays crisp
@@ -52,12 +53,17 @@ function formatPeso(amount){
     })}`
 }
 
+// The number of nights the stay was billed for — every money figure on this
+// receipt already covers all of them, so this is a label, never a multiplier.
+function stayNights(booking){
+    if (booking.sameDayCheckout) return 1
+    return Math.max(1, countNights(booking.checkIn, booking.checkOut))
+}
+
 function stayLength(booking){
     if (booking.sameDayCheckout) return '1 day use'
     if (!booking.checkIn || !booking.checkOut) return null
-    const nights = Math.max(1, Math.round(
-        (new Date(booking.checkOut) - new Date(booking.checkIn)) / 86400000
-    ))
+    const nights = stayNights(booking)
     return `${nights} night${nights > 1 ? 's' : ''}`
 }
 
@@ -113,6 +119,7 @@ function buildReceipt(booking, statusLabel, savedAt){
         booking.pax ? `${booking.pax} pax` : null,
         booking.kids > 0 ? `${booking.kids} kid${booking.kids > 1 ? 's' : ''}` : null,
         booking.seniors > 0 ? `${booking.seniors} senior${booking.seniors > 1 ? 's' : ''}` : null,
+        booking.pwd > 0 ? `${booking.pwd} PWD` : null,
     ].filter(Boolean).join(' • ') || 'Not provided'
 
     const checkInTime = formatClock(booking.startsAt)
@@ -122,10 +129,17 @@ function buildReceipt(booking, statusLabel, savedAt){
     // Every line the stay is made of, then what has been paid against it. The
     // order matters: a guest reading this at the gate should be able to follow
     // it top to bottom and arrive at the figure they are being asked for.
+    const nights = stayNights(booking)
+    // Both the accommodation rate and the entrance fee on this booking are
+    // whole-stay figures — an extended stay stored them already multiplied by
+    // its nights (see data/extendedStay.js). Saying so on the line keeps a
+    // guest from reading ₱6,750 against a ₱2,250 rate card and querying it.
+    const nightsNote = nights > 1 ? ` — ${nights} nights` : ''
+
     const charges = [
         {
             label: 'Accommodation rate',
-            sub: accommodationName,
+            sub: `${accommodationName}${nightsNote}`,
             value: rate != null ? formatPeso(rate) : 'To be advised',
         },
     ]
@@ -141,7 +155,7 @@ function buildReceipt(booking, statusLabel, savedAt){
         charges.push({
             label: 'Entrance fee',
             sub: [
-                `${formatPeso(booking.entrance.perHead)}/head`,
+                `${formatPeso(booking.entrance.perHead)}/head${nightsNote}`,
                 kidsApplied > 0
                     ? `free entrance ${kidsApplied} pax (kids 7 & below)`
                         + ` − ${formatPeso(kidsFree)}`
@@ -189,9 +203,26 @@ function buildReceipt(booking, statusLabel, savedAt){
         })
     }
 
+    // The senior line is the operative instruction on this receipt now, not a
+    // footnote: the discount is given at the desk against this booking's senior
+    // count, so it only happens if the guest brings the ID and staff see the
+    // count. The count itself is printed in the guests line above.
     const notes = [
         'Present this receipt at check-in. The remaining balance above is settled'
-            + ' on-site. Seniors must show a valid ID for the discount to apply.',
+            + ' on-site.'
+            + (booking.seniors > 0 || booking.pwd > 0
+                ? ' This booking declares '
+                    + [
+                        booking.seniors > 0
+                            ? `${booking.seniors} senior citizen${booking.seniors > 1 ? 's' : ''}`
+                            : null,
+                        booking.pwd > 0
+                            ? `${booking.pwd} person${booking.pwd > 1 ? 's' : ''} with disability`
+                            : null,
+                    ].filter(Boolean).join(' and ')
+                    + ' — that discount is applied at the resort against a valid ID,'
+                    + ' off the balance above.'
+                : ''),
     ]
     if (paid > 0 && paid < downPayment){
         notes.push(

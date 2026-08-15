@@ -15,18 +15,19 @@ export default function KidsCount({ kids, onKidsChange, disabled = false, max = 
     const [internalKids, setInternalKids] = useState(0)
     const current = kids ?? internalKids
     const ceiling = Math.min(MAX_KIDS, max)
+    const inactive = disabled
 
     const clamp = (value) => Math.min(ceiling, Math.max(MIN_KIDS, value))
 
     const step = (delta) => {
-        if (disabled) return
+        if (inactive) return
         const next = clamp(current + delta)
         setInternalKids(next)
         onKidsChange?.(next)
     }
 
     return (
-        <div className={`kids-field${disabled ? ' kids-field-disabled' : ''}`}>
+        <div className={`kids-field${inactive ? ' kids-field-disabled' : ''}`}>
             <label className="kids-field-label" id="kids-count-label">
                 Number of Kids
             </label>
@@ -37,7 +38,7 @@ export default function KidsCount({ kids, onKidsChange, disabled = false, max = 
                     className="kids-step"
                     aria-label="Remove one kid"
                     onClick={() => step(-1)}
-                    disabled={disabled || current <= MIN_KIDS}
+                    disabled={inactive || current <= MIN_KIDS}
                 >
                     &minus;
                 </button>
@@ -51,7 +52,7 @@ export default function KidsCount({ kids, onKidsChange, disabled = false, max = 
                     className="kids-step"
                     aria-label="Add one kid"
                     onClick={() => step(1)}
-                    disabled={disabled || current >= ceiling}
+                    disabled={inactive || current >= ceiling}
                 >
                     +
                 </button>

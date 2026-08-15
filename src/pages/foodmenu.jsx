@@ -3,11 +3,16 @@ import { Link } from 'react-router'
 import './foodmenu.css'
 import Footer from '../components/footer'
 import LotusDividerIcon from '../components/LotusDividerIcon'
+import Seo from '../components/Seo.jsx'
 import { SkeletonImage } from '../components/skeletons/Skeleton.jsx'
-import food1 from '../assets/images/food1.png'
-import food2 from '../assets/images/food2.png'
-import food3 from '../assets/images/food3.png'
 import { useBookings } from '../data/useBookings.js'
+// The banner's own words and photos — see CMS → Food Menu → Menu Banner.
+import { useMenuHero, loadMenuHero, resolveMenuHeroImage, resolveMenuHeroBackground } from '../data/menuHero.js'
+// The How to Order panel and its steps — see CMS → Food Menu → How to Order.
+import { useMenuOrder, loadMenuOrder, resolveMenuOrderImage } from '../data/menuOrder.js'
+// The heading, toggle label and MENU banner photo each catalog section
+// prints — see CMS → Food Menu → Section titles.
+import { useMenuSections, loadMenuSections, resolveMenuSectionImage } from '../data/menuSections.js'
 // The menu itself lives in Postgres (food_menu_items) — see data/menuDB.js.
 // This page renders whatever the catalog says, so a price edited there needs
 // no code change here.
@@ -20,13 +25,37 @@ import {
   FLAVORED_COFFEE_UPCHARGE,
 } from '../data/menuDB.js'
 
-const orderSteps = [
-  'Reserve your stay first — you can order before paying.',
-  'Browse the food menu and select your preferred items.',
-  'Choose the quantity for each item.',
-  'Review and confirm your order.',
-  'The food cost joins your down payment, which you settle from My Bookings.',
-]
+// Where the banner's button goes decides what it is — same reasoning as
+// HeroButton in pages/home.jsx. A path is routed inside the app, so it must
+// be a <Link>; an anchor like "#how-to-order" scrolls to that panel further
+// down this same page (html has scroll-behavior: smooth — see
+// components/css/Header.css — so this needs no scrollIntoView of its own);
+// anything else is somewhere off the site.
+function OrderButton({ href, label, className, children }) {
+  if (!label) return null
+  const target = href || '#how-to-order'
+
+  if (target.startsWith('/')) {
+    return (
+      <Link className={className} to={target}>
+        {children}
+        {label}
+      </Link>
+    )
+  }
+
+  const external = /^https?:\/\//i.test(target)
+  return (
+    <a
+      className={className}
+      href={target}
+      {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+    >
+      {children}
+      {label}
+    </a>
+  )
+}
 
 // Kiosk-style order tray. Module-level (same pattern as bookingsStore in
 // mybooking.jsx) so it survives client-side navigation away from /menu and
@@ -193,7 +222,7 @@ function FoodOrderModal({ item, onClose, onAddToCart }) {
           <div className={`food-order-body${item.image ? '' : ' no-image'}`}>
             {item.image && (
               <div className="food-order-image">
-                <SkeletonImage src={item.image} alt={item.label} />
+                <SkeletonImage src={item.image} alt={item.label} loading="lazy" decoding="async" />
               </div>
             )}
             <div className="food-order-details">
@@ -360,7 +389,7 @@ function MenuFoodRow({ items, onAddToOrder }) {
           {combined.map((item, i) => (
             <article className="menu-food-card" key={`${item.id}-${i}`}>
               <div className="menu-food-image">
-                <SkeletonImage src={item.image} alt={item.name} />
+                <SkeletonImage src={item.image} alt={item.name} loading="lazy" decoding="async" />
               </div>
               <h3 className="menu-food-name">{item.name}</h3>
               <p className="menu-food-desc">{item.desc}</p>
@@ -473,7 +502,7 @@ function CheckoutPanel({ cart, status, onIncrease, onDecrease, onRemove, onPlace
         aria-expanded={!collapsed}
       >
         <span className="kiosk-checkout-header-left">
-          <span className="kiosk-checkout-bag" aria-hidden="true">🛍</span>
+          <span className="kiosk-checkout-bag" aria-hidden="true" />
           <span className="kiosk-checkout-title">Your Order</span>
           {itemCount > 0 && <span className="kiosk-checkout-count">{itemCount}</span>}
         </span>
@@ -562,8 +591,22 @@ function CheckoutPanel({ cart, status, onIncrease, onDecrease, onRemove, onPlace
 }
 
 function FoodMenuPage() {
-  const howToOrderRef = useRef(null)
   const { findOrderableBooking, addFoodOrderToBooking } = useBookings()
+
+  // The banner's headline, subtitle, button label and photos — straight from
+  // menu_hero. Re-renders on its own once the row lands, so nothing here has
+  // to wait for it.
+  const { hero: menuHero } = useMenuHero()
+  // The How to Order panel and its steps — straight from menu_order /
+  // menu_order_steps.
+  const { panel: howToOrder, activeSteps: howToOrderSteps } = useMenuOrder()
+  // The heading each catalog section prints — straight from menu_sections.
+  const { sections: menuSections } = useMenuSections()
+  useEffect(() => {
+    loadMenuHero()
+    loadMenuOrder()
+    loadMenuSections()
+  }, [])
 
   // The menu, straight from food_menu_items. Re-renders on its own once the
   // rows land, so nothing here has to wait for them.
@@ -589,10 +632,6 @@ function FoodMenuPage() {
 
   const toggleSection = (key) => {
     setExpanded((prev) => ({ ...prev, [key]: !prev[key] }))
-  }
-
-  const scrollToHowToOrder = () => {
-    howToOrderRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
   const addToCart = (entry) => {
@@ -634,64 +673,81 @@ function FoodMenuPage() {
 
   return (
     <>
+    <Seo path="/menu" />
     <main className="foodmenu-page">
-      <section className="foodmenu-hero">
+      <section
+        className="foodmenu-hero"
+        // Only set when staff have uploaded one: the stylesheet already
+        // paints the backdrop the site shipped with, and an inline style that
+        // repeated it would make the CSS look dead the next time somebody
+        // reads it — same reasoning as the home hero's background.
+        style={menuHero.backgroundUrl
+          ? { '--foodmenu-hero-bg': `url(${resolveMenuHeroBackground(menuHero.backgroundUrl)})` }
+          : undefined}
+      >
         <div className="foodmenu-hero-inner">
           <div className="foodmenu-hero-content">
             <h1 className="foodmenu-hero-title">
-              Hungry? We&apos;ve Got<br />
-              You Covered.
+              {menuHero.titleLines.map((line, index) => (
+                <span key={`${line}-${index}`}>{line}<br /></span>
+              ))}
             </h1>
-            <p className="foodmenu-hero-subtitle">
-              Explore our menu and discover dishes you&apos;ll keep coming back for.
-            </p>
+            <p className="foodmenu-hero-subtitle">{menuHero.subtitle}</p>
             <div className="foodmenu-hero-buttons">
-              <button type="button" className="foodmenu-order-btn" onClick={scrollToHowToOrder}>
+              <OrderButton
+                className="foodmenu-order-btn"
+                href={menuHero.buttonHref}
+                label={menuHero.buttonLabel}
+              >
                 <svg viewBox="0 0 24 24" strokeWidth="1.8" aria-hidden="true">
                   <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
                   <path d="M7 2v20" />
                   <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />
                 </svg>
-                Order Now
-              </button>
+              </OrderButton>
             </div>
           </div>
           <div className="foodmenu-hero-image">
-            <SkeletonImage src={food1} alt="Featured dish" />
+            <SkeletonImage src={resolveMenuHeroImage(menuHero.imageUrl)} alt="Featured dish" loading="eager" fetchPriority="high" decoding="async" />
           </div>
         </div>
       </section>
 
-      <section className="howto-order" ref={howToOrderRef}>
+      <section className="howto-order" id="how-to-order">
         <div className="howto-order-panel">
           <div className="howto-order-image">
-            <img src={food2} alt="Chef preparing a dish" />
+            <img src={resolveMenuOrderImage(howToOrder.imageUrl)} alt="Chef preparing a dish" loading="lazy" decoding="async" />
           </div>
           <div className="howto-order-content">
-            <h3>How to Order Food</h3>
+            <h3>{howToOrder.heading}</h3>
             <ol>
-              {orderSteps.map((step) => (
-                <li key={step}>{step}</li>
+              {howToOrderSteps.map((step) => (
+                <li key={step.id}>{step.step}</li>
               ))}
             </ol>
           </div>
         </div>
-        <p className="howto-order-note">
-          <span className="howto-order-note-icon" aria-hidden="true">!</span>
-          <span><strong>Note:</strong> Food orders are subject to availability and may be modified before the preparation cutoff time.</span>
-        </p>
+        {(howToOrder.noteLabel || howToOrder.noteText) && (
+          <p className="howto-order-note">
+            <span className="howto-order-note-icon" aria-hidden="true">!</span>
+            <span>
+              {howToOrder.noteLabel && <strong>{howToOrder.noteLabel} </strong>}
+              {howToOrder.noteText}
+            </span>
+          </p>
+        )}
       </section>
 
       <section className="menu-category">
         <div
           className="menu-category-banner"
-          style={{ backgroundImage: `url(${food3})` }}
+          style={{ backgroundImage: `url(${resolveMenuSectionImage(menuSections.menuImageUrl)})` }}
         >
-          <CategoryTitle>MENU</CategoryTitle>
+          <CategoryTitle>{menuSections.menuTitle}</CategoryTitle>
         </div>
         <div className="menu-category-toggle-row">
           <SubcategoryToggle
-            label="Foods"
+            label={menuSections.menuToggleLabel}
             expanded={expanded.breakfast}
             onToggle={() => toggleSection('breakfast')}
           />
@@ -701,9 +757,9 @@ function FoodMenuPage() {
 
       <section className="menu-category">
         <div className="menu-category-header">
-          <CategoryTitle plain>COMBO MEAL</CategoryTitle>
+          <CategoryTitle plain>{menuSections.comboTitle}</CategoryTitle>
           <SubcategoryToggle
-            label="Meals"
+            label={menuSections.comboToggleLabel}
             expanded={expanded.beverages}
             onToggle={() => toggleSection('beverages')}
           />
@@ -713,9 +769,9 @@ function FoodMenuPage() {
 
       <section className="menu-category">
         <div className="menu-category-header">
-          <CategoryTitle plain>PRE-ORDER</CategoryTitle>
+          <CategoryTitle plain>{menuSections.preorderTitle}</CategoryTitle>
           <SubcategoryToggle
-            label="Foods"
+            label={menuSections.preorderToggleLabel}
             expanded={expanded.preOrder}
             onToggle={() => toggleSection('preOrder')}
           />
@@ -725,10 +781,12 @@ function FoodMenuPage() {
 
       <section className="menu-category coffee-menu-section">
         <div className="menu-category-header">
-          <p className="coffee-menu-eyebrow">Bukal Cafe by Camp Ba-Long Nature Farm</p>
-          <CategoryTitle plain>COFFEE</CategoryTitle>
+          {menuSections.coffeeEyebrow && (
+            <p className="coffee-menu-eyebrow">{menuSections.coffeeEyebrow}</p>
+          )}
+          <CategoryTitle plain>{menuSections.coffeeTitle}</CategoryTitle>
           <SubcategoryToggle
-            label="Coffee Menu"
+            label={menuSections.coffeeToggleLabel}
             expanded={expanded.coffee}
             onToggle={() => toggleSection('coffee')}
           />

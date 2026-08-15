@@ -2,7 +2,9 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-const REQUIRED = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY']
+// VITE_ADMIN_PATH_HASH is in here because without it the dashboard has no
+// route at all — the build would succeed and staff would find a dead URL.
+const REQUIRED = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY', 'VITE_ADMIN_PATH_HASH']
 
 // Catch a missing .env in the terminal, before anyone opens the browser.
 //
@@ -21,7 +23,7 @@ function requireSupabaseEnv(mode, root) {
 
     const detail =
         `Missing: ${missing.join(', ')}\n` +
-        `Fix: copy .env.example to .env and fill in both values.\n` +
+        `Fix: copy .env.example to .env and fill in every value.\n` +
         `The keys are not in the repo by design — ask a teammate for them, or\n` +
         `read them from the Supabase dashboard under Project Settings -> API.\n` +
         `When deploying, set the same variables in your hosting provider: Vite\n` +

@@ -1,0 +1,211 @@
+/* ============================================================================
+   CMS → Location. The panel, a preview of the heading and its button, the rows
+   of the contact card, the tiles under the map, and a note saying where the map
+   itself lives.
+   ========================================================================== */
+
+.loc-cms-panel {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--cream, #F5F1E4);
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 10px 20px -14px rgba(10, 22, 14, 0.5);
+    font-family: 'Jost', sans-serif;
+    color: var(--forest-dark, #16291E);
+}
+
+/* ---------- Heading preview ---------- */
+/* On the dark green the section actually sits on, and in the page's own fonts:
+   what is being checked is how the wording reads against that band, and a
+   preview on cream would answer a different question. */
+
+.loc-cms-preview {
+    margin-bottom: 4px;
+    padding: 20px 18px;
+    text-align: center;
+    background: #1d3025;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    border-radius: 14px;
+}
+
+.loc-cms-eyebrow {
+    margin: 0 0 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold, #C6A15B);
+}
+
+.loc-cms-title {
+    margin: 0 0 6px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.45rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--cream-2, #EFE9D6);
+}
+
+.loc-cms-sub {
+    margin: 0;
+    font-size: 0.82rem;
+    letter-spacing: 0.5px;
+    color: var(--gold-soft, #D9BD84);
+}
+
+/* The button as it reads, with the address it points at underneath — a label
+   that looks right and a link that does not is the failure worth catching. */
+.loc-cms-btn-preview {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    margin: 16px 0 0;
+}
+
+.loc-cms-btn-preview span {
+    border-radius: 999px;
+    background: var(--forest-dark, #16291E);
+    border: 1px solid rgba(198, 161, 91, 0.5);
+    padding: 9px 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--cream, #F5F1E4);
+}
+
+.loc-cms-btn-preview small {
+    max-width: 46ch;
+    overflow-wrap: anywhere;
+    font-size: 0.68rem;
+    color: rgba(245, 241, 228, 0.6);
+}
+
+/* ---------- Lists ---------- */
+
+.loc-cms-subbar {
+    margin-top: 18px;
+}
+
+.loc-cms-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.loc-cms-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    border-radius: 14px;
+    padding: 16px 18px;
+}
+
+/* Both circles as the page draws them: the card's on cream, the strip's on the
+   dark band. An uploaded icon that will disappear into either is visible here
+   rather than after saving. */
+.loc-cms-detail-icon,
+.loc-cms-feature-icon {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.loc-cms-detail-icon {
+    background: rgba(198, 161, 91, 0.16);
+    border: 1px solid rgba(198, 161, 91, 0.45);
+    color: var(--gold, #C6A15B);
+}
+
+.loc-cms-feature-icon {
+    background: #1d3025;
+    border: 1px solid rgba(198, 161, 91, 0.4);
+    color: var(--gold-soft, #D9BD84);
+}
+
+.loc-cms-detail-icon svg,
+.loc-cms-detail-icon img,
+.loc-cms-feature-icon svg,
+.loc-cms-feature-icon img {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    fill: none;
+}
+
+.loc-cms-copy {
+    flex: 1 1 240px;
+    min-width: 0;
+}
+
+.loc-cms-copy h4 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 0 0 4px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+}
+
+.loc-cms-copy p {
+    margin: 2px 0 0;
+    max-width: 60ch;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: rgba(10, 22, 14, 0.65);
+}
+
+.loc-cms-warning {
+    color: #9E3A2E;
+}
+
+/* ---------- "The map is not here" note ---------- */
+
+.loc-cms-note {
+    margin-top: 18px;
+    padding: 16px 18px;
+    background: rgba(198, 161, 91, 0.1);
+    border: 1px solid rgba(198, 161, 91, 0.4);
+    border-radius: 12px;
+}
+
+.loc-cms-note h4 {
+    margin: 0 0 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.loc-cms-note p {
+    margin: 0;
+    max-width: 70ch;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: rgba(10, 22, 14, 0.65);
+}
+
+@media (max-width: 720px) {
+    .loc-cms-panel {
+        padding: 16px;
+    }
+
+    .loc-cms-title {
+        font-size: 1.25rem;
+    }
+
+    .loc-cms-row {
+        flex-wrap: wrap;
+    }
+}

@@ -1,0 +1,294 @@
+/* ============================================================================
+   CMS → What We Offer. The panel, a preview of the heading, the cards with
+   their nested "Discover More" photos, and the chip row.
+   ========================================================================== */
+
+.offers-cms-panel {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--cream, #F5F1E4);
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 10px 20px -14px rgba(10, 22, 14, 0.5);
+    font-family: 'Jost', sans-serif;
+    color: var(--forest-dark, #16291E);
+}
+
+/* ---------- Heading preview ---------- */
+
+.offers-cms-preview {
+    margin-bottom: 22px;
+    padding: 18px;
+    text-align: center;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    border-radius: 14px;
+}
+
+.offers-cms-title {
+    margin: 0 0 6px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.45rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.offers-cms-sub {
+    margin: 0;
+    font-size: 0.82rem;
+    letter-spacing: 0.6px;
+    color: #5b5b4c;
+}
+
+.offers-cms-highlight {
+    color: var(--gold, #C6A15B);
+    font-weight: 600;
+}
+
+/* ---------- Cards ---------- */
+
+.offers-cms-subbar {
+    margin-top: 4px;
+}
+
+.offers-cms-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 4px;
+}
+
+.offers-cms-card {
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    border-radius: 14px;
+    padding: 16px 18px;
+}
+
+.offers-cms-card-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.offers-cms-photo {
+    flex: 0 0 auto;
+    width: 84px;
+    height: 60px;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(198, 161, 91, 0.15);
+    font-size: 0.66rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: rgba(10, 22, 14, 0.42);
+}
+
+.offers-cms-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* The icon in the dark medallion it sits in on the card, so a pale upload that
+   will vanish against it is obvious here rather than after publishing. */
+.offers-cms-icon {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    box-sizing: border-box;
+    padding: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--forest, #2f5741);
+    border: 2px solid var(--gold-soft, #D9BD84);
+}
+
+.offers-cms-icon svg,
+.offers-cms-chip-icon svg {
+    width: 100%;
+    height: 100%;
+    stroke: var(--gold-soft, #D9BD84);
+    fill: none;
+}
+
+.offers-cms-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+}
+
+.offers-cms-copy {
+    flex: 1 1 200px;
+    min-width: 0;
+}
+
+.offers-cms-copy h4,
+.offers-cms-copy h5 {
+    margin: 0 0 3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-weight: 600;
+}
+
+.offers-cms-copy h4 {
+    font-size: 0.95rem;
+}
+
+.offers-cms-copy h5 {
+    font-size: 0.85rem;
+}
+
+.offers-cms-copy p {
+    margin: 0;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: rgba(10, 22, 14, 0.58);
+}
+
+/* Amber, not red: nothing is broken, a step has not been taken. */
+.offers-cms-warning {
+    margin: 5px 0 0;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #8a6a1f;
+}
+
+/* ---------- The window's photos, nested under their card ---------- */
+
+/* Indented and hairline-separated rather than boxed again: they belong to the
+   card above them, the same way a rate line belongs to its accommodation. */
+.offers-cms-gallery {
+    margin-top: 14px;
+    padding-left: 14px;
+    border-top: 1px solid rgba(198, 161, 91, 0.22);
+    border-left: 2px solid rgba(198, 161, 91, 0.28);
+}
+
+.offers-cms-gallery-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 12px 0 8px;
+}
+
+.offers-cms-gallery-title {
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: rgba(10, 22, 14, 0.5);
+}
+
+.offers-cms-gallery-empty {
+    margin: 0 0 10px;
+    font-size: 0.78rem;
+    color: rgba(10, 22, 14, 0.5);
+}
+
+.offers-cms-slot {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 0;
+    border-top: 1px solid rgba(198, 161, 91, 0.18);
+}
+
+.offers-cms-slot:first-of-type {
+    border-top: none;
+}
+
+.offers-cms-slot-photo {
+    flex: 0 0 auto;
+    width: 64px;
+    height: 48px;
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Dashed while empty, matching the "Photo coming soon" placeholder the
+       window itself shows for this slot. */
+    background: rgba(198, 161, 91, 0.1);
+    border: 1px dashed rgba(198, 161, 91, 0.5);
+    font-size: 0.6rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: rgba(10, 22, 14, 0.4);
+    text-align: center;
+}
+
+.offers-cms-slot-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.offers-cms-copy em {
+    font-style: italic;
+    opacity: 0.75;
+}
+
+/* ---------- Chips ---------- */
+
+.offers-cms-chip {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    border-radius: 12px;
+}
+
+/* On cream, like the chip on the page — no dark disc and no filter, so an
+   uploaded icon shows in its own colour here exactly as it will there. */
+.offers-cms-chip-icon {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    box-sizing: border-box;
+    padding: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: rgba(198, 161, 91, 0.12);
+    border: 1px solid rgba(198, 161, 91, 0.4);
+}
+
+.offers-cms-chip-icon svg {
+    stroke: var(--forest, #2f5741);
+}
+
+.offers-cms-chip-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+@media (max-width: 720px) {
+    .offers-cms-panel {
+        padding: 16px;
+    }
+
+    .offers-cms-card-head,
+    .offers-cms-slot {
+        flex-wrap: wrap;
+    }
+}

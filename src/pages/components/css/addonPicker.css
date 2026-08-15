@@ -1,0 +1,113 @@
+/* Add-ons picker — inline under the accommodation carousel, same bordered-card
+   language as stay-length.css (a pricing control, not just a headcount). */
+.addon-picker{
+    box-sizing: border-box;
+    width: 100%;
+    margin-top: 18px;
+    padding: 16px 18px;
+    background: var(--cream);
+    border: 1px solid var(--gold-soft);
+    border-radius: 14px;
+    font-family: 'Cormorant Garamond', serif;
+}
+
+.addon-picker-label{
+    margin: 0 0 12px;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--leaf);
+}
+
+.addon-picker-list{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.addon-picker-item{
+    flex: 1 1 220px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #FFFFFF;
+    border: 1px solid var(--gold-soft);
+    border-radius: 12px;
+    transition: border-color 0.2s ease;
+}
+
+.addon-picker-item.is-picked{
+    border-color: var(--leaf);
+    background: rgba(76, 107, 79, 0.08);
+}
+
+.addon-picker-item-info{
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.addon-picker-item-name{
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--forest);
+}
+
+.addon-picker-item-price{
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gold);
+}
+
+/* Only shown for an item staff have put a stock ceiling on (see AddonItem
+   in addonPicker.jsx) — most add-ons never render this at all. */
+.addon-picker-item-stock{
+    font-size: 11px;
+    font-style: italic;
+    color: var(--leaf);
+}
+
+.addon-picker-item-stock.is-out{
+    color: #9b3c2d;
+    font-style: normal;
+    font-weight: 600;
+}
+
+.addon-picker-item-qty{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.addon-picker-item-qty button{
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 15px;
+    line-height: 1;
+    color: var(--forest);
+    background-color: var(--cream-2);
+    border: 1px solid var(--gold-soft);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.addon-picker-item-qty button:disabled{
+    opacity: 0.4;
+    cursor: default;
+}
+
+.addon-picker-item-qty span{
+    min-width: 14px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--forest);
+}

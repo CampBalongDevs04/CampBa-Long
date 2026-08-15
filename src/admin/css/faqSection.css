@@ -1,0 +1,186 @@
+/* ============================================================================
+   CMS → FAQ. The panel, a preview of the intro, a note about the prices these
+   answers quote, and the questions in the order they are listed.
+   ========================================================================== */
+
+.faq-cms-panel {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--cream, #F5F1E4);
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 10px 20px -14px rgba(10, 22, 14, 0.5);
+    font-family: 'Jost', sans-serif;
+    color: var(--forest-dark, #16291E);
+}
+
+/* ---------- Intro preview ---------- */
+/* Left-aligned and narrow, because that is the column it occupies beside the
+   accordion — a centred preview would make a paragraph that runs long there
+   look comfortable here. */
+
+.faq-cms-preview {
+    padding: 20px 22px;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    border-radius: 14px;
+}
+
+.faq-cms-eyebrow {
+    margin: 0 0 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold, #C6A15B);
+}
+
+.faq-cms-title {
+    margin: 0 0 8px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.45rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.faq-cms-text {
+    margin: 0;
+    max-width: 54ch;
+    font-size: 0.84rem;
+    line-height: 1.6;
+    color: rgba(10, 22, 14, 0.68);
+}
+
+.faq-cms-preview-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+/* The button as it reads, with the anchor it points at underneath — a label
+   that looks right and a link that goes nowhere is the failure worth catching. */
+.faq-cms-btn-preview {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    border-radius: 999px;
+    background: var(--forest, #1E3A2B);
+    padding: 8px 18px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: #F5F1E4;
+}
+
+.faq-cms-btn-preview small {
+    font-weight: 400;
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+    color: rgba(245, 241, 228, 0.6);
+}
+
+/* ---------- "These do not update themselves" note ---------- */
+
+.faq-cms-note {
+    margin-top: 14px;
+    padding: 16px 18px;
+    background: rgba(198, 161, 91, 0.1);
+    border: 1px solid rgba(198, 161, 91, 0.4);
+    border-radius: 12px;
+}
+
+.faq-cms-note h4 {
+    margin: 0 0 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.faq-cms-note p {
+    margin: 0;
+    max-width: 70ch;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: rgba(10, 22, 14, 0.65);
+}
+
+/* ---------- Questions ---------- */
+
+.faq-cms-subbar {
+    margin-top: 18px;
+}
+
+.faq-cms-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.faq-cms-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    border-radius: 14px;
+    padding: 14px 18px;
+}
+
+/* Its position in the list, so the arrows have something to move against. */
+.faq-cms-number {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(198, 161, 91, 0.16);
+    border: 1px solid rgba(198, 161, 91, 0.4);
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: rgba(10, 22, 14, 0.6);
+}
+
+.faq-cms-copy {
+    flex: 1 1 320px;
+    min-width: 0;
+}
+
+.faq-cms-copy h4 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 0 0 4px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+}
+
+/* In full, not truncated: the job here is deciding whether an answer is still
+   true, which a first line ending in an ellipsis does not allow. */
+.faq-cms-copy p {
+    margin: 0;
+    max-width: 78ch;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: rgba(10, 22, 14, 0.65);
+}
+
+@media (max-width: 720px) {
+    .faq-cms-panel {
+        padding: 16px;
+    }
+
+    .faq-cms-title {
+        font-size: 1.25rem;
+    }
+
+    .faq-cms-row {
+        flex-wrap: wrap;
+    }
+}

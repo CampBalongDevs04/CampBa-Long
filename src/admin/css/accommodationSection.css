@@ -1,0 +1,81 @@
+/* ============================================================================
+   CMS → Accommodations. The heading, and a note saying where the cards under
+   it are actually edited.
+   ========================================================================== */
+
+.acc-cms-panel {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--cream, #F5F1E4);
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 10px 20px -14px rgba(10, 22, 14, 0.5);
+    font-family: 'Jost', sans-serif;
+    color: var(--forest-dark, #16291E);
+}
+
+/* Centred and in the page's own fonts, because what is being checked is how
+   the wording reads — a line too long for the rule, a stray bullet — and none
+   of that shows in a plain form field. */
+.acc-cms-preview {
+    margin-bottom: 18px;
+    padding: 20px 18px;
+    text-align: center;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.28);
+    border-radius: 14px;
+}
+
+.acc-cms-title {
+    margin: 0 0 6px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.45rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.acc-cms-sub {
+    margin: 0;
+    font-size: 0.82rem;
+    letter-spacing: 0.6px;
+    color: #5b5b4c;
+}
+
+/* Not a warning — nothing is wrong. This is the answer to "where is the
+   Teepee's photo", for the staff member who opened this tab looking for it. */
+.acc-cms-note {
+    padding: 16px 18px;
+    background: rgba(198, 161, 91, 0.1);
+    border: 1px solid rgba(198, 161, 91, 0.4);
+    border-radius: 12px;
+}
+
+.acc-cms-note h4 {
+    margin: 0 0 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.acc-cms-note p {
+    margin: 0 0 12px;
+    max-width: 70ch;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: rgba(10, 22, 14, 0.65);
+}
+
+.acc-cms-note-path {
+    margin: 0;
+}
+
+@media (max-width: 720px) {
+    .acc-cms-panel {
+        padding: 16px;
+    }
+
+    .acc-cms-title {
+        font-size: 1.25rem;
+    }
+}

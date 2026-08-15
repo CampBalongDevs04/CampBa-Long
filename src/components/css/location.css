@@ -184,6 +184,12 @@
     padding: 0 22px;
     border-right: 1px solid rgba(198, 161, 91, 0.25);
 }
+/* The divider belongs BETWEEN tiles, so it comes off the last one in each row
+   as well as the last one overall. The count used to be fixed at four and
+   `:last-child` was enough; now that staff can add a fifth, a rule that only
+   knew about the last tile would leave a line hanging at the right edge of the
+   first row. */
+.location-feature:nth-child(4n),
 .location-feature:last-child{
     border-right: none;
 }
@@ -238,7 +244,8 @@
         grid-template-columns: repeat(2, 1fr);
         row-gap: 30px;
     }
-    .location-feature:nth-child(2){
+    /* Two to a row here, so every even tile ends one. */
+    .location-feature:nth-child(2n){
         border-right: none;
     }
 }

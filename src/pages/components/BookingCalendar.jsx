@@ -1,5 +1,21 @@
 import { useState } from 'react'
 import './css/bookingCalendar.css'
+import {
+    addDays,
+    countNights,
+    firstMaintenanceDayInRange,
+    isMaintenanceDay,
+    isSelectableCheckOut,
+    MAX_STAY_NIGHTS,
+} from '../../data/extendedStay.js'
+import {
+    describeClosureOn,
+    describeMaintenanceDates,
+    describeMaintenanceDays,
+    isPastDateKey,
+    useMaintenanceDays,
+} from '../../data/maintenanceDays.js'
+import { isResortFreeOn, useAccommodationDB } from '../../data/accommodationDB.js'
 
 const MONTH_NAMES = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -15,13 +31,58 @@ function isSameDay(a, b) {
     return a && b && a.getTime() === b.getTime()
 }
 
-// First Monday strictly after the given date — no stay may reach it,
-// since the resort is closed every Monday for maintenance.
-function nextMondayAfter(date) {
-    const d = startOfDay(date)
-    const daysUntilMonday = ((8 - d.getDay()) % 7) || 7
-    d.setDate(d.getDate() + daysUntilMonday)
-    return d
+// The first date past the end of the longest bookable stay. This is an outer
+// guardrail against a mis-click holding a unit for a year, not the thing that
+// actually shapes the check-out panel day to day — isSelectableCheckOut()
+// below does that, disabling any date whose range would cross a maintenance
+// day, wherever in the stay it falls.
+function stayLimitAfter(date) {
+    return addDays(date, MAX_STAY_NIGHTS + 1)
+}
+
+// The note under the calendar: 'Mondays are maintenance day', 'Monday to
+// Tuesday are maintenance days', 'Mondays are maintenance day, and so are
+// Aug 8, 9 and 10'. The closure is a setting now (data/maintenanceDays.js) —
+// a weekly pattern plus any number of single dates — so this has to be built
+// rather than written.
+//
+// Dates already past are left out: they close nothing anyone can still book,
+// and listing them would make the sentence longer and less true.
+function closureLabel(days, dates) {
+    const upcoming = dates.filter((key) => !isPastDateKey(key))
+    const weekly = days.length === 0
+        ? ''
+        : `${describeMaintenanceDays(days)} ${days.length === 1 ? 'are maintenance day' : 'are maintenance days'}`
+
+    if (upcoming.length === 0) return weekly
+    const single = describeMaintenanceDates(upcoming)
+    if (!weekly) return `The resort is closed on ${single}`
+    return `${weekly}, and so ${upcoming.length === 1 ? 'is' : 'are'} ${single}`
+}
+
+// Why THIS cell is greyed — the weekly pattern for most of them, one date for a
+// one-off closure. Per cell rather than one label for the whole calendar,
+// because "Mondays are maintenance day" on a greyed August 8th would be a wrong
+// answer to the question the guest is actually asking.
+function cellClosureLabel(date) {
+    const reason = describeClosureOn(date)
+    return reason ? `the resort is closed on ${reason} for maintenance` : ''
+}
+
+// Why a CHECK-OUT cell is greyed when the date itself is open but the stay
+// leading up to it is not — the range from the chosen check-in runs through a
+// maintenance day somewhere in between, and this names that day rather than
+// the one the guest clicked.
+function rangeClosureLabel(checkIn, date) {
+    const own = cellClosureLabel(date)
+    if (own) return own
+    if (!checkIn) return ''
+    const blocker = firstMaintenanceDayInRange(checkIn, date)
+    if (!blocker) return ''
+    const reason = describeClosureOn(blocker)
+    return reason
+        ? `the stay would run through ${formatDate(blocker)}, closed on ${reason} for maintenance`
+        : ''
 }
 
 function formatDate(date) {
@@ -31,11 +92,30 @@ function formatDate(date) {
     })
 }
 
-function CalendarPanel({ label, variant, selected, onSelect, minDate, maxDate, rangeStart, rangeEnd }) {
+function CalendarPanel({ label, variant, selected, onSelect, minDate, maxDate, rangeStart, rangeEnd, restrictToFree, scheduleKey, excludeTypeId }) {
     const today = startOfDay(new Date())
     const initialView = selected || minDate || today
     const [viewYear, setViewYear] = useState(initialView.getFullYear())
     const [viewMonth, setViewMonth] = useState(initialView.getMonth())
+
+    // Follow a selection that was made somewhere else. The nights stepper can
+    // set a check-out several days out — "5 nights" from Oct 28 lands in
+    // November — and a panel still showing October would look like the chip
+    // had done nothing.
+    //
+    // Adjusted during render rather than in an effect, which is React's own
+    // advice for state that has to follow a prop: an effect would paint the
+    // stale month first and then correct it. The guard is the last selection
+    // this ran for, so browsing ahead by hand afterwards is left alone.
+    const selectedTime = selected ? selected.getTime() : null
+    const [lastSelectedTime, setLastSelectedTime] = useState(selectedTime)
+    if (selectedTime !== lastSelectedTime) {
+        setLastSelectedTime(selectedTime)
+        if (selected) {
+            setViewYear(selected.getFullYear())
+            setViewMonth(selected.getMonth())
+        }
+    }
 
     const firstOfMonth = new Date(viewYear, viewMonth, 1)
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
@@ -70,16 +150,45 @@ function CalendarPanel({ label, variant, selected, onSelect, minDate, maxDate, r
     for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(viewYear, viewMonth, day)
         const isPast = date.getTime() < today.getTime()
-        const isMonday = date.getDay() === 1
+        // A check-in cell only answers for itself — whichever days the resort
+        // has closed, not a hardcoded Monday. A check-out cell answers for the
+        // whole stay it would complete: `minDate` is the chosen check-in here
+        // (see the two CalendarPanel call sites below), so a date that is
+        // itself open still greys out if reaching it from that check-in would
+        // run through a maintenance day anywhere in between.
+        const isClosed = variant === 'checkout' && minDate
+            ? !isSelectableCheckOut(minDate, date)
+            : isMaintenanceDay(date)
         const isBeforeMin = minDate && date.getTime() <= minDate.getTime()
         const isPastMax = maxDate && date.getTime() >= maxDate.getTime()
-        const isDisabled = isPast || isMonday || isBeforeMin || isPastMax
+
+        // Rent Resort mode: only ask "is the whole resort free that day" once
+        // every other reason to skip the cell is ruled out — no sense paying
+        // for an availability check on a day that's already past, closed, or
+        // outside this panel's own range. `resortFree` is null while the
+        // answer is still in flight (isResortFreeOn mirrors the cards'
+        // "Availability TBA" state) or false once every type is fetched and
+        // at least one is fully booked that day.
+        const skipFreeCheck = isPast || isClosed || isBeforeMin || isPastMax
+        const resortFree = restrictToFree && !skipFreeCheck
+            ? isResortFreeOn(date, scheduleKey, excludeTypeId)
+            : null
+        const notFree = restrictToFree && !skipFreeCheck && resortFree !== true
+
+        const isDisabled = isPast || isClosed || isBeforeMin || isPastMax || notFree
         const isSelected = isSameDay(date, selected)
         const isInRange = rangeStart && rangeEnd &&
             date.getTime() > rangeStart.getTime() && date.getTime() < rangeEnd.getTime()
 
+        const closedBecause = isClosed
+            ? (variant === 'checkout' ? rangeClosureLabel(minDate, date) : cellClosureLabel(date))
+            : notFree
+                ? (resortFree === null ? 'still checking availability for renting the whole resort' : 'the resort already has a booking that day')
+                : ''
+
         const classNames = ['cal-cell', 'cal-day']
-        if (isMonday) classNames.push('cal-maintenance')
+        if (isClosed) classNames.push('cal-maintenance')
+        if (notFree) classNames.push('cal-not-free')
         if (isDisabled) classNames.push('cal-disabled')
         if (isSelected) classNames.push('cal-selected')
         if (isInRange) classNames.push('cal-in-range')
@@ -90,13 +199,16 @@ function CalendarPanel({ label, variant, selected, onSelect, minDate, maxDate, r
                 key={day}
                 type="button"
                 className={classNames.join(' ')}
-                disabled={isDisabled && !isMonday}
+                // A closed or not-yet-free day stays focusable so its tooltip
+                // is reachable — "why can't I pick this?" is worth answering,
+                // where a past date needs no explanation.
+                disabled={isDisabled && !isClosed && !notFree}
                 aria-disabled={isDisabled}
                 onClick={() => { if (!isDisabled) onSelect(date) }}
-                data-hint={isMonday ? 'Mondays are maintenance day' : undefined}
+                data-hint={closedBecause || undefined}
                 aria-label={
-                    isMonday
-                        ? `${formatDate(date)} — unavailable, Mondays are maintenance day`
+                    closedBecause
+                        ? `${formatDate(date)} — unavailable, ${closedBecause}`
                         : formatDate(date)
                 }
             >
@@ -179,40 +291,52 @@ function SameDayPanel({ checkIn }) {
     )
 }
 
-export default function BookingCalendar({ onChange, sameDayCheckout = false }) {
-    const [checkIn, setCheckIn] = useState(null)
-    const [checkOut, setCheckOut] = useState(null)
+// CONTROLLED. The dates used to live here as local state and be mirrored up to
+// the booking page through onChange, which was fine while this was the only
+// thing that could move them. The nights stepper (stayLength.jsx) sets a
+// check-out date too, and two copies of the same fact would have drifted the
+// moment either one wrote — so the booking page owns the pair and this renders
+// what it is given.
+export default function BookingCalendar({
+    checkIn = null, checkOut = null, onChange, sameDayCheckout = false,
+    restrictToFree = false, scheduleKey = null, excludeTypeId = null,
+}) {
+    // Subscribed rather than read once: staff can change the closure from the
+    // dashboard while this calendar is open, and the cells have to regrey
+    // themselves rather than keep offering a date the database now refuses.
+    const { days, dates } = useMaintenanceDays()
+    const closure = closureLabel(days, dates)
+
+    // In Rent Resort mode, isResortFreeOn() answers are fetched lazily as
+    // cells render and land in the same availability cache every
+    // accommodation card reads — this re-renders the calendar once each
+    // answer comes back, the same way AccomodationList re-renders as its
+    // cards' availability arrives.
+    useAccommodationDB()
 
     // Day Time schedule: check-out always happens on the check-in date
     const effectiveCheckOut = sameDayCheckout ? checkIn : checkOut
 
     function selectCheckIn(date) {
-        setCheckIn(date)
         if (sameDayCheckout) {
             onChange?.({ checkIn: date, checkOut: date })
             return
         }
-        // a check-out on or before the new check-in, or one that would
-        // cross the next Monday (maintenance day), no longer makes sense
-        const mondayLimit = nextMondayAfter(date)
-        const nextCheckOut =
-            checkOut &&
-            (date.getTime() >= checkOut.getTime() ||
-                checkOut.getTime() >= mondayLimit.getTime())
-                ? null
-                : checkOut
-        setCheckOut(nextCheckOut)
+        // Keep the check-out only if it still describes a legal stay from the
+        // new check-in: after it, inside the guardrail, and clear of any
+        // maintenance day in between. Moving the check-in past your check-out
+        // — or across a closure that now sits inside the range — clears it, so
+        // the next click on the right-hand panel reads as the new end of the
+        // range.
+        const nextCheckOut = checkOut && isSelectableCheckOut(date, checkOut) ? checkOut : null
         onChange?.({ checkIn: date, checkOut: nextCheckOut })
     }
 
     function selectCheckOut(date) {
-        setCheckOut(date)
         onChange?.({ checkIn, checkOut: date })
     }
 
     function clearDates() {
-        setCheckIn(null)
-        setCheckOut(null)
         onChange?.({ checkIn: null, checkOut: null })
     }
 
@@ -226,6 +350,9 @@ export default function BookingCalendar({ onChange, sameDayCheckout = false }) {
                     onSelect={selectCheckIn}
                     rangeStart={checkIn}
                     rangeEnd={effectiveCheckOut}
+                    restrictToFree={restrictToFree}
+                    scheduleKey={scheduleKey}
+                    excludeTypeId={excludeTypeId}
                 />
                 {sameDayCheckout ? (
                     <SameDayPanel checkIn={checkIn} />
@@ -236,17 +363,41 @@ export default function BookingCalendar({ onChange, sameDayCheckout = false }) {
                         selected={checkOut}
                         onSelect={selectCheckOut}
                         minDate={checkIn}
-                        maxDate={checkIn ? nextMondayAfter(checkIn) : null}
+                        maxDate={checkIn ? stayLimitAfter(checkIn) : null}
                         rangeStart={checkIn}
                         rangeEnd={checkOut}
+                        restrictToFree={restrictToFree}
+                        scheduleKey={scheduleKey}
+                        excludeTypeId={excludeTypeId}
                     />
                 )}
             </div>
 
+            {/* The range, stated as the guest built it. Two panels can be read
+                as two unrelated dates; this is the one line that says they are
+                a stay, and how long it is. */}
+            {!sameDayCheckout && checkIn && checkOut && (
+                <p className="cal-range-summary" aria-live="polite">
+                    <strong>{formatDate(checkIn)}</strong> &rarr; <strong>{formatDate(checkOut)}</strong>
+                    <span className="cal-range-nights">
+                        {countNights(checkIn, checkOut)} night
+                        {countNights(checkIn, checkOut) === 1 ? '' : 's'}
+                    </span>
+                </p>
+            )}
+
             <div className="cal-footer">
+                {/* With nothing closed there is no rule to explain, and a
+                    sentence about maintenance days would be describing
+                    something the calendar is not doing. */}
                 <p className="cal-note">
-                    Mondays are unavailable — maintenance day.
-                    Sunday check-ins are Day Time only.
+                    Stay as long as you like — pick your check-in, then your
+                    check-out.
+                    {closure && (
+                        <> {closure}, so a stay can&rsquo;t start, end, or run
+                        through one — check out before it, or ask us about the
+                        dates around it.</>
+                    )}
                 </p>
                 {(checkIn || checkOut) && (
                     <button type="button" className="cal-clear" onClick={clearDates}>

@@ -75,33 +75,13 @@ export default function PromoMarquee() {
     // worse than the banner arriving a moment late.
     if (!showing) return null
 
-    // Everything after the first pass is the SAME announcement over again, so
-    // only that one is left readable — a screen reader gets the promos once
-    // instead of once per repeat.
-    const pass = (key, hidden, ref) => (
-        <ul className="promo-marquee-pass" key={key} ref={ref} aria-hidden={hidden || undefined}>
-            {messages.map((message, index) => (
-                <li className="promo-marquee-item" key={`${message}-${index}`}>
-                    {message}
-                    <span className="promo-marquee-star" aria-hidden="true">✦</span>
-                </li>
-            ))}
-        </ul>
-    )
-
-    const sequence = (duplicate) => (
-        <div className="promo-marquee-sequence" aria-hidden={duplicate || undefined}>
-            {Array.from({ length: repeats }, (_, index) =>
-                pass(
-                    `${duplicate ? 'dup' : 'main'}-${index}`,
-                    duplicate || index > 0,
-                    // The measured pass is the first one of the real sequence.
-                    !duplicate && index === 0 ? passRef : undefined,
-                ),
-            )}
-        </div>
-    )
-
+    // The two sequences, written out rather than built by a pair of helpers
+    // that took `passRef` as an argument. A ref handed to a plain function
+    // during render is indistinguishable, to React's lint rule and to a reader,
+    // from one whose .current is about to be read — which is genuinely not
+    // allowed here, because a value read during render is not tracked and the
+    // component would not re-render when it changed. Attached inline it is
+    // plainly just a ref attribute on an element, which is always fine.
     return (
         // role="region" with a name, not an aria-live: this is standing copy a
         // guest can read at their own pace, not an update to announce. The
@@ -116,8 +96,38 @@ export default function PromoMarquee() {
                 className="promo-marquee-track"
                 style={{ '--promo-marquee-seconds': `${seconds}s` }}
             >
-                {sequence(false)}
-                {sequence(true)}
+                {[false, true].map((duplicate) => (
+                    <div
+                        className="promo-marquee-sequence"
+                        key={duplicate ? 'dup' : 'main'}
+                        aria-hidden={duplicate || undefined}
+                    >
+                        {Array.from({ length: repeats }, (_, index) => (
+                            // Everything after the first pass is the SAME
+                            // announcement over again, so only that one is left
+                            // readable — a screen reader gets the promos once
+                            // instead of once per repeat.
+                            <ul
+                                className="promo-marquee-pass"
+                                key={`${duplicate ? 'dup' : 'main'}-${index}`}
+                                // The measured pass is the first one of the
+                                // real sequence.
+                                ref={!duplicate && index === 0 ? passRef : null}
+                                aria-hidden={duplicate || index > 0 || undefined}
+                            >
+                                {messages.map((message, messageIndex) => (
+                                    <li
+                                        className="promo-marquee-item"
+                                        key={`${message}-${messageIndex}`}
+                                    >
+                                        {message}
+                                        <span className="promo-marquee-star" aria-hidden="true">✦</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        ))}
+                    </div>
+                ))}
             </div>
         </section>
     )

@@ -37,7 +37,13 @@ html{
     content: '';
     position: absolute;
     inset: 0;
-    background-image: linear-gradient(90deg, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.16)), url('../../../assets/images/spa-hero-benner.png');
+    /* The photo the site shipped with is the default; CMS → Spa Service →
+       Banner overrides it by setting --spa-hero-bg on the banner. The
+       variable rather than an inline background-image because the gradient
+       above it belongs to the stylesheet, and an inline value would have to
+       restate it to avoid wiping it. */
+    background-image: linear-gradient(90deg, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.16)),
+        var(--spa-hero-bg, url('../../../assets/images/spa-hero-benner.png'));
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -1012,8 +1018,12 @@ html{
     gap: 0.6rem;
 }
 .spa-checkout-bag{
-    font-size: 1.2rem;
-    line-height: 1;
+    width: 1.2rem;
+    height: 1.2rem;
+    flex-shrink: 0;
+    background-color: currentColor;
+    -webkit-mask: url('../../../assets/svg/spai.svg') no-repeat center / contain;
+    mask: url('../../../assets/svg/spai.svg') no-repeat center / contain;
 }
 .spa-checkout-title{
     font-weight: 700;
@@ -1085,6 +1095,13 @@ html{
     height: 100%;
     object-fit: cover;
     display: block;
+}
+.spa-checkout-thumb-icon{
+    width: 22px;
+    height: 22px;
+    background-color: var(--forest);
+    -webkit-mask: url('../../../assets/svg/spai.svg') no-repeat center / contain;
+    mask: url('../../../assets/svg/spai.svg') no-repeat center / contain;
 }
 .spa-checkout-item-info{
     flex: 1;

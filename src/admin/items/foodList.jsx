@@ -7,6 +7,8 @@ import {
     loadAdminCatalog,
     saveFoodItem,
     deleteFoodItem,
+    renameCoffeeTable,
+    renameCoffeeSize,
     resolveMenuImage,
     groupCoffeeMenu,
     formatMenuPrice,
@@ -18,6 +20,13 @@ import {
     listAddonOrders,
     hasStaffSession,
 } from '../../data/accommodationDB.js'
+
+// The Cup Size dropdown's escape hatch (foodFields below) — picking this
+// reveals a plain text field to name a size that doesn't exist in the table
+// yet, since a dropdown can only ever offer sizes that already exist
+// somewhere. saveCoffeeItem() is what turns it back into a real sizeLabel
+// before saveFoodItem() ever sees it; the sentinel itself is never stored.
+const NEW_SIZE_OPTION = '__new_size__'
 
 // The Food Menu section of the dashboard: the menu on the left — which staff
 // now EDIT here rather than through a developer — and what guests have actually
@@ -151,16 +160,30 @@ function ItemRows({ items, onEdit }) {
 // Coffee is priced per cup size, so it renders as tables rather than image
 // rows. Every cell IS its own catalog row, which is why tapping one opens that
 // row's form — the price a guest pays for a 12oz Cafe Latte is edited exactly
-// where staff read it.
-function CoffeeTables({ groups, onEdit }) {
+// where staff read it. A gap (flavor.items[i] is undefined — this flavor has
+// no row at this size yet) is clickable too, via onAddCell: there's nothing
+// to open, so it opens a NEW row instead, pre-filled with the flavor and size
+// it was clicked under so filling the gap is "type a price," not "retype the
+// flavor, table and size by hand."
+function CoffeeTables({ groups, onEdit, onEditTable, onAddCell }) {
     return (
         <div className="foodlist-coffee">
             <p className="foodlist-note">
-                Prices in PHP, per cup size. Tap a price to edit that size.
+                Prices in PHP, per cup size. Tap a price to edit that size, or a
+                blank cell to price it for the first time.
             </p>
             {groups.map((group) => (
                 <div key={group.key} className="foodlist-coffee-group">
-                    <h4 className="foodlist-coffee-title">{group.title}</h4>
+                    <div className="foodlist-coffee-title-bar">
+                        <h4 className="foodlist-coffee-title">{group.title}</h4>
+                        <button
+                            type="button"
+                            className="crud-btn is-small"
+                            onClick={() => onEditTable(group)}
+                        >
+                            Edit
+                        </button>
+                    </div>
                     <div className="foodlist-coffee-scroll">
                         <table className="foodlist-coffee-table">
                             <thead>
@@ -189,7 +212,14 @@ function CoffeeTables({ groups, onEdit }) {
                                                         {flavor.items[i].price.toFixed(2)}
                                                     </button>
                                                 ) : (
-                                                    '—'
+                                                    <button
+                                                        type="button"
+                                                        className="foodlist-coffee-cell foodlist-coffee-cell-empty"
+                                                        aria-label={`Price ${flavor.name} at ${size || 'this size'}`}
+                                                        onClick={() => onAddCell(group, flavor.name, size)}
+                                                    >
+                                                        —
+                                                    </button>
                                                 )}
                                             </td>
                                         ))}
@@ -206,7 +236,25 @@ function CoffeeTables({ groups, onEdit }) {
 
 // The form's shape follows the category: only a coffee row belongs to a price
 // table and a cup size, and only a combo comes with a coffee the guest picks.
-function foodFields(values) {
+//
+// `tableOptions` is the dropdown for an EXISTING price table — {value: key,
+// label: title} pairs built from `coffeeGroups` (groupCoffeeMenu() over the
+// live catalog, see FoodList below) — so picking one never involves typing or
+// copying a raw group_key by hand. `values.newTable` (set by blankFoodItem
+// when "+ Add table" opened this form, as opposed to "+ Add flavor") swaps
+// that dropdown for a plain text field instead: naming a brand-new table
+// rather than joining one that already exists. saveFoodItem() is what tells
+// the two apart on save — a groupKey that arrived already set is "join," a
+// bare groupTitle is "create new" — and slugifies the new table's id itself,
+// the same way it already slugifies the item's own id.
+//
+// Cup Size follows the same "pick, don't type" logic once a table is chosen:
+// its options are THAT table's existing sizeLabels, looked up from
+// `coffeeGroups` by `values.groupKey`. Introducing a size that doesn't exist
+// anywhere yet is deliberately not possible from here — that's what "Edit" on
+// the table itself (tableEditFields below) is for, since a brand-new size
+// needs to survive even before it has a second flavor to keep it company.
+function foodFields(values, tableOptions = [], coffeeGroups = []) {
     const isCoffee = values.category === 'coffee'
 
     const fields = [
@@ -229,26 +277,79 @@ function foodFields(values) {
     ]
 
     if (isCoffee) {
+        // Every size the CURRENTLY picked table already has, or nothing if no
+        // table is picked yet (or this is the "+ Add table" flow, which has
+        // no table to look sizes up on).
+        const selectedGroup = coffeeGroups.find((group) => group.key === values.groupKey)
+        const sizeOptions = (selectedGroup?.sizeLabels ?? [])
+            .filter(Boolean) // a blank/legacy size_label has no name to show in a dropdown
+            .map((size) => ({ value: size, label: size }))
+        const addingNewSize = !values.newTable && values.sizeLabel === NEW_SIZE_OPTION
+
         fields.push([
-            {
-                name: 'groupTitle',
-                label: 'Price table',
-                placeholder: 'Classic Hot Coffee',
-                help: 'Which table on the menu this cup appears in.',
-            },
-            {
-                name: 'sizeLabel',
-                label: 'Cup size',
-                placeholder: '12oz.',
-                help: 'The column it sits in.',
-            },
+            values.newTable
+                ? {
+                    name: 'groupTitle',
+                    label: 'New table name',
+                    placeholder: 'Iced Fruit Soda',
+                    help: 'Starts a new price table on the menu, priced at the flavor, size '
+                        + 'and price entered below.',
+                }
+                : {
+                    name: 'groupKey',
+                    label: 'Price table',
+                    type: 'select',
+                    // A leading blank option so an untouched dropdown reads as
+                    // "nothing chosen" both to the admin and to values.groupKey
+                    // — without it, a native <select> whose value matches no
+                    // option visually shows the FIRST table as picked while
+                    // React's own state stays empty, and a save without ever
+                    // touching the field would silently land on that table
+                    // instead of the "pick a table" refusal it should get.
+                    options: [{ value: '', label: 'Choose a table…' }, ...tableOptions],
+                    help: 'Which table on the menu this cup appears in.',
+                    // Switching tables invalidates whatever size was picked
+                    // for the OLD table — Classic Hot Coffee's "12oz." is not
+                    // a real option once Iced Fruit Soda is selected instead.
+                    // Without clearing it, a save made right after switching
+                    // (without re-touching Cup Size) would silently carry the
+                    // stale size over instead of refusing for having none.
+                    clears: ['sizeLabel'],
+                },
+            values.newTable
+                ? {
+                    name: 'sizeLabel',
+                    label: 'Cup size',
+                    placeholder: '12oz.',
+                    help: 'This table’s first size.',
+                }
+                : {
+                    name: 'sizeLabel',
+                    label: 'Cup size',
+                    type: 'select',
+                    disabled: !values.groupKey,
+                    options: [
+                        { value: '', label: values.groupKey ? 'Choose a size…' : 'Pick a price table first' },
+                        ...sizeOptions,
+                        // Only offered once a table is picked — a size is
+                        // always new FOR a specific table, so there is
+                        // nothing to attach it to before then.
+                        ...(values.groupKey ? [{ value: NEW_SIZE_OPTION, label: '+ New cup size…' }] : []),
+                    ],
+                    help: 'The column it sits in.',
+                },
         ])
-        fields.push({
-            name: 'groupKey',
-            label: 'Table id',
-            placeholder: 'classic-hot',
-            help: 'Rows sharing this id share a table. Copy it from a cup already in the table you want.',
-        })
+
+        // Revealed only once "+ New cup size…" is picked above — the actual
+        // name saveCoffeeItem() turns back into sizeLabel at submit time (see
+        // below), since the sentinel itself is never a real size.
+        if (addingNewSize) {
+            fields.push({
+                name: 'newSizeLabel',
+                label: 'New cup size name',
+                placeholder: '20oz.',
+            })
+        }
     } else {
         // The photo is uploaded, not named. A dish that shipped with the site
         // still has its bundled asset behind `imageKey`, which is what fills the
@@ -284,8 +385,10 @@ function foodFields(values) {
 }
 
 // A blank row for the category the staff member pressed "Add" under, so the
-// form opens already belonging where they are standing.
-function blankFoodItem(category) {
+// form opens already belonging where they are standing. `newTable` is
+// transient UI state, read only by foodFields() above to decide which shape
+// the Price Table field takes — saveFoodItem() never sees it.
+function blankFoodItem(category, { newTable = false } = {}) {
     return {
         id: null,
         category: category === 'all' ? 'breakfast' : category,
@@ -300,6 +403,22 @@ function blankFoodItem(category) {
         hasCoffeeOption: false,
         sortOrder: 0,
         isActive: true,
+        newTable,
+    }
+}
+
+// A blank row for a specific GAP in a coffee table's grid — clicking the "—"
+// under, say, Americano's 20oz. column. Same blank draft as blankFoodItem(),
+// with the flavor, table and size already filled in from the cell that was
+// clicked, so the form CrudModal opens is "type a price" rather than
+// "re-enter three things staff can already see on screen."
+function blankCoffeeCell(group, flavorName, size) {
+    return {
+        ...blankFoodItem('coffee', { newTable: false }),
+        name: flavorName,
+        groupKey: group.key,
+        groupTitle: group.title,
+        sizeLabel: size,
     }
 }
 
@@ -318,12 +437,92 @@ function toDraft(item) {
         hasCoffeeOption: item.hasCoffeeOption,
         sortOrder: item.sortOrder ?? 0,
         isActive: item.isActive,
+        // Already belongs to a table — Price Table renders as the dropdown,
+        // same as "+ Add flavor", so editing can also move a size to a
+        // different existing table rather than being locked to its own.
+        newTable: false,
     }
+}
+
+// The item modal's onSubmit — saveFoodItem() for everything except the one
+// case it doesn't know about: NEW_SIZE_OPTION picked in the Cup Size
+// dropdown (foodFields above). That sentinel is never a real size, so it's
+// swapped here for whatever was typed into the "New cup size name" field
+// that picking it revealed — refusing the save outright if that was left
+// blank, rather than silently landing the row in the unlabelled column.
+function saveCoffeeItem(draft) {
+    if (draft.sizeLabel !== NEW_SIZE_OPTION) return saveFoodItem(draft)
+
+    const newSize = String(draft.newSizeLabel ?? '').trim()
+    if (!newSize) return Promise.resolve({ ok: false, message: 'Type a name for the new cup size.' })
+
+    return saveFoodItem({ ...draft, sizeLabel: newSize })
+}
+
+// The "Edit" panel opened from a table's own heading — a fixed set of fields
+// for the `group` snapshot the button was clicked on (not a function of
+// `values`; the table's shape doesn't change while the modal is open). One
+// field to rename the table, one per existing cup size to rename that
+// column. Introducing a brand-new size lives in "+ Add flavor" instead (its
+// Cup Size dropdown's "+ New cup size…" option, see foodFields/
+// saveCoffeeItem above) — one flow to learn instead of two, now that adding a
+// size always comes with a flavor and price anyway.
+function tableEditFields(group) {
+    const fields = [
+        { name: 'title', label: 'Table name', placeholder: group.title },
+    ]
+
+    group.sizeLabels.forEach((size, i) => {
+        fields.push({
+            name: `size_${i}`,
+            label: `Cup size ${i + 1}`,
+            placeholder: size || '(blank)',
+            help: i === 0 ? 'Renaming a size moves every flavor priced at it, in one go.' : undefined,
+        })
+    })
+
+    return fields
+}
+
+function tableEditInitial(group) {
+    const values = { title: group.title }
+    group.sizeLabels.forEach((size, i) => {
+        values[`size_${i}`] = size
+    })
+    return values
+}
+
+// A table rename and any number of size renames, each its own bulk update
+// (see renameCoffeeTable/renameCoffeeSize in menuDB.js) so a failure partway
+// through leaves whatever already landed in place rather than losing it.
+async function saveTableEdits(group, values) {
+    const newTitle = String(values.title ?? '').trim()
+    if (!newTitle) return { ok: false, message: 'Give the table a name.' }
+
+    if (newTitle !== group.title) {
+        const result = await renameCoffeeTable(group.key, newTitle)
+        if (!result.ok) return result
+    }
+
+    for (let i = 0; i < group.sizeLabels.length; i += 1) {
+        const oldSize = group.sizeLabels[i]
+        const newSize = String(values[`size_${i}`] ?? '').trim()
+        if (newSize && newSize !== oldSize) {
+            const result = await renameCoffeeSize(group.key, oldSize, newSize)
+            if (!result.ok) return result
+        }
+    }
+
+    return { ok: true }
 }
 
 export default function FoodList({ category = 'all' }) {
     const catalog = useAdminCatalog()
     const [editing, setEditing] = useState(null)
+    // The per-table "Edit" panel — a `group` from groupCoffeeMenu(), separate
+    // from `editing` above (which is always a single item's draft) since the
+    // two open different CrudModal instances with different field shapes.
+    const [editingTable, setEditingTable] = useState(null)
 
     // Loaded when a dashboard panel first opens rather than on boot: these are
     // the rows including the hidden ones, and only staff may read them.
@@ -342,6 +541,19 @@ export default function FoodList({ category = 'all' }) {
             items: catalog.food.filter((item) => item.category === section.id),
         }))
 
+    // Every price table that exists right now — over the FULL admin catalog
+    // (hidden rows included), not just what's visible under the current tab,
+    // so a table whose only rows are currently switched off is still
+    // pickable. groupCoffeeMenu() already ignores non-coffee rows on its own.
+    // `tableOptions` feeds the "Price table" dropdown; `coffeeGroups` itself
+    // is also handed to foodFields() so it can look up a picked table's own
+    // sizeLabels for the "Cup size" dropdown right next to it.
+    const coffeeGroups = groupCoffeeMenu(catalog.food)
+    const tableOptions = coffeeGroups.map((group) => ({
+        value: group.key,
+        label: group.title,
+    }))
+
     return (
         <div className="foodlist-layout">
             <div className="foodlist-panel">
@@ -351,13 +563,34 @@ export default function FoodList({ category = 'all' }) {
                     <section key={section.id} className="foodlist-section">
                         <div className="crud-bar">
                             <h3 className="crud-bar-title">{section.title}</h3>
-                            <button
-                                type="button"
-                                className="crud-btn is-primary is-small"
-                                onClick={() => setEditing(blankFoodItem(section.id))}
-                            >
-                                + Add {section.id === 'coffee' ? 'a cup size' : 'an item'}
-                            </button>
+                            {section.id === 'coffee' ? (
+                                <div className="crud-bar-actions">
+                                    <button
+                                        type="button"
+                                        className="crud-btn is-small"
+                                        onClick={() => setEditing(blankFoodItem('coffee', { newTable: true }))}
+                                    >
+                                        + Add table
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="crud-btn is-primary is-small"
+                                        disabled={tableOptions.length === 0}
+                                        title={tableOptions.length === 0 ? 'Add a table first.' : undefined}
+                                        onClick={() => setEditing(blankFoodItem('coffee', { newTable: false }))}
+                                    >
+                                        + Add flavor
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    className="crud-btn is-primary is-small"
+                                    onClick={() => setEditing(blankFoodItem(section.id))}
+                                >
+                                    + Add an item
+                                </button>
+                            )}
                         </div>
 
                         {section.items.length === 0 ? (
@@ -370,6 +603,8 @@ export default function FoodList({ category = 'all' }) {
                             <CoffeeTables
                                 groups={groupCoffeeMenu(section.items)}
                                 onEdit={(item) => setEditing(toDraft(item))}
+                                onEditTable={setEditingTable}
+                                onAddCell={(group, flavorName, size) => setEditing(blankCoffeeCell(group, flavorName, size))}
                             />
                         ) : (
                             <ItemRows
@@ -384,20 +619,36 @@ export default function FoodList({ category = 'all' }) {
 
             {editing && (
                 <CrudModal
-                    title={editing.id ? 'Edit menu item' : 'New menu item'}
+                    title={
+                        editing.id
+                            ? 'Edit menu item'
+                            : editing.newTable ? 'New price table' : 'New menu item'
+                    }
                     subtitle={
                         editing.id
                             ? 'Saved straight to the menu — the guest page follows this price immediately. '
                               + 'Orders already placed keep what they were charged.'
                             : 'This goes on the guest menu as soon as you save it.'
                     }
-                    fields={foodFields}
+                    fields={(values) => foodFields(values, tableOptions, coffeeGroups)}
                     initial={editing}
                     submitLabel={editing.id ? 'Save changes' : 'Add to menu'}
-                    onSubmit={saveFoodItem}
+                    onSubmit={saveCoffeeItem}
                     onDelete={editing.id ? () => deleteFoodItem(editing.id) : null}
                     deleteLabel="Delete item"
                     onClose={() => setEditing(null)}
+                />
+            )}
+
+            {editingTable && (
+                <CrudModal
+                    title="Edit price table"
+                    subtitle="Rename the table or rename a cup size — each change saves independently."
+                    fields={tableEditFields(editingTable)}
+                    initial={tableEditInitial(editingTable)}
+                    submitLabel="Save changes"
+                    onSubmit={(values) => saveTableEdits(editingTable, values)}
+                    onClose={() => setEditingTable(null)}
                 />
             )}
         </div>

@@ -1,14 +1,29 @@
 import { SkeletonImage } from './skeletons/Skeleton.jsx'
+import CmsIcon from './CmsIcon.jsx'
 
-export default function OfferCard({ imageUrl, altText, icon: Icon, title, description, link = '#', onDiscoverClick }) {
+// One card in the home page's "What We Offer" grid. Its photo, icon, heading
+// and line are a row in offer_cards, written in the dashboard's CMS — see
+// data/offersSection.js. The icon arrives as the NAME of one the site ships
+// with (or the URL of one staff uploaded), which is why it goes through
+// CmsIcon rather than being handed in as a component.
+export default function OfferCard({
+    imageUrl,
+    altText,
+    iconKey,
+    iconUrl,
+    title,
+    description,
+    link = '#',
+    onDiscoverClick,
+}) {
     return (
         <article className="offer-card">
             <div className="card-media">
-                <SkeletonImage src={imageUrl} alt={altText} />
+                <SkeletonImage src={imageUrl} alt={altText} loading="lazy" decoding="async" />
             </div>
             <div className="card-body">
                 <div className="card-icon">
-                    <Icon />
+                    <CmsIcon iconKey={iconKey} iconUrl={iconUrl} />
                 </div>
                 <h3>{title}</h3>
                 <p>{description}</p>
