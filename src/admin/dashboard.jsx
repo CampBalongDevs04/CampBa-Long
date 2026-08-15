@@ -274,7 +274,10 @@ function AdminDash() {
                     </div>
                 </div>
             ) : activeSection === 'bookings' ? (
-                <div className="admin-dash-content">
+                /* `is-wide`: the bookings table carries twelve columns, so it
+                   gets the full width of a desktop screen instead of the
+                   1200px measure the card-and-form sections read best at. */
+                <div className="admin-dash-content is-wide">
                     <button
                         type="button"
                         className="admin-dash-back"
