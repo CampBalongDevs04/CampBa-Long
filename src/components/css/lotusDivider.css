@@ -1,0 +1,53 @@
+/* ============================================================================
+   The gold rule–lotus–rule divider, styled where the component lives.
+   ----------------------------------------------------------------------------
+   These rules used to sit in offers.css, which only offers.jsx imports. The
+   component is used on about a dozen screens, so on every route that does not
+   render the Offers section — /my-booking, /booking, the maintenance page —
+   the markup arrived with no CSS at all: not centered, and the two .rule spans
+   with no width or background, so the gold lines were invisible and a bare
+   lotus glyph sat off to the left. It looked correct on the landing page only
+   because that is the one page that happens to load offers.css.
+
+   That is also why near-identical copies of this block accumulated in
+   accommodations.css, spaService.css, foodmenu.css and admin.css — each one
+   was a section working around the same missing import.
+
+   Importing this from LotusDividerIcon.jsx is what fixes it for good: a
+   component that owns its markup owns its styles, so the two cannot arrive
+   separately. The section-scoped copies are all more specific than these
+   selectors, so anywhere one deliberately differs — the narrower rules in the
+   food menu, the tighter gap in the admin login card — it still wins.
+
+   Keep the mobile override here too. It is the same specificity as the base
+   rule above it, so if the two lived in different files the winner would come
+   down to which stylesheet Vite happened to inject last.
+   ========================================================================= */
+
+.lotus-divider{
+    display: flex;
+    align-items: center;
+    /* Load-bearing, not decoration. This is a block-level flex row: it
+       stretches to the full width of its container while its three children
+       total about 230px. Without centering they pack against the left edge and
+       the lotus lands wherever that leaves it — which is only the middle when
+       the parent is itself a centering flex column (.offer-header is,
+       .maintenance-shell is not). */
+    justify-content: center;
+    gap: 14px;
+}
+
+/* --gold comes from :root in index.css, which main.jsx imports on every route.
+   The literal is repeated as a fallback so this file never renders an
+   invisible divider if that import order ever changes. */
+.lotus-divider .rule{
+    height: 1px;
+    width: 90px;
+    background: linear-gradient(to var(--dir, right), transparent, var(--gold, #C6A15B));
+}
+.lotus-divider .rule.left{ --dir: left; background: linear-gradient(to left, transparent, var(--gold, #C6A15B)); }
+.lotus-divider .rule.right{ background: linear-gradient(to right, transparent, var(--gold, #C6A15B)); }
+
+@media (max-width: 760px){
+    .lotus-divider .rule{ width: 40px; }
+}

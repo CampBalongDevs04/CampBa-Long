@@ -455,6 +455,7 @@
 .menu-category-header .lotus-divider {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 14px;
   margin: 0.25rem 0 1.1rem;
 }

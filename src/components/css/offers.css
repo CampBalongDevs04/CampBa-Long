@@ -49,18 +49,10 @@
     align-items: center;
   }
 
-  .lotus-divider{
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-  .lotus-divider .rule{
-    height: 1px;
-    width: 90px;
-    background: linear-gradient(to var(--dir, right), transparent, var(--gold));
-  }
-  .lotus-divider .rule.left{ --dir: left; background: linear-gradient(to left, transparent, var(--gold)); }
-  .lotus-divider .rule.right{ background: linear-gradient(to right, transparent, var(--gold)); }
+  /* .lotus-divider now lives in css/lotusDivider.css, imported by the
+     component itself. It was only ever here by accident of where it was first
+     needed, and every page that does not load offers.css was rendering the
+     divider unstyled because of it. */
 
   .offer-title{
     font-family: 'Cormorant Garamond', serif;
@@ -1029,7 +1021,6 @@
   @media (max-width: 760px){
     .cards-grid{ grid-template-columns: 1fr; }
     .offer-section{ border-radius: 34px 34px 18px 18px; padding: 44px 20px 32px; }
-    .lotus-divider .rule{ width: 40px; }
     .tags-row{ gap: 28px; }
     .Welcome-header{ padding: 0 8px; }
     .story-collage{ max-width: 360px; }
