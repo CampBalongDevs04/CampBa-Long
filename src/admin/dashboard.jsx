@@ -39,6 +39,7 @@ const FoodList = lazy(() => import('./items/foodList.jsx'))
 const AccommodationCount = lazy(() => import('./items/accommodationCount.jsx'))
 const AccommodationTab = lazy(() => import('./items/accommodationTab.jsx'))
 const AccommodationManage = lazy(() => import('./items/accommodationManage.jsx'))
+const AddonsManage = lazy(() => import('./items/addonsManage.jsx'))
 const MaintenanceDays = lazy(() => import('./items/maintenanceDays.jsx'))
 const SpaService = lazy(() => import('./items/spaService-Tab.jsx'))
 const SpaServiceList = lazy(() => import('./items/spaServiceList.jsx'))
@@ -306,12 +307,13 @@ function AdminDash() {
                         <h1 className="admin-dash-title">Units</h1>
                         <ClockDate />
                     </div>
-                    <Suspense fallback={<TabsSkeleton count={2} />}>
+                    <Suspense fallback={<TabsSkeleton count={3} />}>
                         <AccommodationTab active={activeUnitTab} onChange={setActiveUnitTab} />
                     </Suspense>
                     <Suspense fallback={<StatCardsSkeleton count={6} />}>
                         {activeUnitTab === 'availability' && <AccommodationCount />}
                         {activeUnitTab === 'manage' && <AccommodationManage />}
+                        {activeUnitTab === 'addons' && <AddonsManage />}
                     </Suspense>
                 </div>
             ) : activeSection === 'menu' ? (

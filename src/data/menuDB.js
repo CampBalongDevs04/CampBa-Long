@@ -305,12 +305,16 @@ function spaItem({
     }
 }
 
-function addonItem({ id, name, desc = null, price, sortOrder = 0, isActive = true }) {
+function addonItem({ id, name, desc = null, price, imageUrl = null, sortOrder = 0, isActive = true }) {
     return {
         id,
         name,
         desc,
         price: Number(price),
+        // No bundled asset for these (unlike food/spa's imageKey) — they never
+        // shipped with a photo, so there is nothing to prefer over an upload.
+        imageUrl,
+        image: imageUrl || null,
         sortOrder,
         isActive,
         label: name,
@@ -482,6 +486,7 @@ function toAddonItem(row) {
         name: row.name,
         desc: row.description,
         price: row.price,
+        imageUrl: row.image_url,
         sortOrder: row.sort_order ?? 0,
         isActive: row.is_active !== false,
     })
@@ -619,7 +624,7 @@ export function formatMenuPrice(price) {
 //  It stays empty until a dashboard panel asks for it — a guest never loads
 //  rows they aren't allowed to act on.
 
-let adminCatalog = { food: [], spa: [], loaded: false, error: null }
+let adminCatalog = { food: [], spa: [], addons: [], loaded: false, error: null }
 
 function getAdminCatalog() {
     return adminCatalog
@@ -638,12 +643,13 @@ export async function loadAdminCatalog() {
         return
     }
 
-    const [food, spa] = await Promise.all([
+    const [food, spa, addons] = await Promise.all([
         supabase.from('food_menu_items').select('*').order('category').order('sort_order'),
         supabase.from('spa_services').select('*').order('sort_order'),
+        supabase.from('resort_addon_items').select('*').order('sort_order'),
     ])
 
-    const error = food.error ?? spa.error
+    const error = food.error ?? spa.error ?? addons.error
     if (error) {
         console.error('Could not load the catalog for editing:', error.message)
         commitAdminCatalog({ loaded: true, error: describeSupabaseError(error) })
@@ -653,6 +659,7 @@ export async function loadAdminCatalog() {
     commitAdminCatalog({
         food: food.data.map(toFoodItem),
         spa: spa.data.map(toSpaItem),
+        addons: addons.data.map(toAddonItem),
         loaded: true,
         error: null,
     })
@@ -808,6 +815,55 @@ export async function deleteSpaService(id) {
         return { ok: false, message: describeSupabaseError(error) }
     }
 
+    await Promise.all([loadCatalog(), loadAdminCatalog()])
+    return { ok: true }
+}
+
+export async function saveResortAddonItem(draft) {
+    if (!isSupabaseConfigured) return { ok: false, message: SUPABASE_SETUP_MESSAGE }
+
+    const name = String(draft.name ?? '').trim()
+    if (!name) return { ok: false, message: 'Give the add-on a name.' }
+
+    const price = priceOrError(draft.price)
+    if (price == null) return { ok: false, message: 'Enter a price of 0 or more.' }
+
+    const taken = new Set(adminCatalog.addons.map((item) => item.id))
+    if (draft.id) taken.delete(draft.id)
+    const id = draft.id || uniqueId(slugify(name), taken)
+
+    const row = {
+        id,
+        name,
+        description: String(draft.desc ?? '').trim() || null,
+        price,
+        image_url: String(draft.imageUrl ?? '').trim() || null,
+        sort_order: Number(draft.sortOrder) || 0,
+        is_active: draft.isActive !== false,
+    }
+
+    const { error } = await supabase.from('resort_addon_items').upsert(row)
+    if (error) {
+        console.error('Could not save the add-on item:', error.message)
+        return { ok: false, message: describeSupabaseError(error) }
+    }
+
+    await Promise.all([loadCatalog(), loadAdminCatalog()])
+    return { ok: true, id }
+}
+
+export async function deleteResortAddonItem(id) {
+    if (!isSupabaseConfigured) return { ok: false, message: SUPABASE_SETUP_MESSAGE }
+
+    const { error } = await supabase.from('resort_addon_items').delete().eq('id', id)
+    if (error) {
+        console.error('Could not delete the add-on item:', error.message)
+        return { ok: false, message: describeSupabaseError(error) }
+    }
+
+    // Bookings that already requested it keep the name and price they were
+    // charged (see add_booking_addon) — deleting the row only stops it being
+    // offered again.
     await Promise.all([loadCatalog(), loadAdminCatalog()])
     return { ok: true }
 }

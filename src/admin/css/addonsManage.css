@@ -1,0 +1,169 @@
+/* ---------- Resort add-on items list (admin view) ---------- */
+.addon-list-panel {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--cream);
+    border: 1px solid rgba(198, 161, 91, 0.35);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 10px 20px -14px rgba(10, 22, 14, 0.5);
+    font-family: 'Jost', sans-serif;
+}
+
+.addon-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.addon-list-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--forest-dark);
+}
+
+.addon-list-note {
+    margin: 4px 0 0;
+    font-size: 0.82rem;
+    color: rgba(10, 22, 14, 0.55);
+}
+
+.addon-list-count {
+    font-size: 0.8rem;
+    color: rgba(10, 22, 14, 0.55);
+    white-space: nowrap;
+}
+
+.addon-list-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.addon-list-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.25);
+    border-radius: 12px;
+    padding: 14px 18px;
+    color: var(--forest-dark);
+}
+
+.addon-list-image {
+    flex-shrink: 0;
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(198, 161, 91, 0.12);
+}
+
+.addon-list-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* An add-on with no photo — none of these shipped with one. The slot keeps
+   its size so rows stay aligned whether or not staff have uploaded yet. */
+.addon-list-image-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    font-size: 0.62rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: rgba(10, 22, 14, 0.4);
+    background: rgba(198, 161, 91, 0.12);
+}
+
+.addon-list-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.addon-list-name {
+    margin: 0 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 0.98rem;
+    font-weight: 600;
+    overflow-wrap: break-word;
+}
+
+.addon-list-desc {
+    margin: 0;
+    font-size: 0.84rem;
+    color: rgba(10, 22, 14, 0.62);
+    overflow-wrap: break-word;
+}
+
+.addon-list-price {
+    flex-shrink: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--forest-dark);
+    white-space: nowrap;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 860px) {
+    .addon-list-panel {
+        padding: 18px;
+    }
+
+    .addon-list-row {
+        flex-wrap: wrap;
+        gap: 10px 16px;
+        padding: 14px 16px;
+    }
+
+    .addon-list-price {
+        margin-right: auto;
+    }
+
+    .addon-list-row .crud-row-actions {
+        width: auto;
+        margin-left: auto;
+    }
+}
+
+@media (max-width: 560px) {
+    .addon-list-panel {
+        padding: 14px;
+        border-radius: 14px;
+    }
+
+    .addon-list-header .crud-row-actions {
+        width: 100%;
+        justify-content: space-between;
+        margin-left: 0;
+    }
+
+    .addon-list-image {
+        width: 52px;
+        height: 52px;
+    }
+
+    .addon-list-name {
+        font-size: 0.92rem;
+    }
+
+    .addon-list-price {
+        font-size: 1rem;
+    }
+}

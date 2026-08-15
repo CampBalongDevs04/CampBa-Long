@@ -7,6 +7,7 @@ import '../css/tab.css'
 const unitTabs = [
     { id: 'availability', label: 'Availability' },
     { id: 'manage', label: 'Manage Accommodations' },
+    { id: 'addons', label: 'Manage Add-ons' },
 ]
 
 export default function AccommodationTab({ active, onChange }) {
