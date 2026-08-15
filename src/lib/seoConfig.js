@@ -44,12 +44,31 @@
 //  both by the bundler, where `process` does not exist and naming it is a
 //  ReferenceError, and by the build scripts, where it does. `globalThis.process`
 //  is a plain property lookup and is simply undefined in the browser.
+//
+//  On Vercel the domain is already known without anyone setting anything:
+//  VERCEL_PROJECT_PRODUCTION_URL is injected into every build and holds the
+//  PRODUCTION host — the custom domain once one is attached, the
+//  <project>.vercel.app until then — with no protocol on the front. It is read
+//  in preference to guessing, and deliberately in preference to VERCEL_URL,
+//  which is the per-deployment host and changes on every push: a canonical link
+//  or an og:image pointing at a one-off preview URL rots as soon as the next
+//  deploy lands. A preview build therefore points its share image at the
+//  production copy, which is the copy that will still be there tomorrow.
 export const SITE_ORIGIN = (
     // Vite inlines this at build time; unset in dev, which is fine.
     import.meta.env?.VITE_SITE_ORIGIN ||
     globalThis.process?.env?.VITE_SITE_ORIGIN ||
+    vercelOrigin() ||
     'https://www.example-campbalong.com'
 ).replace(/\/+$/, '')
+
+// Only ever set in Node, during a Vercel build — the browser bundle never sees
+// an unprefixed variable, so this is undefined there and the chain above falls
+// through to whatever VITE_SITE_ORIGIN was inlined as.
+function vercelOrigin() {
+    const host = globalThis.process?.env?.VERCEL_PROJECT_PRODUCTION_URL
+    return host ? `https://${host}` : ''
+}
 
 export const SITE_NAME = 'Camp Ba-long Nature Farm & Resort'
 export const SITE_SHORT_NAME = 'Camp Ba-long'
@@ -60,10 +79,18 @@ export const DEFAULT_LOCALE = 'en_PH'
 // changes on every build that touches it, and a link already shared on
 // Facebook would point at a file that no longer exists. public/ is copied
 // through untouched, so this URL is stable for the life of the domain.
+//
+// JPEG rather than PNG, and 1200px wide rather than the source's 1904px,
+// because a share image is judged by whether it arrives at all. The same
+// picture as a PNG is 1.25 MB; WhatsApp stops generating a thumbnail somewhere
+// around 300 KB and shows a bare link instead. 1200x630 is the ratio every
+// preview card is designed around — this is 1200x573, the source's own ratio,
+// which Facebook crops by a few pixels top and bottom rather than letterboxing.
 export const OG_IMAGE = {
-    path: '/og-image.png',
-    width: 1366,
-    height: 651,
+    path: '/urlimage.jpg',
+    type: 'image/jpeg',
+    width: 1200,
+    height: 573,
     alt: 'Camp Ba-long Nature Farm & Resort in Liliw, Laguna',
 }
 
