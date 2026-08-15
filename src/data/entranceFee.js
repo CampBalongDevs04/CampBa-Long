@@ -64,20 +64,29 @@ export const PWD_DISCOUNT_RATE = 0
 export const PWD_DISCOUNT_IN_SYSTEM = PWD_DISCOUNT_RATE > 0
 export const PWD_DISCOUNT_LABEL = `${Math.round(PWD_DISCOUNT_RATE * 100)}%`
 
-// ON "FREE ENTRANCE FOR 2 PAX"
-// -----------------------------
+// ON "FREE ENTRANCE FOR 2 PAX" — AND RENT ALL RESORT'S OWN, BIGGER QUOTA
+// ------------------------------------------------------------------------
 // This perk used to be advertised in INCLUSIONS and subtracted here ON TOP OF
 // the kids' exemption — 2 extra free heads regardless of how many kids were
 // already free — so a party of 4 with one child was charged for a single head
 // (₱150) where ₱450 was owed. It was removed rather than fixed at the time.
 //
 // It's back, implemented so it can't stack with the kids' exemption: kids are
-// already free on their own, so the 2-pax quota is only ever handed to
-// non-kid heads (regular first, since that's the bigger saving, then seniors
-// if the party has fewer than 2 non-kid heads). A senior head that gets the
+// already free on their own, so the quota is only ever handed to non-kid
+// heads (regular first, since that's the bigger saving, then seniors if the
+// party has fewer non-kid heads than the quota). A senior head that gets the
 // perk is fully waived instead of just getting the senior discount, so it's
 // dropped from the senior count before the discount is calculated — otherwise
 // that head would be discounted twice.
+//
+// The quota is 2 for an ordinary unit booking — the rate card's standing
+// inclusion — but Rent All Resort has its own, bigger one: the rate card only
+// waives entrance for the first RENT_ALL_FREE_ENTRANCE_PAX heads of a
+// whole-resort booking, not the entire party regardless of size. Callers pass
+// whichever quota applies via `freeQuota`; booking.jsx is what decides which
+// one that is. The SQL twin, entrance_breakdown() in
+// supabase/migrations/20260815150000_rent_all_free_entrance_quota.sql, takes
+// the same parameter — change one, change the other.
 //
 // `freeApplied` / `freeSavings` are the combined "free entrance" bucket the
 // receipt, My Bookings and the admin export have always read (kids + the
@@ -89,8 +98,18 @@ export const PWD_DISCOUNT_LABEL = `${Math.round(PWD_DISCOUNT_RATE * 100)}%`
 // rate and the deductions come off it, so a screen can list the charges and
 // have them add up to `total`. `perHead` is the schedule's rate (0 when no
 // schedule is chosen yet), so callers can render partial totals.
+export const DEFAULT_FREE_ENTRANCE_QUOTA = 2
+
+// Rent All Resort's own free-entrance quota — bigger than the standing 2-pax
+// unit inclusion because it covers a whole-resort party, not one unit's worth
+// of guests. Anyone past this many heads still owes the schedule's per-head
+// rate; the flat card price only ever covered getting everyone IN, not every
+// head that shows up. See the module comment above for the SQL twin.
+export const RENT_ALL_FREE_ENTRANCE_PAX = 20
+
 export function computeEntranceFee({
     perHead = 0, pax = 0, seniors = 0, kids = 0, freeEntranceEligible = true,
+    freeQuota = DEFAULT_FREE_ENTRANCE_QUOTA,
 } = {}){
     const rate = Number(perHead) || 0
     const totalPax = Math.max(0, Number(pax) || 0)
@@ -102,12 +121,14 @@ export function computeEntranceFee({
     // Regular (full-fare) guests are whoever's left after seniors and kids.
     const regularCount = Math.max(0, totalPax - seniorCount - kidsCount)
 
-    // Up to 2 non-kid heads ride free. Regular heads are freed before senior
-    // heads, and the senior heads that do get freed come out of seniorCount
-    // below so they aren't also discounted. With SENIOR_DISCOUNT_RATE at 0 the
-    // two kinds of head cost the same and the ordering changes no money — it is
-    // kept because it is the correct order the moment a discount comes back.
-    const perkApplied = freeEntranceEligible ? Math.min(2, regularCount + seniorCount) : 0
+    // Up to `freeQuota` non-kid heads ride free. Regular heads are freed
+    // before senior heads, and the senior heads that do get freed come out of
+    // seniorCount below so they aren't also discounted. With
+    // SENIOR_DISCOUNT_RATE at 0 the two kinds of head cost the same and the
+    // ordering changes no money — it is kept because it is the correct order
+    // the moment a discount comes back.
+    const quota = Math.max(0, Number(freeQuota) || 0)
+    const perkApplied = freeEntranceEligible ? Math.min(quota, regularCount + seniorCount) : 0
     const perkFromRegular = Math.min(perkApplied, regularCount)
     const perkFromSenior = perkApplied - perkFromRegular
     const payingSeniorCount = seniorCount - perkFromSenior

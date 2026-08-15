@@ -59,7 +59,7 @@ function SummaryRow({ label, value, placeholder }){
 // than just the product.
 export default function BookingSummary({
     checkIn, checkOut, schedule, quote, guest, pax, kids, seniors, pwd, rentAllMode = false,
-    addonLines = [], addonsPreviewTotal = 0,
+    freeEntranceQuota = 2, addonLines = [], addonsPreviewTotal = 0,
 }){
     const {
         nights = 1,
@@ -81,6 +81,18 @@ export default function BookingSummary({
     // Day Time has no nights to charge per: it is a single 7-hour block, and
     // calling its ₱150 a nightly rate would be wrong on the face of it.
     const perNight = schedule != null && schedule.sameDay !== true
+
+    // Built as one string rather than inline in the JSX below: the dynamic
+    // half of the sentence (Rent All's bigger quota vs. the standing 2-pax
+    // unit inclusion) needs to sit next to real text on both sides, and
+    // splicing conditionals across JSX line breaks is exactly the kind of
+    // thing that silently swallows or duplicates a space.
+    const freeEntranceNote = rentAllMode
+        ? `renting the whole resort includes free entrance for up to ${freeEntranceQuota} pax`
+            + (ENTRANCE_PER_NIGHT && perNight ? ' each night' : '')
+        : `your stay includes free entrance for up to ${freeEntranceQuota} more pax`
+            + (ENTRANCE_PER_NIGHT && perNight ? ' each night' : '')
+            + ' (not applicable for Tent Pitching, Cottage or Pavilion)'
 
     // Towel/pillow/etc. picked in AddonPicker aren't part of `quote` (that's
     // unit + entrance only) — folded in here so the figure quoted on this
@@ -229,16 +241,6 @@ export default function BookingSummary({
                         </span>
                     </div>
                 )}
-                {/* Renting the whole resort is a flat rate — the per-head
-                    entrance section below doesn't apply, so this says why
-                    that section is simply missing rather than the guest
-                    wondering where it went. */}
-                {rentAllMode && (
-                    <p className="summary-note-inline">
-                        Entrance for your whole group is included in this rate — there's no
-                        separate per-head entrance fee for renting the whole resort.
-                    </p>
-                )}
             </div>
 
             {/* AddonPicker's picks (see booking.jsx) — these aren't ordered
@@ -262,7 +264,6 @@ export default function BookingSummary({
                 </div>
             )}
 
-            {!rentAllMode && (
             <div className="summary-section">
                 <p className="summary-section-label">Entrance Fees</p>
                 <SummaryRow
@@ -341,9 +342,8 @@ export default function BookingSummary({
                 <p className="summary-note-inline">
                     Entrance is charged for every guest in your group
                     {ENTRANCE_PER_NIGHT && perNight ? ', for every night of your stay' : ''}. Kids 7 &amp;
-                    below get in free, and your stay includes free entrance for up
-                    to 2 more pax {ENTRANCE_PER_NIGHT && perNight ? 'each night ' : ''}(not applicable for Tent Pitching, Cottage or
-                    Pavilion). Half of your entrance fees is included in the down
+                    below get in free, and {freeEntranceNote} — anyone past that still pays
+                    the rate above. Half of your entrance fees is included in the down
                     payment; the rest is settled on-site at check-in.
                     {SENIOR_DISCOUNT_IN_SYSTEM ? (
                         <> Seniors must present a Senior Citizen ID or other valid ID
@@ -356,7 +356,6 @@ export default function BookingSummary({
                     )}
                 </p>
             </div>
-            )}
 
             <div className="summary-section">
                 <p className="summary-section-label">Recipient</p>
@@ -383,15 +382,9 @@ export default function BookingSummary({
                     label={`Stay subtotal${isExtended ? ` (${nights} nights)` : ''}`}
                     value={
                         combinedStayTotal != null
-                            ? rentAllMode
-                                // No separate entrance component to add — the
-                                // flat rate already is the subtotal.
-                                ? addonsPreviewTotal > 0
-                                    ? `${formatPeso(stayTotal)} + ${formatPeso(addonsPreviewTotal)} = ${formatPeso(combinedStayTotal)}`
-                                    : formatPeso(combinedStayTotal)
-                                : addonsPreviewTotal > 0
-                                    ? `${formatPeso(unitTotal)} + ${formatPeso(entrance.total)} + ${formatPeso(addonsPreviewTotal)} = ${formatPeso(combinedStayTotal)}`
-                                    : `${formatPeso(unitTotal)} + ${formatPeso(entrance.total)} = ${formatPeso(combinedStayTotal)}`
+                            ? addonsPreviewTotal > 0
+                                ? `${formatPeso(unitTotal)} + ${formatPeso(entrance.total)} + ${formatPeso(addonsPreviewTotal)} = ${formatPeso(combinedStayTotal)}`
+                                : `${formatPeso(unitTotal)} + ${formatPeso(entrance.total)} = ${formatPeso(combinedStayTotal)}`
                             : null
                     }
                     placeholder="Select at least one unit and a schedule"

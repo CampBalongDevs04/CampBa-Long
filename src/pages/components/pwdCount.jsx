@@ -15,9 +15,6 @@ const MAX_PWD = 20
 //
 // PWD guests are a subset of the total guests, so callers pass:
 //   • disabled — true until at least one guest (pax) is set; grays the stepper.
-//   • locked   — true while renting the whole resort: there's no per-head
-//                entrance fee for a PWD discount to come off, so the count is
-//                fixed at 0 rather than left for the guest to declare.
 //   • max      — the most PWD guests allowed (remaining pax after kids and
 //                seniors), so the three counts can never exceed the party.
 //
@@ -25,11 +22,11 @@ const MAX_PWD = 20
 // discount they intend to claim — the two IDs cannot be used together on the
 // same head, and the note below says so rather than leaving staff to discover
 // a party whose declared counts add up to more than the people who arrive.
-export default function PwdCount({ pwd, onPwdChange, disabled = false, locked = false, max = MAX_PWD }){
+export default function PwdCount({ pwd, onPwdChange, disabled = false, max = MAX_PWD }){
     const [internalPwd, setInternalPwd] = useState(0)
     const current = pwd ?? internalPwd
     const ceiling = Math.min(MAX_PWD, max)
-    const inactive = disabled || locked
+    const inactive = disabled
 
     const clamp = (value) => Math.min(ceiling, Math.max(MIN_PWD, value))
 
@@ -77,10 +74,7 @@ export default function PwdCount({ pwd, onPwdChange, disabled = false, locked = 
             <p className="pwd-note" role="note">
                 <span className="pwd-note-dot" aria-hidden="true"></span>
                 <span className="pwd-note-body">
-                    {locked ? (
-                        <>Renting the whole resort is a <strong>flat rate</strong> with no per-head
-                        entrance fee, so PWD guests aren't tracked separately for this booking.</>
-                    ) : disabled ? (
+                    {disabled ? (
                         <>Set the <strong>number of guests</strong> first — PWD guests are counted within your guest total.</>
                     ) : (
                         PWD_DISCOUNT_IN_SYSTEM ? (

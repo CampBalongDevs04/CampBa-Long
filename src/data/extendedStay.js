@@ -80,7 +80,7 @@
 // MAX_STAY_NIGHTS below is a guardrail against a mis-click holding the last
 // A-House for a year, not a product rule. Raise it freely.
 import { DOWNPAYMENT_RATE } from './accommodationDB.js'
-import { computeEntranceFee } from './entranceFee.js'
+import { computeEntranceFee, DEFAULT_FREE_ENTRANCE_QUOTA } from './entranceFee.js'
 import { isMaintenanceDate, isMaintenanceDow } from './maintenanceDays.js'
 
 // The longest stay the date pickers will offer. Deliberately generous: it is
@@ -277,6 +277,7 @@ export function computeStayQuote({
     kids = 0,
     seniors = 0,
     freeEntranceEligible = true,
+    freeQuota = DEFAULT_FREE_ENTRANCE_QUOTA,
     downpaymentRate = DOWNPAYMENT_RATE,
 } = {}) {
     const nights = billableNights({ schedule, checkIn, checkOut })
@@ -299,6 +300,7 @@ export function computeStayQuote({
         seniors,
         kids,
         freeEntranceEligible,
+        freeQuota,
     })
     const entranceNights = ENTRANCE_PER_NIGHT ? nights : 1
     const entrance = scaleEntrance(entranceNightly, entranceNights)

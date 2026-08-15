@@ -62,6 +62,20 @@
     color: var(--gold);
 }
 
+/* Only shown for an item staff have put a stock ceiling on (see AddonItem
+   in addonPicker.jsx) — most add-ons never render this at all. */
+.addon-picker-item-stock{
+    font-size: 11px;
+    font-style: italic;
+    color: var(--leaf);
+}
+
+.addon-picker-item-stock.is-out{
+    color: #9b3c2d;
+    font-style: normal;
+    font-weight: 600;
+}
+
 .addon-picker-item-qty{
     display: flex;
     align-items: center;

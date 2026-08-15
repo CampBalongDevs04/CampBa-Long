@@ -148,8 +148,16 @@
     color: var(--forest-dark);
 }
 
+.foodlist-coffee-title-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
 .foodlist-coffee-title {
-    margin: 0 0 10px;
+    margin: 0;
     font-size: 0.88rem;
     font-weight: 600;
     letter-spacing: 1px;
@@ -218,6 +226,22 @@
 .foodlist-coffee-cell:focus-visible {
     background: rgba(198, 161, 91, 0.18);
     border-color: rgba(198, 161, 91, 0.5);
+}
+
+/* A gap, not a price — dashed and dim by default so it still reads as "no
+   price here" first, but on hover/focus it picks up the same gold highlight
+   as a real cell to say it is just as clickable, only what tapping it does
+   differs (opens a NEW row instead of that row's own). */
+.foodlist-coffee-cell-empty {
+    border-style: dashed;
+    border-color: rgba(198, 161, 91, 0.35);
+    color: rgba(10, 22, 14, 0.4);
+}
+
+.foodlist-coffee-cell-empty:hover,
+.foodlist-coffee-cell-empty:focus-visible {
+    border-style: solid;
+    color: inherit;
 }
 
 /* ---------- User orders panel (right) ---------- */

@@ -14,10 +14,16 @@ import { uploadSiteVideo, MAX_VIDEO_MB } from '../../../data/siteMedia.js'
 // of side-by-side fields (price + sort order), which is the only layout choice
 // any of these forms needs.
 //
-//   { name, label, type, options, help, placeholder, disabled, rows }
+//   { name, label, type, options, help, placeholder, disabled, rows, clears }
 //
 // `type` is 'text' | 'url' | 'number' | 'textarea' | 'select' | 'checkbox'
 // | 'image' | 'gallery' | 'video'.
+//
+// `clears` names other fields to blank the moment THIS one changes — used by
+// image/video upload (a fresh photo stops preferring a bundled one; see
+// ImageField below) and by 'select' (picking a new price table invalidates
+// whatever cup size was chosen for the old one). Not read by any other type;
+// add support there if a future field needs the same guarantee.
 //
 // `fields` may also be a FUNCTION of the current values, for the forms whose
 // shape depends on what has been picked so far — a coffee row needs a cup size
@@ -375,7 +381,7 @@ function VideoField({ field, value, onChange, onUploading }) {
 }
 
 function Field({ field, value, onChange, onUploading }) {
-    const { name, label, type = 'text', help, placeholder, options = [], disabled, rows } = field
+    const { name, label, type = 'text', help, placeholder, options = [], disabled, rows, clears = [] } = field
     const id = `crud-field-${name}`
 
     if (type === 'image') {
@@ -428,7 +434,17 @@ function Field({ field, value, onChange, onUploading }) {
                     id={id}
                     value={value ?? ''}
                     disabled={disabled}
-                    onChange={(e) => onChange(name, e.target.value)}
+                    onChange={(e) => {
+                        onChange(name, e.target.value)
+                        // Same convention ImageField uses for a photo upload
+                        // replacing a bundled asset's key: a field that names
+                        // another one here means picking THIS invalidates
+                        // whatever was in THAT — e.g. a table dropdown
+                        // clearing a size picked for the table it just
+                        // replaced, rather than letting a stale value ride
+                        // along to save.
+                        for (const other of clears) onChange(other, '')
+                    }}
                 >
                     {options.map((option) => (
                         <option key={option.value} value={option.value}>
