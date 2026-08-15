@@ -74,6 +74,19 @@ All three configs are written so the static file is preferred. The specific
 trap is Netlify's force flag: `/* /index.html 200!` with an exclamation mark
 overrides real files and would quietly undo this.
 
+### Vercel: the fallback destination is `/`, not `/index.html`
+
+`vercel.json` sets `cleanUrls: true`, which makes `.html` URLs non-canonical —
+a request for `/index.html` answers `308 Permanent Redirect` to `/`. A rewrite
+pointing at `/index.html` therefore resolves to nothing, and every route
+without a prerendered file — the staff dashboard among them — returns Vercel's
+`NOT_FOUND` page. The home page and `/menu` keep working the whole time,
+because those are real files, so the site looks deployed.
+
+`vercel.json` is strict JSON and cannot hold a comment saying so, which is why
+this paragraph exists. Netlify is unaffected: it has no `cleanUrls` equivalent,
+so `netlify.toml` correctly keeps `to = "/index.html"`.
+
 ## Verifying a deploy
 
 ```bash
