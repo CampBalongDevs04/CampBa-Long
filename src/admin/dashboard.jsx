@@ -40,7 +40,9 @@ const AccommodationCount = lazy(() => import('./items/accommodationCount.jsx'))
 const AccommodationTab = lazy(() => import('./items/accommodationTab.jsx'))
 const AccommodationManage = lazy(() => import('./items/accommodationManage.jsx'))
 const AddonsManage = lazy(() => import('./items/addonsManage.jsx'))
+const MaintenanceTab = lazy(() => import('./items/maintenanceTab.jsx'))
 const MaintenanceDays = lazy(() => import('./items/maintenanceDays.jsx'))
+const SiteMaintenance = lazy(() => import('./items/siteMaintenance.jsx'))
 const SpaService = lazy(() => import('./items/spaService-Tab.jsx'))
 const SpaServiceList = lazy(() => import('./items/spaServiceList.jsx'))
 const SpaServiceAvails = lazy(() => import('./items/SpaServiceAvails.jsx'))
@@ -117,10 +119,14 @@ function AdminDash() {
   // Units opens on the day board — the question staff ask most is "who is in
   // which unit today", not "what does a Teepee cost".
   const [activeUnitTab, setActiveUnitTab] = useState('availability')
+  // Maintenance opens on the closure days — the setting staff change weekly.
+  // The website blocker next to it is for the rare day the site has to go down.
+  const [activeMaintenanceTab, setActiveMaintenanceTab] = useState('days')
 
 
-  // A session survives a page refresh, so staff aren't kicked out every time
-  // they reload the dashboard.
+  // The session is memory-only (see lib/supabaseClient.js), so this finds one
+  // only while the tab has stayed open — after a reload there is nothing to
+  // find and the login screen is what staff get.
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) return
@@ -388,8 +394,15 @@ function AdminDash() {
                         <h1 className="admin-dash-title">Maintenance</h1>
                         <ClockDate />
                     </div>
+                    <Suspense fallback={<TabsSkeleton count={2} />}>
+                        <MaintenanceTab
+                            active={activeMaintenanceTab}
+                            onChange={setActiveMaintenanceTab}
+                        />
+                    </Suspense>
                     <Suspense fallback={<PanelSkeleton />}>
-                        <MaintenanceDays />
+                        {activeMaintenanceTab === 'days' && <MaintenanceDays />}
+                        {activeMaintenanceTab === 'site' && <SiteMaintenance />}
                     </Suspense>
                 </div>
             ) : activeSection === 'cms' ? (

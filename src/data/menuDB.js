@@ -311,8 +311,6 @@ function addonItem({ id, name, desc = null, price, imageUrl = null, sortOrder = 
         name,
         desc,
         price: Number(price),
-        // No bundled asset for these (unlike food/spa's imageKey) — they never
-        // shipped with a photo, so there is nothing to prefer over an upload.
         imageUrl,
         image: imageUrl || null,
         sortOrder,
@@ -861,9 +859,6 @@ export async function deleteResortAddonItem(id) {
         return { ok: false, message: describeSupabaseError(error) }
     }
 
-    // Bookings that already requested it keep the name and price they were
-    // charged (see add_booking_addon) — deleting the row only stops it being
-    // offered again.
     await Promise.all([loadCatalog(), loadAdminCatalog()])
     return { ok: true }
 }

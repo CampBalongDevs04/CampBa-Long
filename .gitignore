@@ -42,3 +42,4 @@ skills-lock.json
 # to build — the app reads .env. A fresh clone re-creates it with
 # `supabase link --project-ref <ref>`. Migrations stay tracked.
 supabase/.temp/
+supabase/pw.md

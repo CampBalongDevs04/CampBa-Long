@@ -5,6 +5,7 @@ import Header from './components/Header.jsx'
 import SetupNotice from './components/SetupNotice.jsx'
 import CrispChat from './components/CrispChat.jsx'
 import { useIsAdminPath } from './lib/adminRoute.js'
+import { useSiteMaintenance } from './data/siteMaintenance.js'
 import {
   HomeSkeleton,
   FoodMenuSkeleton,
@@ -25,6 +26,7 @@ const MyBooking = lazy(() => import('./pages/mybooking.jsx'))
 const AdminDash = lazy(() => import('./admin/dashboard.jsx'))
 const Booking = lazy(() => import('./pages/booking.jsx'))
 const NotFound = lazy(() => import('./pages/notFound.jsx'))
+const MaintenanceBlocker = lazy(() => import('./components/MaintenanceBlocker.jsx'))
 
 // Every path the public site answers on. Anything else is a candidate for the
 // admin URL, and only those pay for the digest check in useIsAdminPath.
@@ -81,52 +83,61 @@ function App() {
   // and it is one more thing that reacts differently to the right URL.
   const isGuestPage = isAdminPage === false
 
+  // Staff have taken the site down (dashboard → Maintenance → Website Blocker).
+  // Only the guest routes are blocked: the dashboard is where the switch lives,
+  // so blocking that too would leave nobody able to turn it back off.
+  const { isOn: siteOnMaintenance } = useSiteMaintenance()
+  const blocked = isGuestPage && siteOnMaintenance
+
   return (
     <>
       {/* Renders nothing when the keys are present, so this costs a fully
           configured site exactly one boolean check. */}
       <SetupNotice />
       <ScrollToTop />
-      {isGuestPage && <Header />}
+      {isGuestPage && !blocked && <Header />}
       {/* Guest-facing only. Staff on the dashboard have no use for a support
           bubble aimed at guests, and it would sit over the sidebar. */}
-      {isGuestPage && <CrispChat reversed={hasKioskTray} />}
-      <Routes>
-        <Route path="/" element={
-          <Suspense fallback={<HomeSkeleton />}><Home /></Suspense>
-        } />
-        <Route path="/menu" element={
-          <Suspense fallback={<FoodMenuSkeleton />}><FoodMenu /></Suspense>
-        } />
-        <Route path="/spa" element={
-          <Suspense fallback={<SpaServiceSkeleton />}><SpaService /></Suspense>
-        } />
-        <Route path="/my-booking" element={
-          <Suspense fallback={<MyBookingSkeleton />}><MyBooking /></Suspense>
-        } />
-        <Route path="/booking" element={
-          <Suspense fallback={<BookingPageSkeleton />}><Booking /></Suspense>
-        } />
-        {/* The admin path is deliberately absent from this table. The catch-all
-            mounts the dashboard only once the digest matches.
+      {isGuestPage && !blocked && <CrispChat reversed={hasKioskTray} />}
+      {blocked ? (
+        <Suspense fallback={null}><MaintenanceBlocker /></Suspense>
+      ) : (
+        <Routes>
+          <Route path="/" element={
+            <Suspense fallback={<HomeSkeleton />}><Home /></Suspense>
+          } />
+          <Route path="/menu" element={
+            <Suspense fallback={<FoodMenuSkeleton />}><FoodMenu /></Suspense>
+          } />
+          <Route path="/spa" element={
+            <Suspense fallback={<SpaServiceSkeleton />}><SpaService /></Suspense>
+          } />
+          <Route path="/my-booking" element={
+            <Suspense fallback={<MyBookingSkeleton />}><MyBooking /></Suspense>
+          } />
+          <Route path="/booking" element={
+            <Suspense fallback={<BookingPageSkeleton />}><Booking /></Suspense>
+          } />
+          {/* The admin path is deliberately absent from this table. The catch-all
+              mounts the dashboard only once the digest matches.
 
-            The three states are not the same and must not be collapsed:
-              true  — the digest matched, this is the dashboard
-              false — definitively not the admin URL, so it is a wrong one
-              null  — still hashing, and we do not yet know which
+              The three states are not the same and must not be collapsed:
+                true  — the digest matched, this is the dashboard
+                false — definitively not the admin URL, so it is a wrong one
+                null  — still hashing, and we do not yet know which
 
-            Rendering the 404 while the answer is still null would flash "we
-            couldn't find that page" across the admin URL every time staff open
-            it, so null keeps rendering nothing, exactly as before. */}
-        <Route path="*" element={
-          isAdminPage === true ? (
-            <Suspense fallback={<AdminLoginSkeleton />}><AdminDash /></Suspense>
-          ) : isAdminPage === false ? (
-            <Suspense fallback={null}><NotFound /></Suspense>
-          ) : null
-        } />
-      </Routes>
-
+              Rendering the 404 while the answer is still null would flash "we
+              couldn't find that page" across the admin URL every time staff open
+              it, so null keeps rendering nothing, exactly as before. */}
+          <Route path="*" element={
+            isAdminPage === true ? (
+              <Suspense fallback={<AdminLoginSkeleton />}><AdminDash /></Suspense>
+            ) : isAdminPage === false ? (
+              <Suspense fallback={null}><NotFound /></Suspense>
+            ) : null
+          } />
+        </Routes>
+      )}
     </>
   )
 }

@@ -1,0 +1,77 @@
+/* The maintenance page. It replaces the whole guest site, header included, so
+   it stands on its own rather than leaving resort chrome around a page nothing
+   on it can reach. */
+
+.maintenance-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 56px 24px;
+    background: var(--cream);
+}
+
+.maintenance-shell {
+    max-width: 560px;
+    text-align: center;
+}
+
+.maintenance-logo {
+    width: 96px;
+    height: auto;
+    margin: 0 auto 18px;
+    display: block;
+}
+
+.maintenance-eyebrow {
+    margin: 0 0 6px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+}
+
+.maintenance-title {
+    margin: 0 0 4px;
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 700;
+    font-size: clamp(1.9rem, 6vw, 3rem);
+    line-height: 1.15;
+    color: var(--forest-dark);
+}
+
+.maintenance-text {
+    margin: 8px auto 32px;
+    max-width: 42ch;
+    line-height: 1.6;
+    color: var(--ink);
+}
+
+.maintenance-fb {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 30px;
+    border-radius: 999px;
+    background: var(--forest);
+    color: var(--cream);
+    text-decoration: none;
+    font-weight: 600;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.maintenance-fb:hover {
+    background: var(--forest-dark);
+    transform: translateY(-1px);
+}
+
+@media (max-width: 560px) {
+    .maintenance-page {
+        padding: 40px 18px;
+    }
+
+    .maintenance-logo {
+        width: 76px;
+    }
+}

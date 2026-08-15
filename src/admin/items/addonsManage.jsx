@@ -9,15 +9,6 @@ import {
     deleteResortAddonItem,
 } from '../../data/menuDB.js'
 
-// Units → Manage Add-ons. The physical items AddonPicker offers on the
-// booking page (Towel, Pillow, Extra Bedding, Electric Fan, and whatever
-// staff add here) — same list, same lifecycle as the food and spa catalogs
-// (see spaServiceList.jsx, which this mirrors almost field-for-field).
-//
-// These items never shipped with a bundled photo (unlike food/spa's
-// imageKey), so there is nothing to fall back to: a row with no upload just
-// shows "No photo" until staff add one.
-
 function addonFields(values) {
     return [
         { name: 'name', label: 'Add-on', placeholder: 'Towel' },

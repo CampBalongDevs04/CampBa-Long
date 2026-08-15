@@ -73,8 +73,6 @@
     display: block;
 }
 
-/* An add-on with no photo — none of these shipped with one. The slot keeps
-   its size so rows stay aligned whether or not staff have uploaded yet. */
 .addon-list-image-empty {
     display: flex;
     align-items: center;

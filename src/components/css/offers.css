@@ -646,8 +646,8 @@
     background: var(--cream);
     border-radius: 22px;
     box-shadow: inset 0 0 0 1px rgba(198, 161, 91, 0.35), 0 24px 48px -18px rgba(0, 0, 0, 0.5);
-    padding: 42px 36px 36px;
-    width: min(900px, 100%);
+    padding: 42px 36px 32px;
+    width: min(1040px, 100%);
     max-height: 90vh;
     overflow-y: auto;
     animation: gallery-pop 0.3s ease;
@@ -712,78 +712,304 @@
     object-fit: contain;
     filter: brightness(0) invert(1);
   }
+  .gallery-eyebrow{
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 4px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
   .gallery-header h3{
     font-family: 'Cormorant Garamond', serif;
     letter-spacing: 3px;
     text-transform: uppercase;
-    font-size: 1.7rem;
+    font-size: 1.8rem;
     color: var(--forest-dark);
-    margin: 0 0 6px;
+    margin: 0 0 2px;
   }
-  .gallery-header p{
+  .gallery-lede{
+    max-width: 52ch;
+    margin: 4px auto 0;
     font-size: 0.92rem;
+    line-height: 1.6;
     color: #5b5b4c;
-    margin: 0;
   }
 
-  .gallery-grid{
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 20px;
+  /* One photo at a time: the stage, the caption under it, then the strip that
+     jumps between them. Arrow keys and a swipe move the same index. */
+  .gallery-carousel{
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
   }
-  .gallery-item{
+
+  .gallery-stage{
+    position: relative;
+    height: clamp(240px, 46vh, 480px);
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--cream-2);
+    box-shadow: inset 0 0 0 1px rgba(198, 161, 91, 0.45),
+                0 18px 34px -22px rgba(22, 41, 30, 0.75);
+    /* Vertical scrolling still belongs to the page; only sideways is ours. */
+    touch-action: pan-y;
+  }
+
+  .gallery-slide{
     margin: 0;
-    text-align: center;
-  }
-  .gallery-item img,
-  .gallery-placeholder{
     width: 100%;
-    aspect-ratio: 4 / 3;
-    border-radius: 14px;
+    height: 100%;
+    animation: gallery-slide-in 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  }
+  .gallery-stage[data-direction="prev"] .gallery-slide{
+    animation-name: gallery-slide-back;
+  }
+  .gallery-slide img{
+    width: 100%;
+    height: 100%;
     object-fit: cover;
     display: block;
-    box-shadow: inset 0 0 0 1px rgba(198, 161, 91, 0.35);
+    /* A slow settle out of a slight overscale, so a still photo on a big stage
+       has some life in it without ever calling attention to itself. */
+    animation: gallery-drift 14s ease-out both;
   }
+
+  @keyframes gallery-slide-in{
+    from{ opacity: 0; transform: translateX(26px); }
+    to{ opacity: 1; transform: translateX(0); }
+  }
+  @keyframes gallery-slide-back{
+    from{ opacity: 0; transform: translateX(-26px); }
+    to{ opacity: 1; transform: translateX(0); }
+  }
+  @keyframes gallery-drift{
+    from{ transform: scale(1.08); }
+    to{ transform: scale(1); }
+  }
+
   .gallery-placeholder{
-    background: var(--cream-2);
-    border: 1px dashed var(--gold-soft);
+    width: 100%;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
+    /* Hatched rather than blank: most slots are still empty, and an empty
+       stage should look deliberate instead of broken. */
+    background:
+      repeating-linear-gradient(-45deg,
+        rgba(198, 161, 91, 0.1) 0 10px,
+        transparent 10px 22px),
+      var(--cream-2);
   }
   .gallery-placeholder span{
     font-size: 0.8rem;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
     text-transform: uppercase;
     color: #8b8570;
   }
-  .gallery-item figcaption{
-    margin-top: 10px;
+
+  /* Gold brackets at the four corners — the frame the rest of the site draws
+     around a photo, borrowed for the stage. */
+  .gallery-corner{
+    position: absolute;
+    z-index: 2;
+    width: 26px;
+    height: 26px;
+    border: 2px solid var(--gold-soft);
+    pointer-events: none;
+  }
+  .gallery-corner.is-tl{ top: 12px; left: 12px; border-right: 0; border-bottom: 0; border-radius: 8px 0 0 0; }
+  .gallery-corner.is-tr{ top: 12px; right: 12px; border-left: 0; border-bottom: 0; border-radius: 0 8px 0 0; }
+  .gallery-corner.is-bl{ bottom: 12px; left: 12px; border-right: 0; border-top: 0; border-radius: 0 0 0 8px; }
+  .gallery-corner.is-br{ bottom: 12px; right: 12px; border-left: 0; border-top: 0; border-radius: 0 0 8px 0; }
+
+  .gallery-nav{
+    position: absolute;
+    top: 50%;
+    z-index: 3;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 1px solid rgba(217, 189, 132, 0.7);
+    background: rgba(22, 41, 30, 0.5);
+    backdrop-filter: blur(3px);
+    color: var(--cream);
+    font-size: 1.6rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transform: translateY(-50%);
+    transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+  }
+  .gallery-nav:hover{
+    background: var(--forest);
+    border-color: var(--gold);
+    transform: translateY(-50%) scale(1.07);
+  }
+  .gallery-nav.is-prev{ left: 14px; }
+  .gallery-nav.is-next{ right: 14px; }
+
+  .gallery-caption{
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 15px 20px 15px 24px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.3));
+    box-shadow: inset 0 0 0 1px rgba(198, 161, 91, 0.35);
+    animation: gallery-caption-in 0.45s ease both;
+  }
+  .gallery-caption::before{
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 15px;
+    bottom: 15px;
+    width: 3px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, var(--gold), rgba(198, 161, 91, 0.12));
+  }
+  .gallery-caption h4{
+    margin: 0 0 4px;
     font-family: 'Cormorant Garamond', serif;
     font-weight: 700;
-    font-size: 1.1rem;
-    letter-spacing: 1.5px;
+    font-size: 1.3rem;
+    letter-spacing: 2px;
     text-transform: uppercase;
     color: var(--forest-dark);
   }
-  /* The line under a photo's title. Inside the figcaption because a <figure>
-     may only carry its caption as the first or last child — and dropped back
-     to body type so the title still reads as the title. */
-  .gallery-item-note{
-    display: block;
-    margin-top: 4px;
+  .gallery-caption p{
+    margin: 0;
+    max-width: 62ch;
     font-family: 'Jost', sans-serif;
-    font-weight: 400;
-    font-size: 0.82rem;
-    line-height: 1.45;
-    letter-spacing: 0.2px;
-    text-transform: none;
+    font-size: 0.86rem;
+    line-height: 1.55;
     color: #5b5b4c;
+  }
+  @keyframes gallery-caption-in{
+    from{ opacity: 0; transform: translateY(8px); }
+    to{ opacity: 1; transform: translateY(0); }
+  }
+
+  .gallery-count{
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(198, 161, 91, 0.5);
+    font-family: 'Jost', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 2px;
+    color: var(--forest-dark);
+  }
+  .gallery-count i{
+    font-style: normal;
+    color: var(--gold);
+  }
+
+  .gallery-thumbs{
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+  }
+  .gallery-thumb{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 104px;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+  .gallery-thumb-frame{
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--cream-2);
+    box-shadow: inset 0 0 0 1px rgba(198, 161, 91, 0.4);
+    transition: box-shadow 0.25s ease, transform 0.25s ease;
+  }
+  .gallery-thumb img{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    opacity: 0.72;
+    transition: opacity 0.25s ease;
+  }
+  .gallery-thumb-empty{
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.05rem;
+    letter-spacing: 2px;
+    color: rgba(139, 133, 112, 0.85);
+  }
+  .gallery-thumb:hover .gallery-thumb-frame{ transform: translateY(-2px); }
+  .gallery-thumb:hover img{ opacity: 1; }
+  .gallery-thumb.is-active .gallery-thumb-frame{
+    box-shadow: inset 0 0 0 2px var(--gold);
+  }
+  .gallery-thumb.is-active img{ opacity: 1; }
+  .gallery-thumb-label{
+    font-family: 'Jost', sans-serif;
+    font-size: 0.66rem;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: #8b8570;
+    transition: color 0.25s ease;
+  }
+  .gallery-thumb.is-active .gallery-thumb-label{
+    color: var(--forest-dark);
+    font-weight: 600;
+  }
+
+  .gallery-empty{
+    margin: 0;
+    padding: 34px 0;
+    text-align: center;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    color: #8b8570;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .gallery-overlay,
+    .gallery-card,
+    .gallery-slide,
+    .gallery-slide img,
+    .gallery-caption{
+      animation: none;
+    }
   }
 
   @media (max-width: 480px){
-    .gallery-card{ padding: 28px 18px 20px; }
-    .gallery-grid{ grid-template-columns: repeat(2, 1fr); }
+    .gallery-card{ padding: 28px 16px 20px; }
+    .gallery-header h3{ font-size: 1.45rem; }
+    .gallery-stage{ height: clamp(200px, 38vh, 320px); }
+    .gallery-nav{ width: 38px; height: 38px; font-size: 1.3rem; }
+    .gallery-nav.is-prev{ left: 8px; }
+    .gallery-nav.is-next{ right: 8px; }
+    .gallery-corner{ width: 18px; height: 18px; }
+    .gallery-caption{ flex-direction: column; gap: 10px; padding: 14px 16px 14px 22px; }
+    .gallery-thumb{ width: 78px; }
   }
 
   /* tablet: 4-up tag card gets cramped, drop to 2x2; showcase stacks */
