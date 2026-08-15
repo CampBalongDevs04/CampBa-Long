@@ -44,30 +44,8 @@ function requireSupabaseEnv(mode, root) {
     )
 }
 
-// Hand Vercel's build-time domain to the browser bundle under a VITE_ name.
-//
-// lib/seoConfig.js reads VERCEL_PROJECT_PRODUCTION_URL directly, and that is
-// enough for the two build SCRIPTS, which run in Node and can see the whole
-// environment. The bundle cannot: Vite only inlines variables beginning with
-// VITE_, by design, so that a stray secret in the environment does not end up
-// in a public JavaScript file. Without this the served HTML would carry the
-// right canonical link and the app would replace it with the placeholder one
-// on the first client render.
-//
-// Assigning to process.env is what makes it a VITE_ variable, and it has to
-// happen here rather than at the top of the file: Vite reads the environment
-// after it has called this config function. A value the deploy set explicitly
-// always wins.
-function exposeVercelOrigin() {
-  const host = process.env.VERCEL_PROJECT_PRODUCTION_URL
-  if (host && !process.env.VITE_SITE_ORIGIN) {
-    process.env.VITE_SITE_ORIGIN = `https://${host}`
-  }
-}
-
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  exposeVercelOrigin()
   requireSupabaseEnv(mode, process.cwd())
 
   return {

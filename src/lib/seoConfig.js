@@ -45,30 +45,27 @@
 //  ReferenceError, and by the build scripts, where it does. `globalThis.process`
 //  is a plain property lookup and is simply undefined in the browser.
 //
-//  On Vercel the domain is already known without anyone setting anything:
-//  VERCEL_PROJECT_PRODUCTION_URL is injected into every build and holds the
-//  PRODUCTION host — the custom domain once one is attached, the
-//  <project>.vercel.app until then — with no protocol on the front. It is read
-//  in preference to guessing, and deliberately in preference to VERCEL_URL,
-//  which is the per-deployment host and changes on every push: a canonical link
-//  or an og:image pointing at a one-off preview URL rots as soon as the next
-//  deploy lands. A preview build therefore points its share image at the
-//  production copy, which is the copy that will still be there tomorrow.
+//  DO NOT derive this from Vercel's VERCEL_PROJECT_PRODUCTION_URL. That was
+//  tried and it is wrong for this project: it reports `campba-long.vercel.app`,
+//  derived from the project NAME, while the deployment is actually served at
+//  `camp-ba-long.vercel.app`. The two differ by one hyphen, both look
+//  plausible, and the wrong one answers every request with a 404. Nothing about
+//  that failure is visible from the site itself — the pages load, the tags are
+//  present and well-formed — it shows up only as a Messenger link with no
+//  picture, because Facebook fetched the og:image, got a 404, and dropped it.
+//
+//  So the host is written down, not guessed. When a real domain replaces the
+//  vercel.app one, change the string below or set VITE_SITE_ORIGIN in Vercel's
+//  environment variables; the env var wins. Whichever it is, confirm the image
+//  actually loads there before trusting it:
+//
+//      curl -I https://<host>/urlimage.jpg     # expect 200, image/jpeg
 export const SITE_ORIGIN = (
     // Vite inlines this at build time; unset in dev, which is fine.
     import.meta.env?.VITE_SITE_ORIGIN ||
     globalThis.process?.env?.VITE_SITE_ORIGIN ||
-    vercelOrigin() ||
-    'https://www.example-campbalong.com'
+    'https://camp-ba-long.vercel.app'
 ).replace(/\/+$/, '')
-
-// Only ever set in Node, during a Vercel build — the browser bundle never sees
-// an unprefixed variable, so this is undefined there and the chain above falls
-// through to whatever VITE_SITE_ORIGIN was inlined as.
-function vercelOrigin() {
-    const host = globalThis.process?.env?.VERCEL_PROJECT_PRODUCTION_URL
-    return host ? `https://${host}` : ''
-}
 
 export const SITE_NAME = 'Camp Ba-long Nature Farm & Resort'
 export const SITE_SHORT_NAME = 'Camp Ba-long'
