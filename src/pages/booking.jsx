@@ -7,7 +7,7 @@ import TimeSelector from './components/timeSelector'
 import ScheduleNote from './components/scheduleNote'
 import AccomodationList from './components/accomodationList'
 import AddonPicker from './components/addonPicker'
-import { getAccomodationOptions, isFreeEntranceEligible, findRentAllOption, rentAllCapacity } from '../data/accomodationOptions.js'
+import { getAccomodationOptions, isFreeEntranceEligible, isAddonEligible, findRentAllOption, rentAllCapacity } from '../data/accomodationOptions.js'
 import { useResortAddonItems } from '../data/menuDB.js'
 import PaxInput from './components/paxInput'
 import KidsCount from './components/kidscount'
@@ -157,8 +157,19 @@ export default function Booking(){
     const cartCapacity = cartUnlimited
         ? null
         : cartLines.reduce((sum, line) => sum + line.option.maxPax * line.qty, 0)
+    // The perk rides on the booking, not any one unit: a cart only loses it
+    // when EVERY line is an excluded unit (e.g. Table and Chairs alone).
+    // Mixing in even one eligible unit (e.g. Teepee + Table and Chairs) keeps
+    // it — the guest is still entering under a booking that includes an
+    // eligible unit, so the excluded line shouldn't disqualify the other one.
     const cartFreeEntranceEligible =
-        cartLines.length > 0 && cartLines.every((line) => isFreeEntranceEligible(line.id))
+        cartLines.length > 0 && cartLines.some((line) => isFreeEntranceEligible(line.id))
+
+    // Same "any eligible unit keeps it" shape as the free-entrance perk above:
+    // AddonPicker only disappears when EVERY line in the cart is an excluded
+    // unit (e.g. Table and Chairs alone). Mixing in a Teepee keeps it around.
+    const cartAddonEligible =
+        cartLines.length > 0 && cartLines.some((line) => isAddonEligible(line.id))
 
     // AddonPicker's picks, resolved against the catalog into priced order
     // lines — the same { itemId, name, unitPrice, quantity, total } shape
@@ -372,6 +383,18 @@ export default function Booking(){
             setCart({ [rentAllOption.id]: 1 })
             if (rentAllPax != null) handlePaxChange(rentAllPax)
         }
+    }
+
+    // AddonPicker is hidden below once cartAddonEligible goes false (e.g. the
+    // guest drops the Teepee from a Teepee + Table and Chairs cart, leaving
+    // only the excluded unit) — but hiding it doesn't erase whatever was
+    // already picked. Without this, reserve() would still submit those picks
+    // for a cart that no longer has anything to attach them to. Same
+    // during-render pattern as rentAllSignal above.
+    const [lastCartAddonEligible, setLastCartAddonEligible] = useState(true)
+    if (cartAddonEligible !== lastCartAddonEligible) {
+        setLastCartAddonEligible(cartAddonEligible)
+        if (!cartAddonEligible && Object.keys(addonPicks).length > 0) setAddonPicks({})
     }
 
     // An overnight schedule needs a check-out STRICTLY after the check-in —
@@ -750,8 +773,11 @@ export default function Booking(){
 
                                 {/* Same reveal pattern as StayLength under the
                                     schedule cards: appears once there is
-                                    something to attach it to, not before. */}
-                                {cartUnitCount > 0 && (
+                                    something to attach it to, not before —
+                                    and stays hidden if every unit in the cart
+                                    is excluded from these addons (Table and
+                                    Chairs, Cottage, Pavilion, Tent Pitching). */}
+                                {cartUnitCount > 0 && cartAddonEligible && (
                                     <AddonPicker picks={addonPicks} onChange={setAddonPicks} />
                                 )}
                             </div>

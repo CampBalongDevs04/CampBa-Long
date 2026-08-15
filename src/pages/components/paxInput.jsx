@@ -2,11 +2,11 @@ import { useState } from 'react'
 import '../components/css/paxInput.css'
 import { getAccomodationOptions, getPaxFit } from '../../data/accomodationOptions.js'
 
-// Site-wide range for the counter. A unit's own minPax/maxPax shapes the note
-// below rather than the counter: the guest is allowed to type the real size of
-// their group and be told how it sits against the unit they picked.
+// Floor for the counter. There is no ceiling: a unit's own minPax/maxPax
+// shapes the note below rather than the counter itself, so the guest is
+// always allowed to type the real size of their group and be told how it
+// sits against the unit(s) they picked (see getFitNote/overCapacity).
 const MIN_PAX = 1
-const MAX_PAX = 20
 
 // `cartLines` is one entry per selected accommodation type — { id, qty,
 // option } — since a guest can now put more than one type (and more than one
@@ -118,7 +118,7 @@ export default function PaxInput({ pax, onPaxChange, cartLines, guest, onGuestCh
         : null
     const limited = capacity != null
 
-    const clamp = (value) => Math.min(MAX_PAX, Math.max(MIN_PAX, value))
+    const clamp = (value) => Math.max(MIN_PAX, value)
     const step = (delta) => onPaxChange?.(clamp((pax ?? 0) + delta))
     const setField = (field) => (e) => onGuestChange?.({ ...guest, [field]: e.target.value })
 
@@ -198,7 +198,6 @@ export default function PaxInput({ pax, onPaxChange, cartLines, guest, onGuestCh
                             type="number"
                             id="pax"
                             min={MIN_PAX}
-                            max={MAX_PAX}
                             aria-invalid={(overCapacity || paxRequiredError) || undefined}
                             placeholder="0"
                             aria-label="Number of guests"
@@ -217,7 +216,7 @@ export default function PaxInput({ pax, onPaxChange, cartLines, guest, onGuestCh
                             className="pax-step"
                             aria-label="Add one guest"
                             onClick={() => step(1)}
-                            disabled={locked || (pax != null && pax >= MAX_PAX)}
+                            disabled={locked}
                             title={capacityTitle}
                         >
                             +

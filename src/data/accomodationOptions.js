@@ -95,6 +95,24 @@ export function isFreeEntranceEligible(unitId){
     return unitId != null && !FREE_ENTRANCE_EXCLUDED_UNITS.has(unitId)
 }
 
+// Physical add-ons (Towel, Pillow, Extra Bedding, Electric Fan — see
+// menuDB.js's DEFAULT_ADDON_ITEMS) are only for units with resort-provided
+// overnight bedding: Teepee and the three A-House sizes. Table and Chairs,
+// Cottage and Pavilion are day-use with nothing to add bedding to, and Tent
+// Pitching guests bring their own tent and gear — nothing of the resort's to
+// add towels or a fan to either. Small Tent and Big Tent are NOT excluded:
+// those are resort-provided tents guests actually sleep in.
+//
+// Same membership as FREE_ENTRANCE_EXCLUDED_UNITS today, kept as its own set
+// on purpose — the two answer different questions (an entrance-fee perk vs.
+// what physical items a unit can use) and nothing guarantees they keep
+// matching as units are added or the rate card changes.
+export const ADDON_EXCLUDED_UNITS = new Set(['tent-pitching', 'cottage', 'pavilion', 'table'])
+
+export function isAddonEligible(unitId){
+    return unitId != null && !ADDON_EXCLUDED_UNITS.has(unitId)
+}
+
 // What each rate group includes used to be an INCLUSIONS constant here. It is
 // editable copy now — booking_inclusions in Postgres, read through
 // inclusionsFor() in data/bookingPage.js, which keeps the same list as its
