@@ -25,47 +25,36 @@
 // ============================================================================
 
 // ----------------------------------------------------------------------------
-//  TODO — set this to the real domain before the first production deploy.
+//  The one place the site's public address is written down.
 // ----------------------------------------------------------------------------
 //  Canonical links, the sitemap and the og:image URL are all absolute, because
 //  the specs require it: a crawler reads og:image out of context and has no
-//  page to resolve a relative path against. Facebook simply drops a share image
-//  it cannot resolve, so this being wrong shows up as a link preview with no
-//  picture rather than as an error anyone would notice.
+//  page to resolve a relative path against. Facebook, Messenger and Viber all
+//  drop a share image they cannot fetch, so a wrong value here does not look
+//  like an error — it looks like a link preview with no picture, and nothing on
+//  the site itself gives any hint why.
 //
-//  The placeholder below is deliberately obvious. Nothing breaks while it is
-//  here — the site runs, the tags render — so the cost of forgetting is only
-//  that the tags point at a domain nobody owns. Grep for `example` before
-//  going live. Set SITE_ORIGIN in the host's environment to override it
-//  without editing this file.
+//  THIS IS A CONSTANT, ON PURPOSE. It used to read VITE_SITE_ORIGIN first, and
+//  twice in a row that indirection is what broke the share image: Vercel's
+//  environment has VITE_SITE_ORIGIN set to `https://campba-long.vercel.app`,
+//  while the deployment is actually served at `camp-ba-long.vercel.app`. One
+//  hyphen apart, both entirely plausible, and the wrong one 404s every request.
+//  Because the env var outranked the value written here, editing this file
+//  changed the local build and nothing about the deployed one — the tags looked
+//  correct in dist/ and shipped wrong.
 //
-//  No trailing slash: every path below starts with one.
-//  Read through globalThis rather than as a bare `process`: this file is loaded
-//  both by the bundler, where `process` does not exist and naming it is a
-//  ReferenceError, and by the build scripts, where it does. `globalThis.process`
-//  is a plain property lookup and is simply undefined in the browser.
+//  An override that silently outranks the source of truth is worth less than
+//  the bugs it causes. To change the domain — when a real one replaces the
+//  vercel.app address — edit the line below. That is the whole procedure, and
+//  it is a one-line diff in the file the sitemap and share tags already read.
 //
-//  DO NOT derive this from Vercel's VERCEL_PROJECT_PRODUCTION_URL. That was
-//  tried and it is wrong for this project: it reports `campba-long.vercel.app`,
-//  derived from the project NAME, while the deployment is actually served at
-//  `camp-ba-long.vercel.app`. The two differ by one hyphen, both look
-//  plausible, and the wrong one answers every request with a 404. Nothing about
-//  that failure is visible from the site itself — the pages load, the tags are
-//  present and well-formed — it shows up only as a Messenger link with no
-//  picture, because Facebook fetched the og:image, got a 404, and dropped it.
-//
-//  So the host is written down, not guessed. When a real domain replaces the
-//  vercel.app one, change the string below or set VITE_SITE_ORIGIN in Vercel's
-//  environment variables; the env var wins. Whichever it is, confirm the image
-//  actually loads there before trusting it:
+//  Whatever it is set to, confirm the share image actually loads there before
+//  trusting it. This is the check that would have caught both failures:
 //
 //      curl -I https://<host>/urlimage.jpg     # expect 200, image/jpeg
-export const SITE_ORIGIN = (
-    // Vite inlines this at build time; unset in dev, which is fine.
-    import.meta.env?.VITE_SITE_ORIGIN ||
-    globalThis.process?.env?.VITE_SITE_ORIGIN ||
-    'https://camp-ba-long.vercel.app'
-).replace(/\/+$/, '')
+//
+//  No trailing slash: every path below starts with one.
+export const SITE_ORIGIN = 'https://camp-ba-long.vercel.app'
 
 export const SITE_NAME = 'Camp Ba-long Nature Farm & Resort'
 export const SITE_SHORT_NAME = 'Camp Ba-long'

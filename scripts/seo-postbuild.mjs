@@ -209,6 +209,11 @@ async function writeHtml(template, route) {
     html = replaceMeta(html, 'property', 'og:description', route.description)
     html = replaceMeta(html, 'property', 'og:url', canonical)
     html = replaceMeta(html, 'property', 'og:image', image)
+    // Redundant for anything written this decade — og:image is already https —
+    // but Viber's scraper is old and reads secure_url in preference. It costs a
+    // line and it is the difference between a preview with a picture and one
+    // without on the app this resort's guests actually share links in.
+    html = replaceMeta(html, 'property', 'og:image:secure_url', image)
     html = replaceMeta(html, 'name', 'twitter:title', route.title)
     html = replaceMeta(html, 'name', 'twitter:description', route.description)
     html = replaceMeta(html, 'name', 'twitter:image', image)
