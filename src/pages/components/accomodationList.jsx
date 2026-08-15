@@ -10,6 +10,30 @@ import {
     findAccommodationType,
 } from '../../data/accommodationDB.js'
 import { getAccomodationOptions, findRentAllOption, isRentAllOption } from '../../data/accomodationOptions.js'
+import { useHoldCountdown } from './useHoldCountdown.js'
+import { formatCountdown } from './usePaymentWindow.js'
+
+// What a fully-booked card says instead of a flat "Fully booked · free <date>"
+// when the blocker turns out to be another guest's unpaid ten-minute hold
+// rather than a real booking — see useHoldCountdown.js. Its own component
+// (not inlined in the card loop below) so its hook only runs for cards that
+// are actually fully booked: React mounts/unmounts it as `isFullyBooked`
+// flips, which starts and stops the polling for free instead of needing an
+// `enabled` flag threaded through the hook.
+function FullyBookedLabel({ typeId, checkIn, checkOut, scheduleKey, fallback }){
+    const { isHeld, msLeft } = useHoldCountdown({ typeId, checkIn, checkOut, scheduleKey })
+    if (!isHeld) return fallback
+    return (
+        <span className="accomodation-card-held">
+            Held by another guest · frees in{' '}
+            {/* Announced on the minute only — a screen reader reciting a
+                ticking clock makes the rest of the carousel unusable. */}
+            <span role="timer" aria-live={msLeft % 60000 < 1000 ? 'polite' : 'off'}>
+                {formatCountdown(msLeft)}
+            </span>
+        </span>
+    )
+}
 
 // `nights` is how many nights the chosen dates come to (1 for Day Time and for
 // a plain overnight stay). The cards keep quoting the RATE — that is what the
@@ -286,7 +310,15 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
                                             : availability === null
                                                 ? 'Availability TBA'
                                                 : isFullyBooked
-                                                    ? `Fully booked${nextAvailable ? ` · free ${formatShortDate(nextAvailable)}` : ''}`
+                                                    ? (
+                                                        <FullyBookedLabel
+                                                            typeId={item.id}
+                                                            checkIn={stayStart}
+                                                            checkOut={stayEnd}
+                                                            scheduleKey={scheduleKey}
+                                                            fallback={`Fully booked${nextAvailable ? ` · free ${formatShortDate(nextAvailable)}` : ''}`}
+                                                        />
+                                                    )
                                                     : poolLocked
                                                         ? 'Taken by your other pick'
                                                         : poolId

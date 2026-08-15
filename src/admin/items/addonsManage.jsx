@@ -18,7 +18,16 @@ function addonFields(values) {
             type: 'textarea',
             placeholder: 'One bath towel.',
         },
-        { name: 'price', label: 'Price (PHP)', type: 'number', placeholder: '100' },
+        [
+            { name: 'price', label: 'Price (PHP)', type: 'number', placeholder: '100' },
+            {
+                name: 'stockTotal',
+                label: 'How many exist',
+                type: 'number',
+                placeholder: 'Leave blank for no limit',
+                help: 'The ceiling on requests whose stays overlap. Blank means unlimited.',
+            },
+        ],
         {
             name: 'imageUrl',
             label: 'Photo',
@@ -40,6 +49,7 @@ const BLANK_ADDON = {
     imageUrl: '',
     sortOrder: 0,
     isActive: true,
+    stockTotal: '',
 }
 
 function toDraft(item) {
@@ -51,6 +61,7 @@ function toDraft(item) {
         imageUrl: item.imageUrl ?? '',
         sortOrder: item.sortOrder ?? 0,
         isActive: item.isActive,
+        stockTotal: item.stockTotal == null ? '' : String(item.stockTotal),
     }
 }
 

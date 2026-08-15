@@ -15,16 +15,12 @@ const MAX_SENIORS = 20
 //
 // Seniors are a subset of the total guests, so callers pass:
 //   • disabled — true until at least one guest (pax) is set; grays the stepper.
-//   • locked   — true while renting the whole resort: there's no per-head
-//                entrance fee for a senior discount to come off, so the
-//                count is fixed at 0 rather than left for the guest to
-//                declare.
 //   • max      — the most seniors allowed (remaining pax after kids).
-export default function SeniorCount({ seniors, onSeniorsChange, disabled = false, locked = false, max = MAX_SENIORS }){
+export default function SeniorCount({ seniors, onSeniorsChange, disabled = false, max = MAX_SENIORS }){
     const [internalSeniors, setInternalSeniors] = useState(0)
     const current = seniors ?? internalSeniors
     const ceiling = Math.min(MAX_SENIORS, max)
-    const inactive = disabled || locked
+    const inactive = disabled
 
     const clamp = (value) => Math.min(ceiling, Math.max(MIN_SENIORS, value))
 
@@ -72,10 +68,7 @@ export default function SeniorCount({ seniors, onSeniorsChange, disabled = false
             <p className="senior-note" role="note">
                 <span className="senior-note-dot" aria-hidden="true"></span>
                 <span className="senior-note-body">
-                    {locked ? (
-                        <>Renting the whole resort is a <strong>flat rate</strong> with no per-head
-                        entrance fee, so seniors aren't tracked separately for this booking.</>
-                    ) : disabled ? (
+                    {disabled ? (
                         <>Set the <strong>number of guests</strong> first — seniors are counted within your guest total.</>
                     ) : (
                         SENIOR_DISCOUNT_IN_SYSTEM ? (

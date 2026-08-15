@@ -69,6 +69,7 @@ import {
     describeSupabaseError,
     SUPABASE_SETUP_MESSAGE,
 } from '../lib/supabaseClient.js'
+import { toISODate } from './accommodationDB.js'
 
 import menu1 from '../assets/images/menu1.png'
 import menu2 from '../assets/images/menu2.png'
@@ -305,7 +306,10 @@ function spaItem({
     }
 }
 
-function addonItem({ id, name, desc = null, price, imageUrl = null, sortOrder = 0, isActive = true }) {
+function addonItem({
+    id, name, desc = null, price, imageUrl = null, sortOrder = 0, isActive = true,
+    stockTotal = null,
+}) {
     return {
         id,
         name,
@@ -315,6 +319,11 @@ function addonItem({ id, name, desc = null, price, imageUrl = null, sortOrder = 
         image: imageUrl || null,
         sortOrder,
         isActive,
+        // Null means unlimited — see stock_total's column comment in
+        // 20260815160000_addon_stock_limit.sql. Carried on the item so the
+        // admin form and AddonPicker both know without a second query
+        // whether this one even has a ceiling to check.
+        stockTotal,
         label: name,
     }
 }
@@ -487,6 +496,7 @@ function toAddonItem(row) {
         imageUrl: row.image_url,
         sortOrder: row.sort_order ?? 0,
         isActive: row.is_active !== false,
+        stockTotal: row.stock_total ?? null,
     })
 }
 
@@ -720,7 +730,28 @@ export async function saveFoodItem(draft) {
     // A coffee row is only orderable at a size, so the size is part of what
     // makes it a distinct row — and of its id.
     const sizeLabel = String(draft.sizeLabel ?? '').trim() || null
-    const groupKey = String(draft.groupKey ?? '').trim() || null
+    let groupKey = String(draft.groupKey ?? '').trim() || null
+    let groupTitle = String(draft.groupTitle ?? '').trim() || null
+
+    if (category === 'coffee') {
+        if (groupKey) {
+            // Picked an EXISTING table from the dropdown (or editing a row
+            // that already belonged to one) — the title is whatever that
+            // table's own rows already agree on, not something retyped in
+            // this form, so two rows in one table can never disagree on its
+            // name again.
+            const sibling = adminCatalog.food.find((item) => item.groupKey === groupKey && item.groupTitle)
+            groupTitle = sibling?.groupTitle ?? groupTitle
+        } else if (groupTitle) {
+            // No table picked — the admin named a brand NEW one ("+ Add
+            // table"). Slugify it into a fresh key, the same way the item's
+            // own id below is slugified from its own inputs.
+            const takenKeys = new Set(adminCatalog.food.map((item) => item.groupKey).filter(Boolean))
+            groupKey = uniqueId(slugify(groupTitle), takenKeys)
+        } else {
+            return { ok: false, message: 'Pick a price table, or name a new one.' }
+        }
+    }
 
     const taken = new Set(adminCatalog.food.map((item) => item.id))
     if (draft.id) taken.delete(draft.id)
@@ -736,7 +767,7 @@ export async function saveFoodItem(draft) {
         image_key: String(draft.imageKey ?? '').trim() || null,
         image_url: String(draft.imageUrl ?? '').trim() || null,
         group_key: groupKey,
-        group_title: String(draft.groupTitle ?? '').trim() || null,
+        group_title: groupTitle,
         size_label: sizeLabel,
         has_coffee_option: Boolean(draft.hasCoffeeOption),
         sort_order: Number(draft.sortOrder) || 0,
@@ -765,6 +796,57 @@ export async function deleteFoodItem(id) {
     // Orders already placed against it keep the name and price they were
     // charged (see add_booking_addon) — deleting the row does not rewrite
     // anyone's bill, it only stops the item being sold again.
+    await Promise.all([loadCatalog(), loadAdminCatalog()])
+    return { ok: true }
+}
+
+// Renames a coffee price table. Every row sharing this group_key gets the new
+// group_title in one update, rather than staff re-saving each cup by hand —
+// which is how a table's rows could end up split across two titles if one
+// row were missed. RLS already allows a bulk update like this ("staff manage
+// the menu" is `for all ... using (is_staff())`, no per-row scoping beyond
+// that — see 20260730120000_food_and_spa_catalog.sql), the same way
+// deleteFoodItem() above already writes straight to the table under it.
+export async function renameCoffeeTable(groupKey, title) {
+    if (!isSupabaseConfigured) return { ok: false, message: SUPABASE_SETUP_MESSAGE }
+    const trimmed = String(title ?? '').trim()
+    if (!groupKey || !trimmed) return { ok: false, message: 'Give the table a name.' }
+
+    const { error } = await supabase.from('food_menu_items')
+        .update({ group_title: trimmed })
+        .eq('group_key', groupKey)
+
+    if (error) {
+        console.error('Could not rename the price table:', error.message)
+        return { ok: false, message: describeSupabaseError(error) }
+    }
+
+    await Promise.all([loadCatalog(), loadAdminCatalog()])
+    return { ok: true }
+}
+
+// Renames one COLUMN of a table — every row in THIS table currently at the
+// old size moves to the new one in a single update, the same "one write, not
+// one per row" guarantee as renameCoffeeTable() above. `oldSize` is matched
+// with `.is(..., null)` rather than `.eq(..., '')` when it's blank:
+// groupCoffeeMenu() reads a null size_label as the empty-string column
+// (`item.sizeLabel ?? ''`), and Postgres `= ''` does not match NULL.
+export async function renameCoffeeSize(groupKey, oldSize, newSize) {
+    if (!isSupabaseConfigured) return { ok: false, message: SUPABASE_SETUP_MESSAGE }
+    const trimmed = String(newSize ?? '').trim()
+    if (!groupKey || !trimmed) return { ok: false, message: 'Give the size a name.' }
+
+    let query = supabase.from('food_menu_items')
+        .update({ size_label: trimmed })
+        .eq('group_key', groupKey)
+    query = oldSize ? query.eq('size_label', oldSize) : query.is('size_label', null)
+
+    const { error } = await query
+    if (error) {
+        console.error('Could not rename the cup size:', error.message)
+        return { ok: false, message: describeSupabaseError(error) }
+    }
+
     await Promise.all([loadCatalog(), loadAdminCatalog()])
     return { ok: true }
 }
@@ -826,6 +908,20 @@ export async function saveResortAddonItem(draft) {
     const price = priceOrError(draft.price)
     if (price == null) return { ok: false, message: 'Enter a price of 0 or more.' }
 
+    // Blank means unlimited (stock_total stays null) — the same "no ceiling
+    // unless staff set one" contract accommodation_types.total doesn't have
+    // (a unit count is never optional there), so this is validated separately
+    // rather than reusing priceOrError.
+    const stockTotalRaw = String(draft.stockTotal ?? '').trim()
+    let stockTotal = null
+    if (stockTotalRaw !== '') {
+        const parsed = Number(stockTotalRaw)
+        if (!Number.isInteger(parsed) || parsed < 0) {
+            return { ok: false, message: 'How many exist must be a whole number 0 or more, or left blank for no limit.' }
+        }
+        stockTotal = parsed
+    }
+
     const taken = new Set(adminCatalog.addons.map((item) => item.id))
     if (draft.id) taken.delete(draft.id)
     const id = draft.id || uniqueId(slugify(name), taken)
@@ -838,6 +934,7 @@ export async function saveResortAddonItem(draft) {
         image_url: String(draft.imageUrl ?? '').trim() || null,
         sort_order: Number(draft.sortOrder) || 0,
         is_active: draft.isActive !== false,
+        stock_total: stockTotal,
     }
 
     const { error } = await supabase.from('resort_addon_items').upsert(row)
@@ -861,4 +958,37 @@ export async function deleteResortAddonItem(id) {
 
     await Promise.all([loadCatalog(), loadAdminCatalog()])
     return { ok: true }
+}
+
+// How much of one add-on's stock is already claimed for a stay window, and
+// how much that leaves — read-only, anon-safe (SECURITY DEFINER, returns
+// counts only), mirroring getAvailability()/hold_conflict() in
+// accommodationDB.js/bookingQueue.js for the same reason: an anonymous guest
+// gets no Realtime on `bookings`, so this is what AddonPicker polls instead.
+// Returns null for an item with no stock_total set — nothing to check.
+export async function getAddonStockStatus({ itemId, checkIn, checkOut = null, scheduleKey = null }) {
+    if (!isSupabaseConfigured || !itemId || !checkIn) return null
+
+    const { data, error } = await supabase.rpc('addon_stock_status', {
+        p_item_id: itemId,
+        p_check_in: toISODate(checkIn),
+        p_check_out: toISODate(checkOut ?? checkIn),
+        p_schedule_key: scheduleKey,
+    })
+
+    if (error) {
+        console.error('Could not check add-on stock:', error.message)
+        return null
+    }
+
+    const row = Array.isArray(data) ? data[0] : data
+    if (!row) return null
+
+    return {
+        stockTotal: row.stock_total ?? null,
+        claimed: Number(row.claimed ?? 0),
+        // Null (unlimited) travels through as-is — AddonPicker treats it the
+        // same as "no limit set" either way.
+        available: row.available ?? null,
+    }
 }

@@ -164,6 +164,15 @@
     gap: 26px;
 }
 
+/* Sections built around a wide data table rather than reading text. 1200px is
+   a comfortable measure for forms and cards, but it forces the twelve-column
+   bookings table into a sideways scroll on a 1920 screen that has ~1750px of
+   room to give it. `width: 100%` still governs everything narrower, so this is
+   only ever a ceiling being raised — nothing changes on a laptop. */
+.admin-dash-content.is-wide{
+    max-width: 1720px;
+}
+
 .admin-dash-heading{
     display: flex;
     flex-direction: column;

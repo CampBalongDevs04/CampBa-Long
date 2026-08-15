@@ -312,6 +312,15 @@
     font-style: normal;
 }
 
+/* A live, unpaid hold rather than a real booking (see useHoldCountdown.js) —
+   gold rather than the red above, so a card that is usually free again in
+   minutes doesn't read as permanently gone the way a genuinely sold-out one
+   does. One class more specific than the rule above (four vs. three), so it
+   wins on its own without needing `!important` or source order. */
+.accomodation-card.fully-booked .accomodation-card-available .accomodation-card-held{
+    color: var(--gold);
+}
+
 /* Nothing of THIS card is booked or even cancelled — a sibling card sharing
    the same physical slots (Small Tent / Big Tent / Tent Pitching) just used
    up what was left, in this guest's own cart. A dark wash over the whole

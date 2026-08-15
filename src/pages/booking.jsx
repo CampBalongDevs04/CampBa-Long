@@ -7,13 +7,14 @@ import TimeSelector from './components/timeSelector'
 import ScheduleNote from './components/scheduleNote'
 import AccomodationList from './components/accomodationList'
 import AddonPicker from './components/addonPicker'
-import { getAccomodationOptions, isFreeEntranceEligible, isAddonEligible, findRentAllOption, rentAllCapacity } from '../data/accomodationOptions.js'
+import { getAccomodationOptions, isFreeEntranceEligible, isAddonEligible, findRentAllOption } from '../data/accomodationOptions.js'
 import { useResortAddonItems } from '../data/menuDB.js'
 import PaxInput from './components/paxInput'
 import KidsCount from './components/kidscount'
 import SeniorCount from './components/seniorCount'
 import PwdCount from './components/pwdCount'
 import { computeStayQuote, minNightsFrom } from '../data/extendedStay.js'
+import { DEFAULT_FREE_ENTRANCE_QUOTA, RENT_ALL_FREE_ENTRANCE_PAX } from '../data/entranceFee.js'
 import Terms from './components/terms'
 import BookingSummary from './components/bookingSummary'
 import HoldQueueNotice from './components/holdQueueNotice'
@@ -187,16 +188,15 @@ export default function Booking(){
         .filter(Boolean)
     const addonsPreviewTotal = addonLines.reduce((sum, line) => sum + line.total, 0)
 
-    // Renting the whole resort is a flat rate that already covers everyone on
-    // site (the ₱16,000/₱27,000 card price is inclusive, not on top of a
-    // per-head entrance charge) — so the schedule fed into the quote has its
-    // entranceFee zeroed for the duration. A copy, not a mutation: `schedule`
-    // itself stays the real one everywhere else on the page (TimeSelector,
-    // the summary's schedule details, reserve()'s scheduleKey). Zeroing it
-    // going INTO the quote — rather than hiding the fee after the fact —
-    // means the figure that ends up stored on the booking is genuinely zero,
-    // not just hidden on this screen.
-    const scheduleForQuote = rentAllMode && schedule ? { ...schedule, entranceFee: 0 } : schedule
+    // Renting the whole resort is NOT a flat rate that covers everyone on
+    // site regardless of headcount — the rate card only waives entrance for
+    // the first RENT_ALL_FREE_ENTRANCE_PAX (20) guests. A bigger party still
+    // owes the schedule's normal per-head rate on everyone past that, exactly
+    // like an ordinary unit booking with a bigger free-entrance quota. So the
+    // real schedule (real entranceFee) goes into the quote either way — the
+    // only thing rentAllMode changes is which quota computeEntranceFee() is
+    // handed, below.
+    const freeEntranceQuota = rentAllMode ? RENT_ALL_FREE_ENTRANCE_PAX : DEFAULT_FREE_ENTRANCE_QUOTA
 
     // The whole stay's arithmetic, in one place: how many nights the dates
     // come to, the unit rates multiplied across them, the entrance fees
@@ -204,7 +204,7 @@ export default function Booking(){
     // summary renders this object and reserve() stores it, so a guest cannot
     // be quoted one figure on this page and charged another on the next.
     const quote = computeStayQuote({
-        schedule: scheduleForQuote,
+        schedule,
         checkIn: dates.checkIn,
         checkOut: effectiveCheckOut,
         cartLines,
@@ -212,6 +212,7 @@ export default function Booking(){
         kids,
         seniors,
         freeEntranceEligible: cartFreeEntranceEligible,
+        freeQuota: freeEntranceQuota,
     })
 
     // Switching schedules can change which units are even offered (e.g.
@@ -336,15 +337,15 @@ export default function Booking(){
         }
     }
 
-    // Turning it on hands the guest a fixed, non-customizable booking: the
-    // sync below replaces whatever was in the cart with the Rent All card and
-    // takes over pax. Kids/seniors/PWD are zeroed here rather than there,
-    // because renting the whole resort waives per-head entrance entirely
-    // (see scheduleForQuote below) — there is no discount left for those
-    // counts to affect, so they stop being asked for rather than being
-    // auto-filled to some other number. Turning it off hands everything back
-    // — cart, pax and the three counts clear so the guest starts picking
-    // again rather than inheriting a leftover auto-value. Cleared
+    // Turning it on hands the guest a fixed, non-customizable cart: the sync
+    // below replaces whatever was in it with the Rent All card. Pax, kids,
+    // seniors and PWD are left for the guest to declare, same as any other
+    // booking — renting the whole resort no longer waives per-head entrance
+    // for the whole party, only for the first RENT_ALL_FREE_ENTRANCE_PAX (see
+    // freeEntranceQuota above), so those counts still matter to the total.
+    // Turning it off hands everything back — cart, pax and the three counts
+    // clear so the guest starts picking again rather than inheriting a
+    // leftover value from whichever mode they just left. Cleared
     // unconditionally either way since both directions want a clean slate,
     // just for different reasons.
     function handleToggleRentAll(){
@@ -358,30 +359,26 @@ export default function Booking(){
         setBookingError(null)
     }
 
-    // Keeps the cart and pax locked to the Rent All card while rentAllMode is
-    // on, including staying in sync when the guest switches Day Time <-> an
-    // overnight schedule (rateGroup changes what that card even costs and
-    // holds, via rentAllOption above). If the card isn't offered under
-    // whichever schedule ends up picked, rentAllOption is null and this does
-    // nothing — handleSelectTime has already dropped it from the cart and
-    // left droppedUnitNote explaining why, the same message any other unit
-    // not offered under a schedule gets.
+    // Keeps the cart locked to the Rent All card while rentAllMode is on,
+    // including staying in sync when the guest switches Day Time <-> an
+    // overnight schedule (rateGroup changes which accommodation_types row
+    // backs that card, via rentAllOption above). If the card isn't offered
+    // under whichever schedule ends up picked, rentAllOption is null and this
+    // does nothing — handleSelectTime has already dropped it from the cart
+    // and left droppedUnitNote explaining why, the same message any other
+    // unit not offered under a schedule gets.
     //
     // Adjusted during render rather than in an effect — React's own pattern
     // for state that has to follow a derived value (see BookingCalendar's
     // CalendarPanel, which does the same for its month view following the
     // `selected` prop) — so a schedule switch doesn't paint one stale frame
-    // with the old cart/pax before snapping to the new one.
-    const rentAllPax = rentAllOption ? rentAllCapacity(rentAllOption) : null
-    const rentAllSignal = rentAllMode && rentAllOption
-        ? `${rentAllOption.id}|${rentAllPax ?? ''}`
-        : null
+    // with the old cart before snapping to the new one.
+    const rentAllSignal = rentAllMode && rentAllOption ? rentAllOption.id : null
     const [lastRentAllSignal, setLastRentAllSignal] = useState(null)
     if (rentAllSignal !== lastRentAllSignal) {
         setLastRentAllSignal(rentAllSignal)
         if (rentAllSignal && rentAllOption) {
             setCart({ [rentAllOption.id]: 1 })
-            if (rentAllPax != null) handlePaxChange(rentAllPax)
         }
     }
 
@@ -778,7 +775,13 @@ export default function Booking(){
                                     is excluded from these addons (Table and
                                     Chairs, Cottage, Pavilion, Tent Pitching). */}
                                 {cartUnitCount > 0 && cartAddonEligible && (
-                                    <AddonPicker picks={addonPicks} onChange={setAddonPicks} />
+                                    <AddonPicker
+                                        picks={addonPicks}
+                                        onChange={setAddonPicks}
+                                        checkIn={dates.checkIn}
+                                        checkOut={effectiveCheckOut}
+                                        scheduleKey={scheduleKey}
+                                    />
                                 )}
                             </div>
                         </section>
@@ -795,7 +798,6 @@ export default function Booking(){
                                     rateGroup={rateGroup}
                                     fieldErrors={guestFieldErrors}
                                     showErrors={attemptedConfirm}
-                                    locked={rentAllMode}
                                 />
 
                                 {/* Each ceiling is the party minus the other
@@ -805,7 +807,6 @@ export default function Booking(){
                                     kids={kids}
                                     onKidsChange={setKids}
                                     disabled={!pax}
-                                    locked={rentAllMode}
                                     max={(pax ?? 0) - seniors - pwd}
                                 />
 
@@ -813,7 +814,6 @@ export default function Booking(){
                                     seniors={seniors}
                                     onSeniorsChange={setSeniors}
                                     disabled={!pax}
-                                    locked={rentAllMode}
                                     max={(pax ?? 0) - kids - pwd}
                                 />
 
@@ -821,7 +821,6 @@ export default function Booking(){
                                     pwd={pwd}
                                     onPwdChange={setPwd}
                                     disabled={!pax}
-                                    locked={rentAllMode}
                                     max={(pax ?? 0) - kids - seniors}
                                 />
                             </div>
@@ -883,6 +882,7 @@ export default function Booking(){
                         seniors={seniors}
                         pwd={pwd}
                         rentAllMode={rentAllMode}
+                        freeEntranceQuota={freeEntranceQuota}
                         addonLines={addonLines}
                         addonsPreviewTotal={addonsPreviewTotal}
                     />

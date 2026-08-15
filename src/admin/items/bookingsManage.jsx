@@ -244,11 +244,15 @@ export default function BookingsManage() {
                                         <tr key={b.id}>
                                             {/* Staff quote the CBL-… code to guests, not the uuid. */}
                                             <td className="col-id">{b.code ?? b.id}</td>
-                                            <td>{b.guest?.fullName || '—'}</td>
+                                            {/* col-name / col-unit / col-stay: the free-text
+                                                columns. They are the ones allowed to wrap once
+                                                the panel is wide enough to fit the whole table —
+                                                see the @container block in bookings-manage.css. */}
+                                            <td className="col-name">{b.guest?.fullName || '—'}</td>
                                             <td>{formatBookedTime(b.createdAt)}</td>
                                             <td className="col-guests">{guestsLabel(b)}</td>
-                                            <td>{unitLabel(b)}</td>
-                                            <td>{formatRange(b)}</td>
+                                            <td className="col-unit">{unitLabel(b)}</td>
+                                            <td className="col-stay">{formatRange(b)}</td>
                                             <td>{b.schedule?.time ?? '—'}</td>
                                             <td>
                                                 <span className={`bookings-badge ${payment.className || ''}`}>

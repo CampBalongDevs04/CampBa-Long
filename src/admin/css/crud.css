@@ -32,6 +32,15 @@
     color: rgba(10, 22, 14, 0.55);
 }
 
+/* Groups two+ buttons (e.g. "+ Add table" / "+ Add a cup size") as one flex
+   child of .crud-bar, so `justify-content: space-between` up there keeps them
+   together on the right instead of spreading each button to its own edge. */
+.crud-bar-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
 /* ---------- Buttons ---------- */
 .crud-btn {
     display: inline-flex;

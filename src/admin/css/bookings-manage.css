@@ -105,6 +105,15 @@
 .bookings-panel {
     width: 100%;
     box-sizing: border-box;
+    /* Queried by the desktop block at the bottom of this file. The question
+       that block asks — "is there room for all twelve columns?" — is about
+       this box, not the window: the sidebar, the section padding and the
+       1720px cap all sit between the two, so a viewport media query would be
+       that arithmetic hard-coded and wrong the moment any of it changes.
+       Safe to contain: the receipt lightbox is `position: fixed` but it is a
+       sibling of this panel, not a descendant, so it is not caught by the
+       containing block this establishes. */
+    container-type: inline-size;
     background: var(--cream);
     border: 1px solid rgba(198, 161, 91, 0.35);
     border-radius: 18px;
@@ -318,6 +327,99 @@
 }
 
 /* ---------- Responsive ---------- */
+
+/* Desktop. The table is sized for the narrowest screen that has to read it,
+   which on a large monitor leaves twelve columns of 0.86rem text sitting in a
+   panel with room to spare. Staff work this screen all day, so the extra room
+   buys legible type and taller rows rather than more whitespace. */
+@media (min-width: 1280px) {
+    .bookings-search {
+        max-width: 460px;
+    }
+
+    .bookings-filter {
+        padding: 9px 16px;
+        font-size: 0.85rem;
+    }
+
+    .bookings-panel {
+        padding: 12px;
+        border-radius: 20px;
+    }
+
+    .bookings-table {
+        font-size: 0.9rem;
+    }
+
+    .bookings-table thead th {
+        padding: 15px 16px;
+        font-size: 0.76rem;
+    }
+
+    .bookings-table tbody td {
+        padding: 15px 16px;
+    }
+
+    .bookings-badge {
+        padding: 5px 12px;
+        font-size: 0.76rem;
+    }
+}
+
+/* The panel is wide enough to hold every column at once — a maximised window
+   on a 1920 screen, give or take (that leaves the panel 1694px of content box
+   once the sidebar, the section padding and the 1720px cap have taken their
+   share). 1690px is where the twelve columns measured out at the sizes below,
+   so from here up the sideways scroll goes away entirely rather than being
+   made longer by the larger type.
+   `.bookings-panel` declares the container this is measured against.
+   Below this width the block simply does not apply and the table keeps the
+   sizes above, scrolling as it always has — there is no width between the two
+   where all twelve columns could be shown without shrinking the text back
+   below what the media query above already gives it.
+
+   The four columns unpinned here are the ones carrying free text of unknown
+   length — a guest's full name, the units in a combined reservation, the
+   party makeup, a multi-night range. Left as `nowrap` they set the table's
+   width from their longest single line, which is what pushed it past the
+   screen. The floors are what keep the browser from paying for that by
+   crushing them into one-word-per-line towers: with these, the longest values
+   in the table take two lines and the rows stay level. Every other column is
+   fixed-format — a code, a time, a badge, two buttons — so it stays on one
+   line and the table's width stays predictable no matter what is booked. */
+@container (min-width: 1690px) {
+    .bookings-table {
+        font-size: 0.95rem;
+    }
+
+    .bookings-table thead th,
+    .bookings-table tbody td {
+        padding: 18px 13px;
+    }
+
+    .bookings-table tbody td.col-name {
+        white-space: normal;
+        min-width: 150px;
+    }
+
+    .bookings-table tbody td.col-guests,
+    .bookings-table tbody td.col-unit,
+    .bookings-table tbody td.col-stay {
+        white-space: normal;
+        min-width: 145px;
+    }
+
+    /* Taller for the bigger rows, but no wider: the actions column is one of
+       the fixed ones holding the fit together. */
+    .bookings-action {
+        padding: 8px 14px;
+        font-size: 0.88rem;
+    }
+
+    .bookings-receipt-none {
+        font-size: 0.88rem;
+    }
+}
 
 /* Once the filter pills need a line of their own, the 380px cap leaves the
    field stranded beside 500px of nothing — so let it take the line it is on. */
