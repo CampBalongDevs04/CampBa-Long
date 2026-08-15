@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import './components/css/mybooking.css'
 import Footer from '../components/footer'
+import Seo from '../components/Seo.jsx'
 import BookingPayment from './components/bookingPayment.jsx'
 import { saveReceiptImage } from './components/receiptImage.js'
 import { useBookings } from '../data/useBookings.js'
@@ -100,6 +101,16 @@ function spaOrderSummary(booking){
 
 function spaOrderTotal(booking){
     return (booking.spaOrders ?? []).reduce((sum, order) => sum + order.total, 0)
+}
+
+function itemOrderSummary(booking){
+    const orders = booking.itemOrders ?? []
+    if (orders.length === 0) return 'none'
+    return orders.map((order) => `${order.name} x${order.quantity}`).join(', ')
+}
+
+function itemOrderTotal(booking){
+    return (booking.itemOrders ?? []).reduce((sum, order) => sum + order.total, 0)
 }
 
 // How many nights this booking was BILLED for — the same count the booking page
@@ -304,13 +315,16 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, 
                     </p>
                     <p className="field-sub">Payment: Down Payment</p>
                     <p className="field-sub">
-                        Schedule: {booking.schedule?.description ?? 'none'} • Spa: {spaOrderSummary(booking)} • Food: {foodOrderSummary(booking)}
+                        Schedule: {booking.schedule?.description ?? 'none'} • Spa: {spaOrderSummary(booking)} • Food: {foodOrderSummary(booking)} • Add-ons: {itemOrderSummary(booking)}
                     </p>
                     {booking.spaOrders?.length > 0 && (
                         <p className="field-sub">Spa total: {formatPeso(spaOrderTotal(booking))}</p>
                     )}
                     {booking.foodOrders?.length > 0 && (
                         <p className="field-sub">Food total: {formatPeso(foodOrderTotal(booking))}</p>
+                    )}
+                    {booking.itemOrders?.length > 0 && (
+                        <p className="field-sub">Add-ons total: {formatPeso(itemOrderTotal(booking))}</p>
                     )}
                 </div>
             </div>
@@ -570,13 +584,16 @@ function GroupBookingCard({ group, onCancel, onDelete, onSaveReceipt, payNow }){
                     </p>
                     <p className="field-sub">Payment: Down Payment</p>
                     <p className="field-sub">
-                        Schedule: {group.schedule?.description ?? 'none'} • Spa: {spaOrderSummary(group)} • Food: {foodOrderSummary(group)}
+                        Schedule: {group.schedule?.description ?? 'none'} • Spa: {spaOrderSummary(group)} • Food: {foodOrderSummary(group)} • Add-ons: {itemOrderSummary(group)}
                     </p>
                     {group.spaOrders?.length > 0 && (
                         <p className="field-sub">Spa total: {formatPeso(spaOrderTotal(group))}</p>
                     )}
                     {group.foodOrders?.length > 0 && (
                         <p className="field-sub">Food total: {formatPeso(foodOrderTotal(group))}</p>
+                    )}
+                    {group.itemOrders?.length > 0 && (
+                        <p className="field-sub">Add-ons total: {formatPeso(itemOrderTotal(group))}</p>
                     )}
                 </div>
             </div>
@@ -728,6 +745,8 @@ function MyBooking() {
     }
 
     return (
+        <>
+        <Seo path="/my-booking" />
         <main className="page my-booking-page">
             <div className="my-booking-shell">
                 <header className="my-booking-hero">
@@ -856,6 +875,7 @@ function MyBooking() {
 
             <Footer />
         </main>
+        </>
     )
 }
 

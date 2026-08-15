@@ -24,6 +24,12 @@ function formatPeso(amount){
     })}`
 }
 
+// Pesos, to the centavo — same rounding extendedStay.js and bookingPayment.jsx
+// use, so a figure built from add-ons here never lands a centavo off theirs.
+function round2(amount){
+    return Math.round(amount * 100) / 100
+}
+
 // Stands in for the entrance breakdown when this renders without a quote, so
 // the panel shows its placeholders instead of throwing on the first read.
 const NO_ENTRANCE = {
@@ -51,7 +57,10 @@ function SummaryRow({ label, value, placeholder }){
 // multiplication matters to a guest reading the column — a three-night stay
 // showing ₱6,750 against a ₱2,250 card — the row shows the arithmetic rather
 // than just the product.
-export default function BookingSummary({ checkIn, checkOut, schedule, quote, guest, pax, kids, seniors, pwd }){
+export default function BookingSummary({
+    checkIn, checkOut, schedule, quote, guest, pax, kids, seniors, pwd, rentAllMode = false,
+    addonLines = [], addonsPreviewTotal = 0,
+}){
     const {
         nights = 1,
         lengthSet = false,
@@ -64,8 +73,6 @@ export default function BookingSummary({ checkIn, checkOut, schedule, quote, gue
         entrance = NO_ENTRANCE,
         entranceNights = 1,
         stayTotal = null,
-        downpayment = null,
-        balance: onSiteBalance = null,
     } = quote ?? {}
 
     // Reads as "× 3 nights" only when there is more than one — a one-night
@@ -74,6 +81,17 @@ export default function BookingSummary({ checkIn, checkOut, schedule, quote, gue
     // Day Time has no nights to charge per: it is a single 7-hour block, and
     // calling its ₱150 a nightly rate would be wrong on the face of it.
     const perNight = schedule != null && schedule.sameDay !== true
+
+    // Towel/pillow/etc. picked in AddonPicker aren't part of `quote` (that's
+    // unit + entrance only) — folded in here so the figure quoted on this
+    // page is the same one the booking is actually created with, once
+    // reserve() submits these same lines right after. Not read off
+    // `quote.downpayment`/`quote.balance` below for that reason.
+    const combinedStayTotal = stayTotal != null ? round2(stayTotal + addonsPreviewTotal) : null
+    const combinedDownpayment = combinedStayTotal != null ? round2(combinedStayTotal * DOWNPAYMENT_RATE) : null
+    const onSiteBalance = combinedStayTotal != null && combinedDownpayment != null
+        ? round2(combinedStayTotal - combinedDownpayment)
+        : null
 
     return(
         <aside className="booking-summary" aria-label="Booking summary">
@@ -211,8 +229,40 @@ export default function BookingSummary({ checkIn, checkOut, schedule, quote, gue
                         </span>
                     </div>
                 )}
+                {/* Renting the whole resort is a flat rate — the per-head
+                    entrance section below doesn't apply, so this says why
+                    that section is simply missing rather than the guest
+                    wondering where it went. */}
+                {rentAllMode && (
+                    <p className="summary-note-inline">
+                        Entrance for your whole group is included in this rate — there's no
+                        separate per-head entrance fee for renting the whole resort.
+                    </p>
+                )}
             </div>
 
+            {/* AddonPicker's picks (see booking.jsx) — these aren't ordered
+                yet, only queued to be, the instant reserve() succeeds. */}
+            {addonLines.length > 0 && (
+                <div className="summary-section">
+                    <p className="summary-section-label">Add-ons</p>
+                    {addonLines.map((line) => (
+                        <SummaryRow
+                            key={line.itemId}
+                            label={`${line.name}${line.quantity > 1 ? ` ×${line.quantity}` : ''}`}
+                            value={formatPeso(line.total)}
+                            placeholder=""
+                        />
+                    ))}
+                    <SummaryRow
+                        label="Add-ons subtotal"
+                        value={formatPeso(addonsPreviewTotal)}
+                        placeholder=""
+                    />
+                </div>
+            )}
+
+            {!rentAllMode && (
             <div className="summary-section">
                 <p className="summary-section-label">Entrance Fees</p>
                 <SummaryRow
@@ -306,6 +356,7 @@ export default function BookingSummary({ checkIn, checkOut, schedule, quote, gue
                     )}
                 </p>
             </div>
+            )}
 
             <div className="summary-section">
                 <p className="summary-section-label">Recipient</p>
@@ -331,8 +382,16 @@ export default function BookingSummary({ checkIn, checkOut, schedule, quote, gue
                 <SummaryRow
                     label={`Stay subtotal${isExtended ? ` (${nights} nights)` : ''}`}
                     value={
-                        stayTotal != null
-                            ? `${formatPeso(unitTotal)} + ${formatPeso(entrance.total)} = ${formatPeso(stayTotal)}`
+                        combinedStayTotal != null
+                            ? rentAllMode
+                                // No separate entrance component to add — the
+                                // flat rate already is the subtotal.
+                                ? addonsPreviewTotal > 0
+                                    ? `${formatPeso(stayTotal)} + ${formatPeso(addonsPreviewTotal)} = ${formatPeso(combinedStayTotal)}`
+                                    : formatPeso(combinedStayTotal)
+                                : addonsPreviewTotal > 0
+                                    ? `${formatPeso(unitTotal)} + ${formatPeso(entrance.total)} + ${formatPeso(addonsPreviewTotal)} = ${formatPeso(combinedStayTotal)}`
+                                    : `${formatPeso(unitTotal)} + ${formatPeso(entrance.total)} = ${formatPeso(combinedStayTotal)}`
                             : null
                     }
                     placeholder="Select at least one unit and a schedule"
@@ -340,8 +399,8 @@ export default function BookingSummary({ checkIn, checkOut, schedule, quote, gue
                 <SummaryRow
                     label={`Down payment (${RATE_LABEL})`}
                     value={
-                        downpayment != null
-                            ? `${formatPeso(stayTotal)} × ${RATE_LABEL} = ${formatPeso(downpayment)}`
+                        combinedDownpayment != null
+                            ? `${formatPeso(combinedStayTotal)} × ${RATE_LABEL} = ${formatPeso(combinedDownpayment)}`
                             : null
                     }
                     placeholder="—"
@@ -350,7 +409,7 @@ export default function BookingSummary({ checkIn, checkOut, schedule, quote, gue
                     label="Balance on-site"
                     value={
                         onSiteBalance != null
-                            ? `${formatPeso(stayTotal)} − ${formatPeso(downpayment)} = ${formatPeso(onSiteBalance)}`
+                            ? `${formatPeso(combinedStayTotal)} − ${formatPeso(combinedDownpayment)} = ${formatPeso(onSiteBalance)}`
                             : null
                     }
                     placeholder="—"
@@ -364,16 +423,16 @@ export default function BookingSummary({ checkIn, checkOut, schedule, quote, gue
             <div className="summary-total">
                 <span className="summary-total-label">Down Payment ({RATE_LABEL})</span>
                 <span className="summary-total-value">
-                    {downpayment != null
-                        ? formatPeso(downpayment)
+                    {combinedDownpayment != null
+                        ? formatPeso(combinedDownpayment)
                         : lines.length > 0 ? 'Price TBA' : '—'}
                 </span>
             </div>
             <p className="summary-total-hint">
-                {RATE_LABEL} of the whole stay — unit rate and entrance fees — payable
-                after you reserve. Order food or spa treatments before you pay and
-                their {RATE_LABEL} joins this figure; order them after and it is asked
-                for separately, at the same {RATE_LABEL}.
+                {RATE_LABEL} of the whole stay — unit rate, entrance fees, and any
+                add-ons picked above — payable after you reserve. Order food or spa
+                treatments separately from /menu or /spa and their {RATE_LABEL} joins
+                this figure the same way.
             </p>
 
             <div className="summary-secure">

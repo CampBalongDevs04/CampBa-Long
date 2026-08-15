@@ -245,6 +245,17 @@ const DEFAULT_SPA_SERVICES = [
     { id: 'manicure-and-pedicure', name: 'Manicure and Pedicure', desc: 'Classic hand and foot grooming for a clean, polished finish.', duration: '1hr', price: 300, imageKey: 'massage88' },
 ]
 
+// Physical add-ons — the third catalog alongside food and spa, see
+// supabase/migrations/20260814120000_resort_addon_items.sql. No photos, no
+// categories: just a name and a price, which is all the post-reservation
+// upsell popup needs to list them.
+const DEFAULT_ADDON_ITEMS = [
+    { id: 'towel', name: 'Towel', desc: 'One bath towel.', price: 100 },
+    { id: 'pillow', name: 'Pillow', desc: 'One extra pillow.', price: 50 },
+    { id: 'extra-bedding', name: 'Extra Bedding', desc: 'One extra set of bedding.', price: 500 },
+    { id: 'electric-fan', name: 'Electric Fan', desc: 'One standing electric fan.', price: 200 },
+]
+
 // --------------------------------------------------------------- item shape
 // The one shape every screen consumes, whether the row came from Postgres or
 // from the defaults above. `label` is what goes on an order line: a coffee is
@@ -294,6 +305,20 @@ function spaItem({
     }
 }
 
+function addonItem({ id, name, desc = null, price, imageUrl = null, sortOrder = 0, isActive = true }) {
+    return {
+        id,
+        name,
+        desc,
+        price: Number(price),
+        imageUrl,
+        image: imageUrl || null,
+        sortOrder,
+        isActive,
+        label: name,
+    }
+}
+
 // Flatten the authored coffee tables into one orderable row per (flavor, size),
 // with the same ids the migration generates so an order placed against the
 // fallback menu still resolves to a catalog row once the database answers.
@@ -319,11 +344,13 @@ function flattenCoffee(groups) {
 
 const FALLBACK_FOOD = [...DEFAULT_DISHES.map(foodItem), ...flattenCoffee(DEFAULT_COFFEE_GROUPS)]
 const FALLBACK_SPA = DEFAULT_SPA_SERVICES.map(spaItem)
+const FALLBACK_ADDON_ITEMS = DEFAULT_ADDON_ITEMS.map(addonItem)
 
 // ===================================================================== store
 
 let foodMenu = FALLBACK_FOOD
 let spaServices = FALLBACK_SPA
+let addonItems = FALLBACK_ADDON_ITEMS
 
 const listeners = new Set()
 
@@ -344,6 +371,10 @@ export function getSpaServices() {
     return spaServices
 }
 
+export function getResortAddonItems() {
+    return addonItems
+}
+
 export function useFoodMenu() {
     return useSyncExternalStore(subscribe, getFoodMenu)
 }
@@ -352,12 +383,16 @@ export function useSpaServices() {
     return useSyncExternalStore(subscribe, getSpaServices)
 }
 
+export function useResortAddonItems() {
+    return useSyncExternalStore(subscribe, getResortAddonItems)
+}
+
 // =================================================================== loading
 
 // Both tables are public (RLS allows anon select), so this needs no session —
 // the guest menu page and the admin dashboard load the catalog the same way.
 async function loadCatalog() {
-    const [food, spa] = await Promise.all([
+    const [food, spa, addons] = await Promise.all([
         supabase
             .from('food_menu_items')
             .select('*')
@@ -365,6 +400,11 @@ async function loadCatalog() {
             .order('sort_order'),
         supabase
             .from('spa_services')
+            .select('*')
+            .eq('is_active', true)
+            .order('sort_order'),
+        supabase
+            .from('resort_addon_items')
             .select('*')
             .eq('is_active', true)
             .order('sort_order'),
@@ -391,6 +431,14 @@ async function loadCatalog() {
         spaServices = spa.data.map(toSpaItem)
     } else {
         spaServices = []
+    }
+
+    if (addons.error) {
+        console.error('Could not load the resort add-on items:', addons.error.message)
+    } else if (addons.data.length > 0) {
+        addonItems = addons.data.map(toAddonItem)
+    } else {
+        addonItems = []
     }
 
     notify()
@@ -424,6 +472,18 @@ function toSpaItem(row) {
         duration: row.duration_label,
         price: row.price,
         imageKey: row.image_key,
+        imageUrl: row.image_url,
+        sortOrder: row.sort_order ?? 0,
+        isActive: row.is_active !== false,
+    })
+}
+
+function toAddonItem(row) {
+    return addonItem({
+        id: row.id,
+        name: row.name,
+        desc: row.description,
+        price: row.price,
         imageUrl: row.image_url,
         sortOrder: row.sort_order ?? 0,
         isActive: row.is_active !== false,
@@ -468,6 +528,7 @@ function watchCatalogRealtime() {
         .channel(CATALOG_CHANNEL)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'food_menu_items' }, onCatalogChanged)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'spa_services' }, onCatalogChanged)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'resort_addon_items' }, onCatalogChanged)
         .subscribe()
 }
 
@@ -491,6 +552,10 @@ export function findFoodItem(id) {
 
 export function findSpaService(id) {
     return spaServices.find((service) => service.id === id) ?? null
+}
+
+export function findResortAddonItem(id) {
+    return addonItems.find((item) => item.id === id) ?? null
 }
 
 // Rebuild the coffee price tables from the flat rows: one table per group, a
@@ -557,7 +622,7 @@ export function formatMenuPrice(price) {
 //  It stays empty until a dashboard panel asks for it — a guest never loads
 //  rows they aren't allowed to act on.
 
-let adminCatalog = { food: [], spa: [], loaded: false, error: null }
+let adminCatalog = { food: [], spa: [], addons: [], loaded: false, error: null }
 
 function getAdminCatalog() {
     return adminCatalog
@@ -576,12 +641,13 @@ export async function loadAdminCatalog() {
         return
     }
 
-    const [food, spa] = await Promise.all([
+    const [food, spa, addons] = await Promise.all([
         supabase.from('food_menu_items').select('*').order('category').order('sort_order'),
         supabase.from('spa_services').select('*').order('sort_order'),
+        supabase.from('resort_addon_items').select('*').order('sort_order'),
     ])
 
-    const error = food.error ?? spa.error
+    const error = food.error ?? spa.error ?? addons.error
     if (error) {
         console.error('Could not load the catalog for editing:', error.message)
         commitAdminCatalog({ loaded: true, error: describeSupabaseError(error) })
@@ -591,6 +657,7 @@ export async function loadAdminCatalog() {
     commitAdminCatalog({
         food: food.data.map(toFoodItem),
         spa: spa.data.map(toSpaItem),
+        addons: addons.data.map(toAddonItem),
         loaded: true,
         error: null,
     })
@@ -743,6 +810,52 @@ export async function deleteSpaService(id) {
     const { error } = await supabase.from('spa_services').delete().eq('id', id)
     if (error) {
         console.error('Could not delete the spa service:', error.message)
+        return { ok: false, message: describeSupabaseError(error) }
+    }
+
+    await Promise.all([loadCatalog(), loadAdminCatalog()])
+    return { ok: true }
+}
+
+export async function saveResortAddonItem(draft) {
+    if (!isSupabaseConfigured) return { ok: false, message: SUPABASE_SETUP_MESSAGE }
+
+    const name = String(draft.name ?? '').trim()
+    if (!name) return { ok: false, message: 'Give the add-on a name.' }
+
+    const price = priceOrError(draft.price)
+    if (price == null) return { ok: false, message: 'Enter a price of 0 or more.' }
+
+    const taken = new Set(adminCatalog.addons.map((item) => item.id))
+    if (draft.id) taken.delete(draft.id)
+    const id = draft.id || uniqueId(slugify(name), taken)
+
+    const row = {
+        id,
+        name,
+        description: String(draft.desc ?? '').trim() || null,
+        price,
+        image_url: String(draft.imageUrl ?? '').trim() || null,
+        sort_order: Number(draft.sortOrder) || 0,
+        is_active: draft.isActive !== false,
+    }
+
+    const { error } = await supabase.from('resort_addon_items').upsert(row)
+    if (error) {
+        console.error('Could not save the add-on item:', error.message)
+        return { ok: false, message: describeSupabaseError(error) }
+    }
+
+    await Promise.all([loadCatalog(), loadAdminCatalog()])
+    return { ok: true, id }
+}
+
+export async function deleteResortAddonItem(id) {
+    if (!isSupabaseConfigured) return { ok: false, message: SUPABASE_SETUP_MESSAGE }
+
+    const { error } = await supabase.from('resort_addon_items').delete().eq('id', id)
+    if (error) {
+        console.error('Could not delete the add-on item:', error.message)
         return { ok: false, message: describeSupabaseError(error) }
     }
 

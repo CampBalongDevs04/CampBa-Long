@@ -152,8 +152,24 @@
     text-decoration: line-through;
 }
 
+/* ---- Rent Resort mode: dates that aren't fully free ---- */
+/* Same tooltip mechanism as maintenance closures (data-hint + hover), just a
+   different reason text — Rent Resort mode disables a date via .cal-not-free
+   instead of .cal-maintenance, see BookingCalendar.jsx's CalendarPanel.
+   Light red rather than the plain grey .cal-disabled gives it (both classes
+   land on the same cell, and this rule wins by coming after it below) so a
+   date that's already booked reads differently from one that's simply
+   closed for maintenance — same red used for an over-capacity guest count
+   elsewhere on this page, for one consistent "there's a problem here" color. */
+.cal-not-free {
+    color: #8F3A2D;
+    background: rgba(178, 74, 58, 0.14);
+    text-decoration: line-through;
+}
+
 /* ---- Monday maintenance tooltip ---- */
-.cal-maintenance::after {
+.cal-maintenance::after,
+.cal-not-free::after {
     content: attr(data-hint);
     position: absolute;
     bottom: calc(100% + 8px);
@@ -174,7 +190,8 @@
     z-index: 10;
 }
 
-.cal-maintenance::before {
+.cal-maintenance::before,
+.cal-not-free::before {
     content: '';
     position: absolute;
     bottom: calc(100% + 2px);
@@ -189,13 +206,15 @@
     z-index: 10;
 }
 
-.cal-maintenance:hover::after {
+.cal-maintenance:hover::after,
+.cal-not-free:hover::after {
     opacity: 1;
     visibility: visible;
     transform: translateX(-50%) scale(1);
 }
 
-.cal-maintenance:hover::before {
+.cal-maintenance:hover::before,
+.cal-not-free:hover::before {
     opacity: 1;
     visibility: visible;
 }

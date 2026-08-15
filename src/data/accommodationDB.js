@@ -196,6 +196,26 @@ export function getSchedule(key) {
     return STAY_SCHEDULES.find((schedule) => schedule.key === key) ?? null
 }
 
+// Whether a same-day schedule's window has already ended for a check-in of
+// TODAY specifically — Day Time greys out once it hits 5pm, the same way it
+// already would tomorrow at 5pm. Exported so TimeSelector (greys the card)
+// and booking.jsx (clears a stale selection when the check-in date changes
+// out from under it) read one answer and can't drift apart.
+//
+// Only ever true for a sameDay schedule: an overnight one's window ends the
+// NEXT day at the earliest, so "today" can never be past its end while
+// check-in is still today.
+export function isScheduleWindowElapsed(schedule, checkIn, now = new Date()) {
+    if (!schedule || schedule.sameDay !== true || checkIn == null) return false
+    if (checkIn.getFullYear() !== now.getFullYear()
+        || checkIn.getMonth() !== now.getMonth()
+        || checkIn.getDate() !== now.getDate()) {
+        return false
+    }
+    const dayStart = new Date(checkIn.getFullYear(), checkIn.getMonth(), checkIn.getDate())
+    return now.getTime() >= dayStart.getTime() + schedule.endMinutes * 60000
+}
+
 // ------------------------------------------------------------- date helpers
 // Everything is handled at LOCAL midnight so a 'YYYY-MM-DD' from an <input
 // type="date"> and a Date from the calendar widget land on the same day. The
@@ -561,6 +581,7 @@ function fromRow(row) {
 
         foodOrders: row.food_orders ?? [],
         spaOrders: row.spa_orders ?? [],
+        itemOrders: row.item_orders ?? [],
         addonsTotal: addonsTotal(row),
         // Everything this stay costs. The down payment is half of it and the
         // rest is settled on-site, so both figures come off this one number.
@@ -604,7 +625,7 @@ function paymentDueAt(row) {
 function addonsTotal(row) {
     const sum = (orders) =>
         (orders ?? []).reduce((total, order) => total + Number(order.total ?? 0), 0)
-    return sum(row.food_orders) + sum(row.spa_orders)
+    return sum(row.food_orders) + sum(row.spa_orders) + sum(row.item_orders)
 }
 
 // The staff path reads the table and gets the storage path with each entry; the
@@ -707,6 +728,7 @@ function fromGroupRow(row) {
 
         foodOrders: row.food_orders ?? [],
         spaOrders: row.spa_orders ?? [],
+        itemOrders: row.item_orders ?? [],
         receipts: receiptList(row),
         paidSubmitted: receiptList(row).reduce((sum, entry) => sum + entry.amount, 0),
         createdAt: row.created_at,
@@ -925,7 +947,8 @@ function sameBookings(a, b) {
             booking.downpayment === other.downpayment &&
             booking.paidSubmitted === other.paidSubmitted &&
             booking.foodOrders.length === other.foodOrders.length &&
-            booking.spaOrders.length === other.spaOrders.length
+            booking.spaOrders.length === other.spaOrders.length &&
+            booking.itemOrders.length === other.itemOrders.length
         )
     })
 }
@@ -1231,6 +1254,27 @@ export function getAvailability(idOrPrefix, checkIn = new Date(), checkOut = nul
     return null
 }
 
+// Whether EVERY other active type is fully free on one date — what "Rent All
+// Resort" needs, since renting the whole resort only makes sense on a day
+// nothing else is booked. Built on the same cached per-date RPC every card
+// already uses (getAvailability), so this costs nothing new: one call for the
+// date (all types come back together), read back per type.
+//
+// `excludeTypeId` leaves the rent-all card itself out of its own check — it
+// owns no physical units to conflict with. Returns null while any type's
+// answer is still in flight (same "don't know yet" the cards already show as
+// "Availability TBA"), so a caller can tell "not free" from "not answered".
+export function isResortFreeOn(date, scheduleKey, excludeTypeId = null){
+    let allFree = true
+    for (const type of ACCOMMODATION_TYPES){
+        if (type.id === excludeTypeId) continue
+        const availability = getAvailability(type.id, date, null, scheduleKey)
+        if (availability == null) return null
+        if (availability.available < availability.total) allFree = false
+    }
+    return allFree
+}
+
 // --- local computations over the rows this session can see -----------------
 
 // Bookings that currently hold a unit. Cancelled ones release their dates.
@@ -1393,15 +1437,29 @@ function randomKey() {
 }
 
 // Put the guest's screenshot in the bucket and return its path, which is what
-// gets stored on the booking row. Called BEFORE the booking is created: an
-// upload that fails should leave no reservation behind, and a path that exists
-// with no booking is just an orphan file.
+// gets stored on the booking row. Called from payBooking()/payBookingGroup(),
+// so the reservation already exists and has an id to file the image under.
 //
-// The folder is random rather than derived from the booking code, because the
-// path is what a signed URL is minted from — a guessable one would let anybody
-// with a code ask for someone else's receipt.
-export async function uploadReceipt(file) {
+// THE PATH IS `<owner id>/<random>.jpg`, AND BOTH HALVES EARN THEIR PLACE
+// ----------------------------------------------------------------------
+// The id prefix is what pay_my_booking() checks: without it, any path that
+// named a real object was creditable against ANY booking, so one guest's
+// upload could be replayed onto someone else's reservation to mark it paid.
+//
+// The random half is still there for the original reason — the path is what a
+// signed URL is minted from, so a guessable one would let anybody ask for
+// someone else's receipt. A booking id is a uuid, not the human-facing
+// 'CBL-…' code a guest might share, so prefixing with it gives the server
+// something to verify without making the path guessable.
+export async function uploadReceipt(file, ownerId) {
     if (!file) return { ok: true, path: null }
+
+    // The server refuses a path that is not under a booking id, so an upload
+    // without one would only strand a file in the bucket.
+    if (!ownerId) {
+        console.error('Receipt upload skipped: no booking id to file it under.')
+        return { ok: false, message: 'Could not upload your receipt. Please refresh the page and try again.' }
+    }
 
     // Checked before the request rather than after it fails. Without keys the
     // upload is aimed at a placeholder host and comes back "Failed to fetch",
@@ -1413,7 +1471,7 @@ export async function uploadReceipt(file) {
     }
 
     const { extension, mime } = receiptFormat(file)
-    const path = `${randomKey()}/receipt.${extension}`
+    const path = `${ownerId}/${randomKey()}.${extension}`
 
     const { error } = await supabase.storage.from(RECEIPT_BUCKET).upload(path, file, {
         contentType: mime,
@@ -1512,11 +1570,29 @@ export async function createBooking(draft) {
         p_kids: kids,
         p_seniors: seniors,
         p_pwd: pwd,
+        // ADVISORY ONLY — the server does not read these any more.
+        //
+        // book_accommodation() computes the price from accommodation_rates ×
+        // nights and the entrance breakdown from stay_schedules.entrance_fee,
+        // and stores its own figures. It has to: these arguments arrive from a
+        // browser holding a publishable key, so a single crafted request used to
+        // be able to book a real unit for ₱1 (bookings.downpayment is generated
+        // from price, so the amount owed scaled down with it). See the header of
+        // *_server_side_pricing.sql.
+        //
+        // They are still SENT so that the parameters can stay on the function
+        // signature — dropping them would break every browser tab still holding
+        // the previous bundle. If the server's figure differs from the one
+        // quoted here it writes a line to the Postgres log and charges its own.
         p_price: price,
         p_entrance_total: entrance?.total ?? null,
-        // The storage path of the uploaded image. A non-null value is also what
-        // flips the booking to 'down-payment'. The marker is the fallback for a
-        // caller that only says a receipt exists without uploading one.
+        // Also ignored by the server now, and nothing in this app has sent a
+        // non-null value since payment moved to after the hold. It used to flip
+        // the new booking to 'down-payment' — which meant a crafted request
+        // could create a booking that was exempt from the ten-minute sweep from
+        // the moment it existed, holding a unit indefinitely without paying.
+        // A receipt can only be verified once there is a booking id to file it
+        // under, so it now arrives through pay_my_booking() instead.
         p_receipt_url: receiptPath ?? (hasReceipt ? RECEIPT_PENDING_MARKER : null),
         // Full breakdown, so my-booking and the admin export can show how the
         // entrance total was reached rather than just the figure.
@@ -1612,6 +1688,11 @@ export async function createGroupBooking(draft) {
     const effectiveCheckOut = schedule?.sameDay ? checkIn : (checkOut ?? checkIn)
 
     const { data, error } = await supabase.rpc('book_stay_group', {
+        // `price` on each item is ADVISORY, exactly as in createBooking() above:
+        // book_stay_group() prices every member row through book_accommodation()
+        // and sums what was actually stored into the group's unit_subtotal. It
+        // used to sum these figures instead, which made the combined-reservation
+        // path a second way to book at a price of the caller's choosing.
         p_items: items.map((item) => ({ type_id: item.typeId, price: item.price })),
         p_schedule_key: scheduleKey,
         p_check_in: toISODate(checkIn),
@@ -1623,6 +1704,7 @@ export async function createGroupBooking(draft) {
         p_kids: kids,
         p_seniors: seniors,
         p_pwd: pwd,
+        // Advisory too — the group's entrance is recomputed server-side.
         p_entrance_total: entrance?.total ?? null,
         p_entrance_per_head: entrance?.perHead ?? 0,
         p_entrance_senior_discount: entrance?.seniorDiscount ?? 0,
@@ -1883,7 +1965,10 @@ export async function payBooking(bookingId, file) {
         return { ok: false, message: 'Choose a screenshot of your payment first.' }
     }
 
-    const upload = await uploadReceipt(file)
+    // Filed under the booking's own id — pay_my_booking() refuses a path that
+    // is not, which is what stops one booking's receipt being credited to
+    // another. See uploadReceipt().
+    const upload = await uploadReceipt(file, bookingId)
     if (!upload.ok) return upload
 
     const { data, error } = await supabase.rpc('pay_my_booking', {
@@ -1916,7 +2001,9 @@ export async function payBookingGroup(groupId, file) {
         return { ok: false, message: 'Choose a screenshot of your payment first.' }
     }
 
-    const upload = await uploadReceipt(file)
+    // Under the GROUP's id — a combined reservation's receipt belongs to the
+    // group row, not to any one member booking.
+    const upload = await uploadReceipt(file, groupId)
     if (!upload.ok) return upload
 
     const { data, error } = await supabase.rpc('pay_booking_group', {
@@ -2085,6 +2172,10 @@ export function addSpaOrder(bookingId, order) {
     return addAddon(bookingId, 'spa', order)
 }
 
+export function addItemOrder(bookingId, order) {
+    return addAddon(bookingId, 'item', order)
+}
+
 // Same as addAddon() above, for a combined reservation — the order goes on
 // the group's own row, not any one of its units.
 async function addGroupAddon(groupId, kind, order) {
@@ -2112,6 +2203,10 @@ export function addFoodOrderToGroup(groupId, order) {
 
 export function addSpaOrderToGroup(groupId, order) {
     return addGroupAddon(groupId, 'spa', order)
+}
+
+export function addItemOrderToGroup(groupId, order) {
+    return addGroupAddon(groupId, 'item', order)
 }
 
 // ------------------------------------------------------------ derived status
@@ -2215,10 +2310,16 @@ export function getBookingStats() {
 // Both read the ADMIN list, so they answer with nothing at all without a staff
 // session — the same reason the overview tabs come up empty rather than wrong.
 
+// Which field on a booking each kind's lines live in — one place, so adding
+// a fourth kind later is this one line plus a catalog table, not a hunt
+// through every ternary that used to hardcode 'food' vs 'spa'.
+const ADDON_KIND_FIELDS = { food: 'foodOrders', spa: 'spaOrders', item: 'itemOrders' }
+const ADDON_KINDS = Object.keys(ADDON_KIND_FIELDS)
+
 // A booking's add-on lines are ordered oldest-first on the row; the dashboard
 // wants the newest order at the top.
 function addonLines(booking, kind) {
-    const orders = kind === 'spa' ? booking.spaOrders : booking.foodOrders
+    const orders = booking[ADDON_KIND_FIELDS[kind]]
     return (orders ?? []).map((order, index) => ({
         // Two guests can order the same dish in the same second, and one guest
         // can order it twice — the booking and the line's own position are what
@@ -2259,36 +2360,40 @@ function addonableBookings() {
 }
 
 // Every add-on line across every booking, newest first.
-// `kind` is 'all' | 'food' | 'spa'.
+// `kind` is 'all' | 'food' | 'spa' | 'item'.
 export function listAddonOrders(kind = 'all') {
+    const kinds = kind === 'all' ? ADDON_KINDS : [kind]
     const lines = []
     for (const booking of addonableBookings()) {
         if (getBookingStage(booking) === 'cancelled') continue
-        if (kind !== 'spa') lines.push(...addonLines(booking, 'food'))
-        if (kind !== 'food') lines.push(...addonLines(booking, 'spa'))
+        for (const oneKind of kinds) lines.push(...addonLines(booking, oneKind))
     }
     return lines.sort((a, b) => new Date(b.orderedAt ?? 0) - new Date(a.orderedAt ?? 0))
 }
 
 // The same lines grouped back under the booking that placed them — one card per
 // guest rather than one row per dish. Bookings with no add-ons of the requested
-// kind drop out entirely, which is what makes the dashboard's Food and Spa tabs
-// different lists rather than the same list with empty cards in it.
+// kind drop out entirely, which is what makes the dashboard's Food, Spa and
+// Add-ons tabs different lists rather than the same list with empty cards in it.
 export function listBookingsWithAddons(kind = 'all') {
+    const kinds = kind === 'all' ? ADDON_KINDS : [kind]
     return addonableBookings()
         .filter((booking) => getBookingStage(booking) !== 'cancelled')
         .map((booking) => {
-            const food = kind === 'spa' ? [] : addonLines(booking, 'food')
-            const spa = kind === 'food' ? [] : addonLines(booking, 'spa')
+            const food = kinds.includes('food') ? addonLines(booking, 'food') : []
+            const spa = kinds.includes('spa') ? addonLines(booking, 'spa') : []
+            const items = kinds.includes('item') ? addonLines(booking, 'item') : []
             return {
                 booking,
                 food,
                 spa,
+                items,
                 foodTotal: food.reduce((sum, line) => sum + line.total, 0),
                 spaTotal: spa.reduce((sum, line) => sum + line.total, 0),
+                itemsTotal: items.reduce((sum, line) => sum + line.total, 0),
             }
         })
-        .filter((entry) => entry.food.length > 0 || entry.spa.length > 0)
+        .filter((entry) => entry.food.length > 0 || entry.spa.length > 0 || entry.items.length > 0)
 }
 
 // Add-on lines rolled up per catalog item: how many were ordered, what they

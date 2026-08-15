@@ -19,7 +19,7 @@ export default function OfferCard({
     return (
         <article className="offer-card">
             <div className="card-media">
-                <SkeletonImage src={imageUrl} alt={altText} />
+                <SkeletonImage src={imageUrl} alt={altText} loading="lazy" decoding="async" />
             </div>
             <div className="card-body">
                 <div className="card-icon">

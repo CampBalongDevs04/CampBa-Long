@@ -10,23 +10,27 @@ const MAX_KIDS = 20
 //
 // Kids are a subset of the total guests, so callers pass:
 //   • disabled — true until at least one guest (pax) is set; grays the stepper.
+//   • locked   — true while renting the whole resort: there's no per-head
+//                entrance fee to wave kids in free of, so the count is fixed
+//                at 0 rather than left for the guest to declare.
 //   • max      — the most kids allowed (remaining pax after seniors).
-export default function KidsCount({ kids, onKidsChange, disabled = false, max = MAX_KIDS }){
+export default function KidsCount({ kids, onKidsChange, disabled = false, locked = false, max = MAX_KIDS }){
     const [internalKids, setInternalKids] = useState(0)
     const current = kids ?? internalKids
     const ceiling = Math.min(MAX_KIDS, max)
+    const inactive = disabled || locked
 
     const clamp = (value) => Math.min(ceiling, Math.max(MIN_KIDS, value))
 
     const step = (delta) => {
-        if (disabled) return
+        if (inactive) return
         const next = clamp(current + delta)
         setInternalKids(next)
         onKidsChange?.(next)
     }
 
     return (
-        <div className={`kids-field${disabled ? ' kids-field-disabled' : ''}`}>
+        <div className={`kids-field${inactive ? ' kids-field-disabled' : ''}`}>
             <label className="kids-field-label" id="kids-count-label">
                 Number of Kids
             </label>
@@ -37,7 +41,7 @@ export default function KidsCount({ kids, onKidsChange, disabled = false, max = 
                     className="kids-step"
                     aria-label="Remove one kid"
                     onClick={() => step(-1)}
-                    disabled={disabled || current <= MIN_KIDS}
+                    disabled={inactive || current <= MIN_KIDS}
                 >
                     &minus;
                 </button>
@@ -51,7 +55,7 @@ export default function KidsCount({ kids, onKidsChange, disabled = false, max = 
                     className="kids-step"
                     aria-label="Add one kid"
                     onClick={() => step(1)}
-                    disabled={disabled || current >= ceiling}
+                    disabled={inactive || current >= ceiling}
                 >
                     +
                 </button>
@@ -62,7 +66,10 @@ export default function KidsCount({ kids, onKidsChange, disabled = false, max = 
             <p className="kids-note" role="note">
                 <span className="kids-note-dot" aria-hidden="true"></span>
                 <span className="kids-note-body">
-                    {disabled ? (
+                    {locked ? (
+                        <>Renting the whole resort is a <strong>flat rate</strong> with no per-head
+                        entrance fee, so kids aren't tracked separately for this booking.</>
+                    ) : disabled ? (
                         <>Set the <strong>number of guests</strong> first — kids are counted within your guest total.</>
                     ) : (
                         <>Only <strong>7 years old and below</strong> — kids in this age range have no entrance fee.</>

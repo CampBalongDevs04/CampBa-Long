@@ -89,7 +89,7 @@ export default function Contact(){
                 <div className="contact-header">
                     <LotusDividerIcon />
                     {section.eyebrow && <p className="contact-eyebrow">{section.eyebrow}</p>}
-                    {section.title && <h1 className="contact-title">{section.title}</h1>}
+                    {section.title && <h2 className="contact-title">{section.title}</h2>}
                 </div>
 
                 <div className="contact-body">

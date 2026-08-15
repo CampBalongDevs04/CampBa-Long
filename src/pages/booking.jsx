@@ -6,7 +6,9 @@ import StayLength from './components/stayLength'
 import TimeSelector from './components/timeSelector'
 import ScheduleNote from './components/scheduleNote'
 import AccomodationList from './components/accomodationList'
-import { getAccomodationOptions, isFreeEntranceEligible } from '../data/accomodationOptions.js'
+import AddonPicker from './components/addonPicker'
+import { getAccomodationOptions, isFreeEntranceEligible, isAddonEligible, findRentAllOption, rentAllCapacity } from '../data/accomodationOptions.js'
+import { useResortAddonItems } from '../data/menuDB.js'
 import PaxInput from './components/paxInput'
 import KidsCount from './components/kidscount'
 import SeniorCount from './components/seniorCount'
@@ -17,8 +19,12 @@ import BookingSummary from './components/bookingSummary'
 import HoldQueueNotice from './components/holdQueueNotice'
 import { useBookingQueue } from './components/useBookingQueue.js'
 import Footer from '../components/footer'
+import Seo from '../components/Seo.jsx'
 import BookingTrustIcon from '../components/BookingTrustIcon.jsx'
-import { createBooking, createGroupBooking, STAY_SCHEDULES as timeOptions } from '../data/accommodationDB.js'
+import {
+    createBooking, createGroupBooking, addItemOrder, addItemOrderToGroup,
+    useAccommodationDB, isScheduleWindowElapsed, STAY_SCHEDULES as timeOptions,
+} from '../data/accommodationDB.js'
 import { useBookingPage, bookingStep, BOOKING_STEP_IDS } from '../data/bookingPage.js'
 
 // Paying is deliberately NOT one of these steps any more. It happens from My
@@ -53,13 +59,19 @@ function isValidEmail(email){
     return EMAIL_COM_RE.test(String(email ?? '').trim())
 }
 
-function StepHeader({ index }){
+// `action`, when given, renders beside the title itself (e.g. the Rent All
+// Resort toggle next to "Dates & Schedule") rather than inside the step body
+// — it's an action ON the step, not a field belonging to it.
+function StepHeader({ index, action }){
     const step = bookingStep(BOOKING_STEP_IDS[index])
     return(
         <header className="booking-step-header">
             <span className="booking-step-num" aria-hidden="true">{index + 1}</span>
             <div className="booking-step-heading">
-                <h2 className="booking-step-title" id={step.id}>{step.title}</h2>
+                <div className="booking-step-title-row">
+                    <h2 className="booking-step-title" id={step.id}>{step.title}</h2>
+                    {action}
+                </div>
                 {step.subtitle && <p className="booking-step-sub">{step.subtitle}</p>}
             </div>
         </header>
@@ -73,6 +85,15 @@ export default function Booking(){
     // guest who already has this form open. Subscribing here is also what makes
     // bookingStep() below re-read — it is a plain lookup against the same store.
     const { page, activeTrust } = useBookingPage()
+    // Subscribed for the same reason AccomodationList is: staff toggling an
+    // accommodation's "Offer this on the booking page" checkbox (or editing a
+    // rate) already updates the underlying catalog live via realtime — but
+    // without this, THIS component (which decides whether the Rent All Resort
+    // button renders at all, via rentAllExists below) never re-renders to
+    // notice. AccomodationList re-rendering on its own was masking the same
+    // gap for the carousel; the button sits one level up, in the parent that
+    // never subscribed.
+    useAccommodationDB()
     const [selectedTime, setSelectedTime] = useState(null)
     const [dates, setDates] = useState({ checkIn: null, checkOut: null })
     // A cart, not a single pick: { [accommodationId]: quantity }, one entry
@@ -82,6 +103,12 @@ export default function Booking(){
         location.state?.accomodationId ? { [location.state.accomodationId]: 1 } : {}
     )
     const [droppedUnitNote, setDroppedUnitNote] = useState(null)
+    // Renting the whole resort as one block instead of picking units: locks
+    // the Accommodation step to the "Rent All Resort" card, the calendar to
+    // dates nothing else is booked on, and Number of Guests to that card's
+    // capacity. See handleToggleRentAll and the effect that keeps the cart
+    // and pax in sync with it below.
+    const [rentAllMode, setRentAllMode] = useState(false)
     const [pax, setPax] = useState(null)
     const [kids, setKids] = useState(0)
     const [seniors, setSeniors] = useState(0)
@@ -98,6 +125,11 @@ export default function Booking(){
     // holding. The object identity is the hook's dependency — replacing it
     // rejoins the queue at the BACK, so it is only ever set from null.
     const [queueRequest, setQueueRequest] = useState(null)
+    // Add-ons picked in the form, before any booking exists to attach them to
+    // — same shape and lifecycle as kids/seniors/pwd: { itemId: quantity },
+    // held here and only turned into real orders by reserve(), right after
+    // the booking it attaches to is created. See AddonPicker below.
+    const [addonPicks, setAddonPicks] = useState({})
 
     const schedule = selectedTime !== null ? timeOptions[selectedTime] : null
     const sameDayCheckout = schedule?.sameDay === true
@@ -110,6 +142,12 @@ export default function Booking(){
     // is filtered out — see handleSelectTime, which is what actually removes
     // it from `cart` itself.
     const accommodationOptions = getAccomodationOptions(rateGroup)
+    // Schedule-aware (drives auto-select/auto-pax below) vs schedule-agnostic
+    // (just "does this resort even offer a Rent All card", which decides
+    // whether the toggle button shows at all — a guest with no schedule
+    // picked yet should still see the button).
+    const rentAllOption = findRentAllOption(accommodationOptions)
+    const rentAllExists = findRentAllOption(getAccomodationOptions(null)) != null
     const cartLines = Object.entries(cart)
         .filter(([, qty]) => qty > 0)
         .map(([id, qty]) => ({ id, qty, option: accommodationOptions.find((item) => item.id === id) ?? null }))
@@ -119,8 +157,46 @@ export default function Booking(){
     const cartCapacity = cartUnlimited
         ? null
         : cartLines.reduce((sum, line) => sum + line.option.maxPax * line.qty, 0)
+    // The perk rides on the booking, not any one unit: a cart only loses it
+    // when EVERY line is an excluded unit (e.g. Table and Chairs alone).
+    // Mixing in even one eligible unit (e.g. Teepee + Table and Chairs) keeps
+    // it — the guest is still entering under a booking that includes an
+    // eligible unit, so the excluded line shouldn't disqualify the other one.
     const cartFreeEntranceEligible =
-        cartLines.length > 0 && cartLines.every((line) => isFreeEntranceEligible(line.id))
+        cartLines.length > 0 && cartLines.some((line) => isFreeEntranceEligible(line.id))
+
+    // Same "any eligible unit keeps it" shape as the free-entrance perk above:
+    // AddonPicker only disappears when EVERY line in the cart is an excluded
+    // unit (e.g. Table and Chairs alone). Mixing in a Teepee keeps it around.
+    const cartAddonEligible =
+        cartLines.length > 0 && cartLines.some((line) => isAddonEligible(line.id))
+
+    // AddonPicker's picks, resolved against the catalog into priced order
+    // lines — the same { itemId, name, unitPrice, quantity, total } shape
+    // add_booking_addon() expects, computed once here so both the summary
+    // preview and reserve()'s actual submission read the same numbers.
+    const addonCatalog = useResortAddonItems()
+    const addonLines = Object.entries(addonPicks)
+        .filter(([, qty]) => qty > 0)
+        .map(([id, qty]) => {
+            const item = addonCatalog.find((entry) => entry.id === id)
+            if (!item) return null
+            const unitPrice = Number(item.price)
+            return { itemId: id, name: item.name, unitPrice, quantity: qty, total: unitPrice * qty }
+        })
+        .filter(Boolean)
+    const addonsPreviewTotal = addonLines.reduce((sum, line) => sum + line.total, 0)
+
+    // Renting the whole resort is a flat rate that already covers everyone on
+    // site (the ₱16,000/₱27,000 card price is inclusive, not on top of a
+    // per-head entrance charge) — so the schedule fed into the quote has its
+    // entranceFee zeroed for the duration. A copy, not a mutation: `schedule`
+    // itself stays the real one everywhere else on the page (TimeSelector,
+    // the summary's schedule details, reserve()'s scheduleKey). Zeroing it
+    // going INTO the quote — rather than hiding the fee after the fact —
+    // means the figure that ends up stored on the booking is genuinely zero,
+    // not just hidden on this screen.
+    const scheduleForQuote = rentAllMode && schedule ? { ...schedule, entranceFee: 0 } : schedule
 
     // The whole stay's arithmetic, in one place: how many nights the dates
     // come to, the unit rates multiplied across them, the entrance fees
@@ -128,7 +204,7 @@ export default function Booking(){
     // summary renders this object and reserve() stores it, so a guest cannot
     // be quoted one figure on this page and charged another on the next.
     const quote = computeStayQuote({
-        schedule,
+        schedule: scheduleForQuote,
         checkIn: dates.checkIn,
         checkOut: effectiveCheckOut,
         cartLines,
@@ -229,6 +305,13 @@ export default function Booking(){
     // a date). An overnight schedule already picked before the check-in moved
     // to one of these dates is dropped here, so a disabled card can never sit
     // there still "selected" underneath.
+    //
+    // The same has to happen the other way round: a same-day schedule picked
+    // for some other date, then the check-in moved back to today after its
+    // own window elapsed, would otherwise leave Day Time greyed out in
+    // TimeSelector while this page still treated it as the selected schedule
+    // underneath — sameDayCheckout still true, the schedule note still
+    // describing a slot that's actually unavailable.
     function handleDatesChange(nextDates){
         setDates(nextDates)
 
@@ -245,7 +328,73 @@ export default function Booking(){
         if (selectedTime !== null && schedule?.sameDay !== true
             && minNightsFrom(nextDates.checkIn) == null) {
             setSelectedTime(null)
+            return
         }
+
+        if (selectedTime !== null && isScheduleWindowElapsed(schedule, nextDates.checkIn)) {
+            setSelectedTime(null)
+        }
+    }
+
+    // Turning it on hands the guest a fixed, non-customizable booking: the
+    // sync below replaces whatever was in the cart with the Rent All card and
+    // takes over pax. Kids/seniors/PWD are zeroed here rather than there,
+    // because renting the whole resort waives per-head entrance entirely
+    // (see scheduleForQuote below) — there is no discount left for those
+    // counts to affect, so they stop being asked for rather than being
+    // auto-filled to some other number. Turning it off hands everything back
+    // — cart, pax and the three counts clear so the guest starts picking
+    // again rather than inheriting a leftover auto-value. Cleared
+    // unconditionally either way since both directions want a clean slate,
+    // just for different reasons.
+    function handleToggleRentAll(){
+        setRentAllMode((current) => !current)
+        setCart({})
+        setPax(null)
+        setKids(0)
+        setSeniors(0)
+        setPwd(0)
+        setDroppedUnitNote(null)
+        setBookingError(null)
+    }
+
+    // Keeps the cart and pax locked to the Rent All card while rentAllMode is
+    // on, including staying in sync when the guest switches Day Time <-> an
+    // overnight schedule (rateGroup changes what that card even costs and
+    // holds, via rentAllOption above). If the card isn't offered under
+    // whichever schedule ends up picked, rentAllOption is null and this does
+    // nothing — handleSelectTime has already dropped it from the cart and
+    // left droppedUnitNote explaining why, the same message any other unit
+    // not offered under a schedule gets.
+    //
+    // Adjusted during render rather than in an effect — React's own pattern
+    // for state that has to follow a derived value (see BookingCalendar's
+    // CalendarPanel, which does the same for its month view following the
+    // `selected` prop) — so a schedule switch doesn't paint one stale frame
+    // with the old cart/pax before snapping to the new one.
+    const rentAllPax = rentAllOption ? rentAllCapacity(rentAllOption) : null
+    const rentAllSignal = rentAllMode && rentAllOption
+        ? `${rentAllOption.id}|${rentAllPax ?? ''}`
+        : null
+    const [lastRentAllSignal, setLastRentAllSignal] = useState(null)
+    if (rentAllSignal !== lastRentAllSignal) {
+        setLastRentAllSignal(rentAllSignal)
+        if (rentAllSignal && rentAllOption) {
+            setCart({ [rentAllOption.id]: 1 })
+            if (rentAllPax != null) handlePaxChange(rentAllPax)
+        }
+    }
+
+    // AddonPicker is hidden below once cartAddonEligible goes false (e.g. the
+    // guest drops the Teepee from a Teepee + Table and Chairs cart, leaving
+    // only the excluded unit) — but hiding it doesn't erase whatever was
+    // already picked. Without this, reserve() would still submit those picks
+    // for a cart that no longer has anything to attach them to. Same
+    // during-render pattern as rentAllSignal above.
+    const [lastCartAddonEligible, setLastCartAddonEligible] = useState(true)
+    if (cartAddonEligible !== lastCartAddonEligible) {
+        setLastCartAddonEligible(cartAddonEligible)
+        if (!cartAddonEligible && Object.keys(addonPicks).length > 0) setAddonPicks({})
     }
 
     // An overnight schedule needs a check-out STRICTLY after the check-in —
@@ -297,6 +446,19 @@ export default function Booking(){
         ? `Your selected accommodation${cartUnitCount > 1 ? 's hold' : ' holds'} up to ${cartCapacity} pax combined.`
             + ` Lower your guest count or add another unit for your group of ${pax}.`
         : null
+
+    // Turns AddonPicker's picks into real orders, right after the booking
+    // they attach to exists — addItemOrder()/addItemOrderToGroup() are the
+    // same writers a guest ordering from /menu after paying would use.
+    // Best-effort on purpose: a single line failing (a stale price, a
+    // network blip) must not hold up the reservation the guest is waiting
+    // on — the booking itself is what matters, and anything that didn't
+    // attach can still be ordered afterward.
+    async function submitAddonOrders(targetId, isGroup){
+        if (addonLines.length === 0) return
+        const addOne = isGroup ? addItemOrderToGroup : addItemOrder
+        await Promise.allSettled(addonLines.map((line) => addOne(targetId, line)))
+    }
 
     // One reservation attempt. Split out of handleConfirm because it is made
     // twice in the queue case: once when the guest presses Reserve and is told
@@ -403,6 +565,10 @@ export default function Booking(){
             // whoever is behind. Cleared before navigating, while this
             // component still exists.
             setQueueRequest(null)
+            // Whatever was picked in AddonPicker attaches to the booking that
+            // just got created, then the guest is handed to My Bookings —
+            // same one click as before, the add-ons just ride along invisibly.
+            await submitAddonOrders(result.booking.id, false)
             navigate('/my-booking', {
                 state: { justBooked: result.booking.code, payNow: true },
             })
@@ -450,6 +616,7 @@ export default function Booking(){
 
         setBookingError(null)
         setQueueRequest(null)
+        await submitAddonOrders(result.group.id, true)
         navigate('/my-booking', {
             state: { justBooked: result.group.code, payNow: true },
         })
@@ -510,6 +677,8 @@ export default function Booking(){
     }
 
     return(
+        <>
+        <Seo path="/booking" />
         <main className="page booking-page">
             <div className="booking-shell">
                 <header className="booking-hero">
@@ -535,13 +704,28 @@ export default function Booking(){
                 <div className="booking-layout">
                     <div className="booking-steps">
                         <section className="booking-step" aria-labelledby="step-schedule">
-                            <StepHeader index={0} />
+                            <StepHeader
+                                index={0}
+                                action={rentAllExists && (
+                                    <button
+                                        type="button"
+                                        className={`booking-rentall-toggle${rentAllMode ? ' active' : ''}`}
+                                        onClick={handleToggleRentAll}
+                                        aria-pressed={rentAllMode}
+                                    >
+                                        {rentAllMode ? 'Rent All Resort ✓' : 'Rent All Resort'}
+                                    </button>
+                                )}
+                            />
                             <div className="booking-step-body">
                                 <BookingCalendar
                                     checkIn={dates.checkIn}
                                     checkOut={dates.checkOut}
                                     sameDayCheckout={sameDayCheckout}
                                     onChange={handleDatesChange}
+                                    restrictToFree={rentAllMode}
+                                    scheduleKey={scheduleKey}
+                                    excludeTypeId={rentAllOption?.id ?? null}
                                 />
 
                                 <TimeSelector
@@ -584,7 +768,18 @@ export default function Booking(){
                                     rateGroup={rateGroup}
                                     scheduleKey={scheduleKey}
                                     droppedUnitNote={droppedUnitNote}
+                                    rentAllMode={rentAllMode}
                                 />
+
+                                {/* Same reveal pattern as StayLength under the
+                                    schedule cards: appears once there is
+                                    something to attach it to, not before —
+                                    and stays hidden if every unit in the cart
+                                    is excluded from these addons (Table and
+                                    Chairs, Cottage, Pavilion, Tent Pitching). */}
+                                {cartUnitCount > 0 && cartAddonEligible && (
+                                    <AddonPicker picks={addonPicks} onChange={setAddonPicks} />
+                                )}
                             </div>
                         </section>
 
@@ -600,6 +795,7 @@ export default function Booking(){
                                     rateGroup={rateGroup}
                                     fieldErrors={guestFieldErrors}
                                     showErrors={attemptedConfirm}
+                                    locked={rentAllMode}
                                 />
 
                                 {/* Each ceiling is the party minus the other
@@ -609,6 +805,7 @@ export default function Booking(){
                                     kids={kids}
                                     onKidsChange={setKids}
                                     disabled={!pax}
+                                    locked={rentAllMode}
                                     max={(pax ?? 0) - seniors - pwd}
                                 />
 
@@ -616,6 +813,7 @@ export default function Booking(){
                                     seniors={seniors}
                                     onSeniorsChange={setSeniors}
                                     disabled={!pax}
+                                    locked={rentAllMode}
                                     max={(pax ?? 0) - kids - pwd}
                                 />
 
@@ -623,6 +821,7 @@ export default function Booking(){
                                     pwd={pwd}
                                     onPwdChange={setPwd}
                                     disabled={!pax}
+                                    locked={rentAllMode}
                                     max={(pax ?? 0) - kids - seniors}
                                 />
                             </div>
@@ -683,11 +882,15 @@ export default function Booking(){
                         kids={kids}
                         seniors={seniors}
                         pwd={pwd}
+                        rentAllMode={rentAllMode}
+                        addonLines={addonLines}
+                        addonsPreviewTotal={addonsPreviewTotal}
                     />
                 </div>
             </div>
             <Footer />
 
         </main>
+        </>
     )
 }

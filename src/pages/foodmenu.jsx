@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import './foodmenu.css'
 import Footer from '../components/footer'
 import LotusDividerIcon from '../components/LotusDividerIcon'
+import Seo from '../components/Seo.jsx'
 import { SkeletonImage } from '../components/skeletons/Skeleton.jsx'
 import { useBookings } from '../data/useBookings.js'
 // The banner's own words and photos — see CMS → Food Menu → Menu Banner.
@@ -221,7 +222,7 @@ function FoodOrderModal({ item, onClose, onAddToCart }) {
           <div className={`food-order-body${item.image ? '' : ' no-image'}`}>
             {item.image && (
               <div className="food-order-image">
-                <SkeletonImage src={item.image} alt={item.label} />
+                <SkeletonImage src={item.image} alt={item.label} loading="lazy" decoding="async" />
               </div>
             )}
             <div className="food-order-details">
@@ -388,7 +389,7 @@ function MenuFoodRow({ items, onAddToOrder }) {
           {combined.map((item, i) => (
             <article className="menu-food-card" key={`${item.id}-${i}`}>
               <div className="menu-food-image">
-                <SkeletonImage src={item.image} alt={item.name} />
+                <SkeletonImage src={item.image} alt={item.name} loading="lazy" decoding="async" />
               </div>
               <h3 className="menu-food-name">{item.name}</h3>
               <p className="menu-food-desc">{item.desc}</p>
@@ -672,6 +673,7 @@ function FoodMenuPage() {
 
   return (
     <>
+    <Seo path="/menu" />
     <main className="foodmenu-page">
       <section
         className="foodmenu-hero"
@@ -706,7 +708,7 @@ function FoodMenuPage() {
             </div>
           </div>
           <div className="foodmenu-hero-image">
-            <SkeletonImage src={resolveMenuHeroImage(menuHero.imageUrl)} alt="Featured dish" />
+            <SkeletonImage src={resolveMenuHeroImage(menuHero.imageUrl)} alt="Featured dish" loading="eager" fetchPriority="high" decoding="async" />
           </div>
         </div>
       </section>
@@ -714,7 +716,7 @@ function FoodMenuPage() {
       <section className="howto-order" id="how-to-order">
         <div className="howto-order-panel">
           <div className="howto-order-image">
-            <img src={resolveMenuOrderImage(howToOrder.imageUrl)} alt="Chef preparing a dish" />
+            <img src={resolveMenuOrderImage(howToOrder.imageUrl)} alt="Chef preparing a dish" loading="lazy" decoding="async" />
           </div>
           <div className="howto-order-content">
             <h3>{howToOrder.heading}</h3>

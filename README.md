@@ -112,11 +112,15 @@ are therefore **half prepaid**; only the remaining half is settled on-site.
 ## How receipts work
 
 1. The guest picks a screenshot in the My Bookings payment panel.
-2. `uploadReceipt()` puts it in the private `receipts` bucket under a **random**
-   folder and returns the path. This runs *before* the row is touched, so a
-   failed upload is never recorded as a payment received.
-3. `pay_my_booking()` stores the path in `receipt_url` and appends an entry to
-   `receipt_uploads` stamped with the amount that was due at that moment.
+2. `uploadReceipt()` puts it in the private `receipts` bucket at
+   `<booking id>/<random>.jpg` and returns the path. This runs *before* the row
+   is touched, so a failed upload is never recorded as a payment received.
+3. `pay_my_booking()` checks that the path names a **real object** in the bucket
+   and sits under **this** booking's id, then stores it in `receipt_url` and
+   appends an entry to `receipt_uploads` stamped with the amount that was due at
+   that moment. Both checks matter: an unverified path used to buy permanent
+   exemption from the 10-minute sweep, and an unprefixed one could be replayed
+   from one booking onto another.
 4. Staff open the receipt viewer, which mints a **signed URL valid for 5
    minutes** — the image is never public.
 
@@ -139,6 +143,16 @@ More detail on the data layer: [`src/data/README-accommodation.md`](src/data/REA
 
 Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in your hosting
 provider's environment-variable settings, then redeploy.
+
+Set `VITE_SITE_ORIGIN` to the real domain at the same time. Until it is set,
+every canonical link, the sitemap and the Facebook share image point at a
+placeholder domain — `npm run build` prints a yellow warning while that is
+still the case.
+
+**[`docs/deployment.md`](docs/deployment.md) is the full guide**: which of
+`vercel.json` / `netlify.toml` / the nginx snippet to keep, the one routing
+setting that silently breaks link previews if it is wrong, and how to check a
+deploy actually worked.
 
 ### Why the build fails instead of warning
 
@@ -347,6 +361,31 @@ so the front page is never blank.
 | Command | What it does |
 | --- | --- |
 | `npm run dev` | Dev server with HMR |
-| `npm run build` | Production build (fails without Supabase keys) |
+| `npm run build` | Production build (fails without Supabase keys), then `scripts/seo-postbuild.mjs` |
 | `npm run preview` | Serve the built bundle locally |
 | `npm run lint` | ESLint |
+
+---
+
+## Search engines
+
+Page titles, descriptions and the resort's address and phone live in one file:
+[`src/lib/seoConfig.js`](src/lib/seoConfig.js). Edit that, not `index.html`.
+
+Three things read it, and they must never disagree:
+
+| | |
+| --- | --- |
+| [`components/Seo.jsx`](src/components/Seo.jsx) | Rewrites the `<head>` as the guest navigates. Every public page mounts one. |
+| [`scripts/seo-postbuild.mjs`](scripts/seo-postbuild.mjs) | After `vite build`: writes `robots.txt`, `sitemap.xml`, and a copy of the HTML per route with that route's tags already in it. |
+| [`lib/structuredData.js`](src/lib/structuredData.js) | The JSON-LD that puts the resort in a local search result with a map pin and opening hours. |
+
+Two things are worth knowing before changing any of it:
+
+- **The per-route HTML is not an optimisation.** Facebook, Messenger and Viber
+  read a link preview out of the raw HTML and never run JavaScript. Without
+  those files every link shared anywhere shows the home page's title and photo.
+- **What the schema claims, the page must show.** The phone number in
+  `seoConfig.js` has to match the one in the contact card. Structured data that
+  disagrees with the visible page is what Google drops a rich result for — so
+  when staff change the number in the dashboard, change it here too.

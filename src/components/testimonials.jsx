@@ -67,7 +67,7 @@ export default function Testimonials() {
         <section className="testimonials-section" id="testimonials">
             <div className="testimonials-header">
                 <LotusDividerIcon />
-                {section.title && <h1 className="testimonials-title">{section.title}</h1>}
+                {section.title && <h2 className="testimonials-title">{section.title}</h2>}
                 {section.subtitle && <p className="testimonials-sub">{section.subtitle}</p>}
             </div>
 

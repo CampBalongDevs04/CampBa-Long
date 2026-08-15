@@ -164,6 +164,22 @@
     color: var(--leaf);
 }
 
+/* Rent Resort mode: the count itself dims slightly (still fully legible) so
+   the counter reads as "answered for you" rather than an ordinary editable
+   field the buttons just happen not to respond to. */
+.pax-counter-locked .pax-count{
+    background-color: var(--cream-2);
+    color: var(--leaf);
+    cursor: default;
+}
+
+.pax-field-note{
+    margin: 4px 0 0;
+    font-size: 13px;
+    font-style: italic;
+    color: var(--leaf);
+}
+
 /* Past the selected unit's capacity: the count is allowed on screen so the
    note can explain it, but it reads as a problem rather than a valid entry. */
 .pax-count-over{

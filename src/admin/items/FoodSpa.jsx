@@ -5,7 +5,8 @@ import {useState} from 'react'
 const service = [
     {id: 'all', label: 'All'},
     {id: 'food',label: 'Food'},
-    {id: 'spa', label: 'Spa'}
+    {id: 'spa', label: 'Spa'},
+    {id: 'addons', label: 'Add-ons'}
 ]
 
 export default function FoodSpa({active,onChange}){

@@ -9,14 +9,14 @@ import {
     getSchedule,
     findAccommodationType,
 } from '../../data/accommodationDB.js'
-import { getAccomodationOptions } from '../../data/accomodationOptions.js'
+import { getAccomodationOptions, findRentAllOption, isRentAllOption } from '../../data/accomodationOptions.js'
 
 // `nights` is how many nights the chosen dates come to (1 for Day Time and for
 // a plain overnight stay). The cards keep quoting the RATE — that is what the
 // rate card says and what a guest compares units on — and add what it comes to
 // for the stay underneath, so an extended stay never looks cheaper on the card
 // than it is in the summary.
-export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut, nights = 1, rateGroup, scheduleKey, droppedUnitNote }){
+export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut, nights = 1, rateGroup, scheduleKey, droppedUnitNote, rentAllMode = false }){
     const trackRef = useRef(null)
     // Re-renders whenever anything is booked or cancelled — anywhere in the
     // app — so the counts below are never stale.
@@ -25,6 +25,20 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
     const stayStart = checkIn ?? new Date()
     const stayEnd = checkOut ?? null
     const list = getAccomodationOptions(rateGroup)
+    // Rent Resort mode swaps the whole carousel for just the Rent All card —
+    // nothing else can be added alongside a whole-resort rental. If the
+    // schedule currently picked doesn't offer that card at all, `rentAllCard`
+    // is null and the carousel renders empty (booking.jsx's droppedUnitNote
+    // already explains why when a schedule SWITCH is what caused it).
+    //
+    // The card is also left OUT of the normal, non-Rent-All browsing list —
+    // it's only ever meant to be picked through the dedicated toggle, not
+    // added alongside (or instead of) individual units the way an ordinary
+    // card can be.
+    const rentAllCard = rentAllMode ? findRentAllOption(list) : null
+    const visibleList = rentAllMode
+        ? (rentAllCard ? [rentAllCard] : [])
+        : list.filter((item) => !isRentAllOption(item))
     const schedule = getSchedule(scheduleKey)
     const stayNights = Math.max(1, Number(nights) || 1)
     const isExtended = stayNights > 1
@@ -54,24 +68,27 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
     }
 
     // Bring a preselected card (e.g. coming from the home page "Book Now!")
-    // into view, and re-home the carousel every time the schedule switches.
+    // into view, and re-home the carousel every time the schedule switches OR
+    // Rent Resort mode toggles.
     //
     // `list` is the same array length or not — Day Time and the overnight
-    // schedules don't offer the same units — but it's still the SAME track
-    // DOM node underneath, so the browser keeps whatever scrollLeft it had
-    // from the last schedule instead of resetting it. Left alone, switching
-    // back to Day Time after scrolling around under an overnight schedule
-    // would leave the track exactly where that schedule left it, showing
-    // some card other than the new list's first — with no visual hint that
-    // there's anything to the left.
+    // schedules don't offer the same units, and Rent Resort mode swaps it
+    // down to just one card — but it's still the SAME track DOM node
+    // underneath, so the browser keeps whatever scrollLeft it had from
+    // before instead of resetting it. Left alone, switching back to Day Time
+    // after scrolling around under an overnight schedule (or turning Rent
+    // Resort back off after scrolling to find it) would leave the track
+    // exactly where that left it, showing some card other than the new
+    // list's first — with no visual hint that there's anything to the left.
     //
-    // ONLY on a schedule switch, not on every +/- click: `hasSelection` used
-    // to be a dependency too, so ticking a card's qty up from 0 (or the last
-    // one back down to 0) re-ran this and yanked the carousel to centre on
-    // it, or snapped it back to the first card, while the guest was still
-    // clicking. Reading `hasSelection` inside without listing it is
-    // deliberate — this render's value is what the effect closure captures,
-    // which is what "at the moment rateGroup changes" means.
+    // ONLY on a schedule switch or a Rent Resort toggle, not on every +/-
+    // click: `hasSelection` used to be a dependency too, so ticking a card's
+    // qty up from 0 (or the last one back down to 0) re-ran this and yanked
+    // the carousel to centre on it, or snapped it back to the first card,
+    // while the guest was still clicking. Reading `hasSelection` inside
+    // without listing it is deliberate — this render's value is what the
+    // effect closure captures, which is what "at the moment rateGroup or
+    // rentAllMode changes" means.
     //
     // The TRACK is scrolled, not the card — scrollIntoView() walks every
     // scrollable ancestor including the page itself, so centring a card that
@@ -98,7 +115,7 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
             track.scrollLeft = 0
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps -- see the note above the effect
-    }, [rateGroup])
+    }, [rateGroup, rentAllMode])
 
     return(
         <div className="accomodation-list">
@@ -119,6 +136,12 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
                     Select a stay schedule above to see pricing and the units available for it.
                 </p>
             )}
+            {rateGroup && rentAllMode && !rentAllCard && (
+                <p className="accomodation-schedule-note">
+                    Renting the whole resort isn't offered on this schedule — try Day Time or an
+                    overnight schedule that has it, or turn Rent Resort off to pick units individually.
+                </p>
+            )}
             {droppedUnitNote && (
                 <p className="accomodation-dropped-note" role="status">{droppedUnitNote}</p>
             )}
@@ -132,8 +155,14 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
                     &#8249;
                 </button>
 
-                <div className="accomodation-track" ref={trackRef}>
-                    {list.map((item) => {
+                {/* One card in Rent Resort mode never fills the track's width —
+                    centred instead of sitting flush left with empty space
+                    trailing it, the way a full carousel reads. */}
+                <div
+                    className={`accomodation-track${visibleList.length === 1 ? ' accomodation-track-centered' : ''}`}
+                    ref={trackRef}
+                >
+                    {visibleList.map((item) => {
                         const unlimited = item.unlimited === true
                         const availability = unlimited
                             ? null
@@ -153,10 +182,17 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
                         const qty = cartCount(item.id)
                         // Capped at what's actually free for the stay — a
                         // guest can put 2 Teepees in the cart when 2 are open,
-                        // never 3. Unlimited (tent pitching) and "no schedule
+                        // never 3. `.available` already accounts for what's
+                        // taken elsewhere (1 of 2 available means only 1 can
+                        // go in the cart, not 2) — `.total` is the physical
+                        // count of the type and was the wrong field to cap
+                        // against; that let a guest add a unit the resort
+                        // didn't actually have free, caught only when
+                        // reserve() hit the real availability check on the
+                        // server. Unlimited (tent pitching) and "no schedule
                         // picked yet" (availability still null) both leave the
                         // + button enabled; there's simply no ceiling to check yet.
-                        const ownRemaining = unlimited || availability == null ? null : availability.total - qty
+                        const ownRemaining = unlimited || availability == null ? null : availability.available - qty
                         const atOwnMax = ownRemaining != null && ownRemaining <= 0
 
                         // The pool-wide check on top of the per-card one above:
@@ -186,7 +222,7 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
                                 )}
                                 <div className="accomodation-card-image">
                                     {item.image
-                                        ? <SkeletonImage src={item.image} alt={item.name} />
+                                        ? <SkeletonImage src={item.image} alt={item.name} loading="lazy" decoding="async" />
                                         : <span className="accomodation-card-noimage">No image</span>}
                                     {/* On the photo rather than down in the
                                         price line, because the carousel is
@@ -265,6 +301,16 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
                                     </span>
                                 </div>
                                 <div className="accomodation-card-qty">
+                                    {rentAllMode ? (
+                                        // No +/- here — renting the whole resort is a
+                                        // single fixed pick, not a quantity a guest can
+                                        // dial up or down. booking.jsx's effect is what
+                                        // keeps this card at qty 1 in the cart.
+                                        <span className="accomodation-card-qty-locked" aria-live="polite">
+                                            {qty > 0 ? 'Selected — whole resort' : 'Selecting the whole resort…'}
+                                        </span>
+                                    ) : (
+                                    <>
                                     <button
                                         type="button"
                                         className="accomodation-card-qty-step"
@@ -286,6 +332,8 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
                                     >
                                         +
                                     </button>
+                                    </>
+                                    )}
                                 </div>
                             </div>
                         )
