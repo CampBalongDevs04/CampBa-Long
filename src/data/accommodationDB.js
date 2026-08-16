@@ -1277,18 +1277,20 @@ export function isResortFreeOn(date, scheduleKey, excludeTypeId = null){
 
 // --- local computations over the rows this session can see -----------------
 
-// The status that decides what a held unit IS — an unpaid hold or a confirmed
-// reservation. For a member row of a combined reservation that is the GROUP's
-// status, never the member's own: a member row is born 'pending' and stays
-// there for life. pay_booking_group() mirrors the receipt and payment onto it
-// but deliberately not the status, and staff approve the booking_groups row,
-// so nothing ever moves a member off 'pending'. Read the member's own column
-// here and every unit of a confirmed — even fully paid — group reads as an
-// unpaid hold on the Units board for the whole stay.
+// The row that says what a held unit IS — its group for a member of a combined
+// reservation, the booking itself for everything else. A member row is born
+// 'pending' and stays there for life: pay_booking_group() mirrors the receipt
+// and payment onto it but deliberately not the status, and staff approve the
+// booking_groups row. Read the member's own columns and every unit of a
+// confirmed — even fully paid — group reads as an unpaid hold for the whole
+// stay, which is exactly what the Units board used to show.
+function authoritativeRowFor(booking) {
+    if (booking.groupId == null) return booking
+    return bookingGroups.find((entry) => entry.id === booking.groupId) ?? booking
+}
+
 function effectiveBookingStatus(booking) {
-    if (booking.groupId == null) return booking.status
-    const group = bookingGroups.find((entry) => entry.id === booking.groupId)
-    return group ? group.status : booking.status
+    return authoritativeRowFor(booking).status
 }
 
 // Bookings that currently hold a unit. Cancelled ones release their dates —
@@ -1303,8 +1305,32 @@ function blockingBookings() {
     )
 }
 
+// How far along the stay holding this unit is, in the three words staff use:
+//
+//   pending  — "Waiting for Payment". Held, but no receipt has been verified.
+//   reserved — staff verified the receipt; the down payment is in and the rest
+//              is settled on arrival.
+//   booked   — paid in full, nothing left to collect.
+//
+// Payment, not stage of stay, decides the last two: a guest who settles the
+// balance on the day is 'reserved' right up until staff record it.
 function unitStatusFor(booking) {
-    return effectiveBookingStatus(booking) === 'pending' ? 'pending' : 'booked'
+    const row = authoritativeRowFor(booking)
+    if (row.status === 'pending') return 'pending'
+    return row.payment === 'paid-full' ? 'booked' : 'reserved'
+}
+
+// Which of two units-worth of status wins when one unit carries several
+// bookings in a day — the furthest along, so a unit paid for in the morning
+// and only held in the evening still reads as taken rather than as a hold.
+const UNIT_STATUS_RANK = { available: 0, pending: 1, reserved: 2, booked: 3 }
+
+function strongestUnitStatus(statuses) {
+    let strongest = 'available'
+    for (const status of statuses) {
+        if (UNIT_STATUS_RANK[status] > UNIT_STATUS_RANK[strongest]) strongest = status
+    }
+    return strongest
 }
 
 export function findConflicts(unitId, window, { ignoreBookingId = null } = {}) {
@@ -1316,16 +1342,11 @@ export function findConflicts(unitId, window, { ignoreBookingId = null } = {}) {
     )
 }
 
-// Status of one unit for a stay: 'available' | 'pending' | 'booked'.
+// Status of one unit for a stay: 'available' | 'pending' | 'reserved' | 'booked'.
 // Exact for a staff session, which is the only place per-unit status is shown.
 export function getUnitStatus(unitId, checkIn = new Date(), checkOut = null, scheduleKey = null) {
     const window = occupancyWindow({ checkIn, checkOut, scheduleKey })
-    let status = 'available'
-    for (const booking of findConflicts(unitId, window)) {
-        if (unitStatusFor(booking) === 'booked') return 'booked'
-        status = 'pending'
-    }
-    return status
+    return strongestUnitStatus(findConflicts(unitId, window).map(unitStatusFor))
 }
 
 export function buildUnits(type, checkIn = new Date(), checkOut = null, scheduleKey = null) {
@@ -1362,13 +1383,7 @@ export function getUnitDayDetail(unitId, date) {
         })
         .sort((a, b) => a.from - b.from)
 
-    const status = slots.some((slot) => slot.status === 'booked')
-        ? 'booked'
-        : slots.length > 0
-            ? 'pending'
-            : 'available'
-
-    return { status, slots }
+    return { status: strongestUnitStatus(slots.map((slot) => slot.status)), slots }
 }
 
 // Occupancy across the whole resort for a day — the admin stat cards.

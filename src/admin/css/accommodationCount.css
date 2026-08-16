@@ -125,7 +125,8 @@
     color: var(--leaf);
 }
 
-.accommodation-card-pending {
+.accommodation-card-pending,
+.accommodation-card-reserved {
     margin: 0;
     font-family: 'Jost', sans-serif;
     font-size: 0.65rem;
@@ -133,6 +134,12 @@
     letter-spacing: 1px;
     text-transform: uppercase;
     color: #b07d2b;
+}
+
+/* Verified, not yet settled — its own tone, so a card carrying both lines
+   reads as two different things at a glance. */
+.accommodation-card-reserved {
+    color: #3a5e7d;
 }
 
 /* ---------- Individual unit grid ---------- */
@@ -167,6 +174,11 @@
     border: 1px solid rgba(176, 125, 43, 0.4);
 }
 
+.accommodation-unit.is-reserved {
+    background: rgba(58, 94, 125, 0.12);
+    border: 1px solid rgba(58, 94, 125, 0.4);
+}
+
 .accommodation-unit-id {
     font-family: 'Jost', sans-serif;
     font-size: 0.72rem;
@@ -193,6 +205,10 @@
 
 .accommodation-unit.is-pending .accommodation-unit-status {
     color: #b07d2b;
+}
+
+.accommodation-unit.is-reserved .accommodation-unit-status {
+    color: #3a5e7d;
 }
 
 /* Which hours of the selected day are taken, and by whom. A unit can hold
