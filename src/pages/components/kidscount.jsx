@@ -66,7 +66,7 @@ export default function KidsCount({ kids, onKidsChange, disabled = false, max = 
                     {disabled ? (
                         <>Set the <strong>number of guests</strong> first — kids are counted within your guest total.</>
                     ) : (
-                        <>Only <strong>7 years old and below</strong> — kids in this age range have no entrance fee.</>
+                        <>Only <strong>7 years old and below</strong></>
                     )}
                 </span>
             </p>
