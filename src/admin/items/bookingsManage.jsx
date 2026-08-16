@@ -12,6 +12,7 @@ import {
     markBookingGroupPaidFull,
     cancelBookingGroup,
     groupUnitsLabel,
+    guestPartyLabel,
 } from '../../data/accommodationDB.js'
 
 // Rows come straight from the accommodation database — the same records the
@@ -38,6 +39,11 @@ const PAYMENT_BADGE = {
     'paid-full': { label: 'Paid Full', className: 'is-paid' },
     'down-payment': { label: 'Down Payment', className: 'is-dp' },
     unpaid: { label: 'Unpaid', className: 'is-unpaid' },
+}
+
+function formatPeso(amount) {
+    if (amount == null) return '—'
+    return `₱${Number(amount).toLocaleString()}`
 }
 
 function formatDate(iso) {
@@ -67,27 +73,6 @@ function formatBookedTime(iso) {
     const day = date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
     const time = date.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })
     return `${day} · ${time}`
-}
-
-// Who is in the party, for the Guests column: total pax, then the two counts
-// that change what happens at the desk.
-//
-// The SENIOR and PWD counts are the reason this column exists. The senior discount is no
-// longer applied by the system — the resort gives it in person against a Senior
-// Citizen ID (see SENIOR_DISCOUNT_RATE in data/entranceFee.js) — so whoever is
-// settling the balance has to be able to see how many seniors the booking
-// declared. It was on the booking row all along and shown nowhere staff look.
-//
-// Kids ride along because they are the other count that alters the money and
-// they cost nothing to show once the column exists.
-function guestsLabel(booking) {
-    if (!booking.pax) return '—'
-    const extras = [
-        booking.seniors > 0 ? `${booking.seniors} senior${booking.seniors > 1 ? 's' : ''}` : null,
-        booking.pwd > 0 ? `${booking.pwd} PWD` : null,
-        booking.kids > 0 ? `${booking.kids} kid${booking.kids > 1 ? 's' : ''}` : null,
-    ].filter(Boolean)
-    return extras.length ? `${booking.pax} pax · ${extras.join(', ')}` : `${booking.pax} pax`
 }
 
 // The unit the database assigned, e.g. "A-House Small · AHS-02". Tent pitching
@@ -250,7 +235,7 @@ export default function BookingsManage() {
                                                 see the @container block in bookings-manage.css. */}
                                             <td className="col-name">{b.guest?.fullName || '—'}</td>
                                             <td>{formatBookedTime(b.createdAt)}</td>
-                                            <td className="col-guests">{guestsLabel(b)}</td>
+                                            <td className="col-guests">{guestPartyLabel(b)}</td>
                                             <td className="col-unit">{unitLabel(b)}</td>
                                             <td className="col-stay">{formatRange(b)}</td>
                                             <td>{b.schedule?.time ?? '—'}</td>
@@ -296,7 +281,17 @@ export default function BookingsManage() {
                                                     {status.label || b.stage}
                                                 </span>
                                             </td>
-                                            <td className="col-total">₱{Number(b.total ?? 0).toLocaleString()}</td>
+                                            {/* Everything the booking costs — units,
+                                                entrance fees and any food, spa or
+                                                add-on ordered against it. `total` is
+                                                the unit rate alone, which read as the
+                                                whole bill sitting under a column
+                                                called Total and is not the figure
+                                                anyone settles up against. Same number
+                                                the Excel export totals (see
+                                                bookingReport.js) and the receipt
+                                                viewer's breakdown arrives at. */}
+                                            <td className="col-total">{formatPeso(b.stayTotal ?? b.total)}</td>
                                             <td className="col-actions">
                                                 {/* Verifying the receipt turns the hold into a
                                                     confirmed stay on the guest's side — so when

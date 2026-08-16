@@ -121,15 +121,11 @@
     font-weight: 700;
 }
 
-/* ---------- Food / spa add-ons ---------- */
+/* ---------- Cost breakdown (units, entrance, add-ons, totals) ---------- */
 .receipt-orders {
     flex-shrink: 0;
     padding: 14px 20px;
     border-bottom: 1px solid rgba(198, 161, 91, 0.3);
-}
-
-.receipt-orders-group + .receipt-orders-group {
-    margin-top: 10px;
 }
 
 .receipt-orders-title {
@@ -143,12 +139,29 @@
 
 .receipt-order-row {
     display: flex;
-    align-items: center;
+    /* Baseline, not centre: a line whose label carries a second row of
+       arithmetic under it must still sit level with its amount. */
+    align-items: baseline;
     justify-content: space-between;
     gap: 12px;
     padding: 3px 0;
     font-size: 0.86rem;
     color: var(--forest-dark, #0a160e);
+}
+
+/* The label and, under it, how the amount beside it was arrived at — the
+   entrance rate per head and every deduction that came off it. */
+.receipt-cost-label {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.receipt-cost-note {
+    font-size: 0.72rem;
+    line-height: 1.35;
+    color: rgba(10, 22, 14, 0.55);
 }
 
 .receipt-order-total {
