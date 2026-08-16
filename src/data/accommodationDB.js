@@ -1277,15 +1277,34 @@ export function isResortFreeOn(date, scheduleKey, excludeTypeId = null){
 
 // --- local computations over the rows this session can see -----------------
 
-// Bookings that currently hold a unit. Cancelled ones release their dates.
+// The status that decides what a held unit IS — an unpaid hold or a confirmed
+// reservation. For a member row of a combined reservation that is the GROUP's
+// status, never the member's own: a member row is born 'pending' and stays
+// there for life. pay_booking_group() mirrors the receipt and payment onto it
+// but deliberately not the status, and staff approve the booking_groups row,
+// so nothing ever moves a member off 'pending'. Read the member's own column
+// here and every unit of a confirmed — even fully paid — group reads as an
+// unpaid hold on the Units board for the whole stay.
+function effectiveBookingStatus(booking) {
+    if (booking.groupId == null) return booking.status
+    const group = bookingGroups.find((entry) => entry.id === booking.groupId)
+    return group ? group.status : booking.status
+}
+
+// Bookings that currently hold a unit. Cancelled ones release their dates —
+// including a member unit whose group was cancelled a moment ago, before the
+// member rows themselves have been read back.
 function blockingBookings() {
     return bookings.filter(
-        (booking) => booking.status !== 'cancelled' && booking.unitId != null,
+        (booking) =>
+            booking.unitId != null &&
+            booking.status !== 'cancelled' &&
+            effectiveBookingStatus(booking) !== 'cancelled',
     )
 }
 
 function unitStatusFor(booking) {
-    return booking.status === 'pending' ? 'pending' : 'booked'
+    return effectiveBookingStatus(booking) === 'pending' ? 'pending' : 'booked'
 }
 
 export function findConflicts(unitId, window, { ignoreBookingId = null } = {}) {
@@ -1756,6 +1775,13 @@ function removeLocal(id) {
     notify()
 }
 
+// The member units of one combined reservation, in the admin array only — a
+// guest never holds member rows (my_bookings() does not return them).
+function applyPatchMembers(groupId, patch) {
+    bookings = bookings.map((b) => (b.groupId === groupId ? { ...b, ...patch } : b))
+    notify()
+}
+
 function applyPatchGroup(id, patch) {
     bookingGroups = bookingGroups.map((g) => (g.id === id ? { ...g, ...patch } : g))
     myBookingGroups = myBookingGroups.map((g) => (g.id === id ? { ...g, ...patch } : g))
@@ -1802,18 +1828,39 @@ export function markBookingPaidFull(id) {
     return patchBooking(id, { payment: 'paid-full' })
 }
 
-// Staff-only, same as patchBooking() above but for the group row. Confirming
-// or marking a group paid-full does not need to touch its member `bookings`
-// rows — those already stopped being "unpaid holds" the moment
-// pay_booking_group() mirrored the receipt onto them (see the migration), and
-// their own `status` staying 'pending' is harmless: nothing reads a member
-// row's status directly once it has a group_id, only the group's.
+// Staff-only, same as patchBooking() above but for the group row — and for its
+// member `bookings` rows, which carry the same status and payment. Leaving them
+// behind is not harmless, as it looked while nothing but the group's own card
+// was read: a member row still sitting at 'pending' with no receipt is exactly
+// what expire_stale_bookings() sweeps, so a group confirmed by staff before the
+// guest ever uploaded could have its units cancelled out from under it once the
+// payment window passed. Both tables are written the same way the rest of the
+// staff paths here write them (see cancelBookingGroup below).
 async function patchBookingGroup(id, patch) {
     const { error } = await supabase.from('booking_groups').update(patch).eq('id', id)
     if (error) {
         console.error('Could not update reservation:', error.message)
         return { ok: false, message: error.message }
     }
+
+    // Only the two columns a member row shares with its group. Everything else
+    // on a group (its receipt, its totals) belongs to the reservation as a
+    // whole and has no meaning on one unit of it.
+    const memberPatch = {}
+    if (patch.status !== undefined) memberPatch.status = patch.status
+    if (patch.payment !== undefined) memberPatch.payment = patch.payment
+    if (Object.keys(memberPatch).length > 0) {
+        const { error: membersError } = await supabase
+            .from('bookings')
+            .update(memberPatch)
+            .eq('group_id', id)
+        if (membersError) {
+            console.error('Could not update the reservation\'s units:', membersError.message)
+            return { ok: false, message: membersError.message }
+        }
+        applyPatchMembers(id, memberPatch)
+    }
+
     clearCaches()
     applyPatchGroup(id, patch)
     return { ok: true }

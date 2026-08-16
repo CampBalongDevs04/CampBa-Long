@@ -5,6 +5,7 @@ import {
     listUnitIds,
     getUnitDayDetail,
     useAccommodationDB,
+    useBookingGroups,
     toISODate,
     formatShortDate,
 } from '../../data/accommodationDB.js'
@@ -26,8 +27,14 @@ function groupByPool(types) {
 }
 
 export default function AccommodationCount() {
-    
+
     useAccommodationDB()
+    // A unit held by a combined reservation takes its status from the GROUP
+    // row, so this board has to re-render when those load or change too —
+    // useAccommodationDB() alone only reacts to the single-unit array, and
+    // groups land a beat later on the first page load (same reason units.jsx
+    // subscribes to both).
+    useBookingGroups()
     const [selectedDate, setSelectedDate] = useState(() => toISODate(new Date()))
     const isToday = selectedDate === toISODate(new Date())
 
