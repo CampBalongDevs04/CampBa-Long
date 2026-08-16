@@ -10,9 +10,13 @@ import {
     formatShortDate,
 } from '../../data/accommodationDB.js'
 
+// The life of a held unit, in the order it moves through: nobody has paid, the
+// receipt has been verified, the balance has been settled. 'Booked' is the end
+// of that road, not the start of it — a unit nobody has paid for yet says so.
 const UNIT_STATUS = {
     available: { label: 'Available', className: 'is-available' },
     pending: { label: 'Waiting for Payment', className: 'is-pending' },
+    reserved: { label: 'Reserved', className: 'is-reserved' },
     booked: { label: 'Booked', className: 'is-booked' },
 }
 
@@ -67,8 +71,10 @@ export default function AccommodationCount() {
                         id,
                         ...getUnitDayDetail(id, selectedDate),
                     }))
-                    const availableCount = units.filter((unit) => unit.status === 'available').length
-                    const pendingCount = units.filter((unit) => unit.status === 'pending').length
+                    const countOf = (status) => units.filter((unit) => unit.status === status).length
+                    const availableCount = countOf('available')
+                    const pendingCount = countOf('pending')
+                    const reservedCount = countOf('reserved')
 
                     return (
                         <div
@@ -93,6 +99,11 @@ export default function AccommodationCount() {
                                     {pendingCount > 0 && (
                                         <p className="accommodation-card-pending">
                                             {pendingCount} waiting for payment
+                                        </p>
+                                    )}
+                                    {reservedCount > 0 && (
+                                        <p className="accommodation-card-reserved">
+                                            {reservedCount} reserved
                                         </p>
                                     )}
                                 </div>
