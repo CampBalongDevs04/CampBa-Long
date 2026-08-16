@@ -761,6 +761,27 @@ export function groupUnitsLabel(units) {
         .join(', ')
 }
 
+// Who is in the party: total pax, then the counts that change what happens at
+// the desk. Shared by every staff screen that shows a booking — the table's
+// Guests column and the receipt viewer — so the two cannot describe the same
+// party differently.
+//
+// The SENIOR and PWD counts are the reason this exists. Neither discount is
+// applied by the system any more — the resort gives both in person against an
+// ID (see SENIOR_DISCOUNT_RATE and PWD_DISCOUNT_RATE in data/entranceFee.js) —
+// so whoever settles the balance has to be able to see how many of each the
+// booking declared. Kids ride along because they are the other count that
+// alters the money.
+export function guestPartyLabel(booking) {
+    if (!booking?.pax) return '—'
+    const extras = [
+        booking.seniors > 0 ? `${booking.seniors} senior${booking.seniors > 1 ? 's' : ''}` : null,
+        booking.pwd > 0 ? `${booking.pwd} PWD` : null,
+        booking.kids > 0 ? `${booking.kids} kid${booking.kids > 1 ? 's' : ''}` : null,
+    ].filter(Boolean)
+    return extras.length ? `${booking.pax} pax · ${extras.join(', ')}` : `${booking.pax} pax`
+}
+
 function upsertLocalGroup(group) {
     const index = myBookingGroups.findIndex((item) => item.id === group.id)
     if (index === -1) commitMineGroups([group, ...myBookingGroups])

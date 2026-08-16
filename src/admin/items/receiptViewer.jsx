@@ -5,7 +5,9 @@ import {
     getBookingStage,
     DOWNPAYMENT_RATE,
     groupUnitsLabel,
+    guestPartyLabel,
 } from '../../data/accommodationDB.js'
+import { splitFreeEntrance } from '../../data/entranceFee.js'
 
 // The proof-of-payment lightbox. Staff open this from the bookings table to
 // read the guest's uploaded screenshot BEFORE approving the reservation —
@@ -74,6 +76,57 @@ function stayLabel(booking) {
 
 function orderTotal(orders) {
     return orders.reduce((sum, order) => sum + order.total, 0)
+}
+
+// What the units on this reservation cost, before entrance and add-ons. Stored
+// per-row for a single booking (`price`) and rolled up for a combined one
+// (`unitSubtotal`), which is the only difference between the two shapes here.
+function unitCost(booking) {
+    const amount = booking.isGroup ? booking.unitSubtotal : booking.price
+    return amount != null ? Number(amount) : null
+}
+
+// The entrance line's own arithmetic, in the words the guest's saved receipt
+// uses (pages/components/receiptImage.js) — every head at the schedule's rate,
+// then what came off it. Kids and the rate card's free-entrance inclusion are
+// stored as one combined bucket on the row, so they are split back out here;
+// see splitFreeEntrance() for why the split is recoverable at all.
+//
+// The senior and PWD counts are NOT arithmetic on this screen: the resort gives
+// both discounts in person against an ID (see data/entranceFee.js), so what
+// staff need here is the count, which is why it rides in the Guests fact above
+// rather than as a deduction. A booking old enough to carry a stored senior
+// discount still shows it — the row is read, never recomputed.
+function entranceNotes(booking) {
+    const entrance = booking.entrance ?? {}
+    const { kidsApplied, kidsFree, perkApplied, perkSavings } = splitFreeEntrance({
+        freeApplied: entrance.freeApplied,
+        freeSavings: entrance.freeSavings,
+        kids: booking.kids,
+        perHead: entrance.perHead,
+    })
+    return [
+        entrance.perHead > 0 ? `${formatPeso(entrance.perHead)}/head` : null,
+        booking.pax ? `${booking.pax} pax` : null,
+        kidsApplied > 0 ? `${kidsApplied} free (kids) −${formatPeso(kidsFree)}` : null,
+        perkApplied > 0 ? `${perkApplied} free (inclusion) −${formatPeso(perkSavings)}` : null,
+        entrance.seniorDiscount > 0
+            ? `senior discount −${formatPeso(entrance.seniorDiscount)}`
+            : null,
+    ].filter(Boolean).join(' · ')
+}
+
+// One line of the breakdown: what it is, the arithmetic behind it, the amount.
+function CostRow({ label, note, value, variant = '' }) {
+    return (
+        <div className={`receipt-order-row${variant ? ` ${variant}` : ''}`}>
+            <span className="receipt-cost-label">
+                {label}
+                {note ? <span className="receipt-cost-note">{note}</span> : null}
+            </span>
+            <span>{value}</span>
+        </div>
+    )
 }
 
 export default function ReceiptViewer({ booking, onClose, onApprove, onCancel }) {
@@ -178,7 +231,19 @@ export default function ReceiptViewer({ booking, onClose, onApprove, onCancel })
     const foodOrders = booking.foodOrders ?? []
     const spaOrders = booking.spaOrders ?? []
     const itemOrders = booking.itemOrders ?? []
-    const hasAddOns = foodOrders.length > 0 || spaOrders.length > 0 || itemOrders.length > 0
+
+    // Everything the stay costs, line by line, so the down payment above can be
+    // checked against the arithmetic it came from rather than taken on trust.
+    // `stayTotal` is the stored figure (Postgres adds it up, same as it does the
+    // down payment); the fallback only covers a row saved before it existed.
+    const units = unitCost(booking)
+    const entranceTotal = Number(booking.entrance?.total ?? 0)
+    const addOnsTotal = orderTotal(foodOrders) + orderTotal(spaOrders) + orderTotal(itemOrders)
+    const stayTotal = Number(booking.stayTotal ?? (units ?? 0) + entranceTotal + addOnsTotal)
+    // What the desk still collects. A booking marked paid-full is settled
+    // whatever the screenshots add up to — that flag IS staff saying so.
+    const credited = booking.payment === 'paid-full' ? stayTotal : submitted
+    const dueOnArrival = Math.max(0, Math.round((stayTotal - credited) * 100) / 100)
 
     return (
         <div
@@ -246,6 +311,14 @@ export default function ReceiptViewer({ booking, onClose, onApprove, onCancel })
                             <dt>Stay</dt>
                             <dd>{stayLabel(booking)}</dd>
                         </div>
+                        {/* The counts the desk acts on. Senior and PWD discounts
+                            are given in person against an ID, so this is the
+                            only place the amount of them is decided — a count
+                            staff cannot see is a discount that cannot happen. */}
+                        <div className="receipt-fact">
+                            <dt>Guests</dt>
+                            <dd>{guestPartyLabel(booking)}</dd>
+                        </div>
                         <div className="receipt-fact">
                             <dt>Mobile</dt>
                             <dd>{booking.guest?.mobile || '—'}</dd>
@@ -256,47 +329,74 @@ export default function ReceiptViewer({ booking, onClose, onApprove, onCancel })
                         </div>
                     </dl>
 
-                    {hasAddOns && (
-                        <div className="receipt-orders">
-                            {foodOrders.length > 0 && (
-                                <div className="receipt-orders-group">
-                                    <p className="receipt-orders-title">Food orders</p>
-                                    {foodOrders.map((order, index) => (
-                                        <div className="receipt-order-row" key={`food-${index}`}>
-                                            <span>{order.name} × {order.quantity}</span>
-                                            <span>{formatPeso(order.total)}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                            {spaOrders.length > 0 && (
-                                <div className="receipt-orders-group">
-                                    <p className="receipt-orders-title">Spa orders</p>
-                                    {spaOrders.map((order, index) => (
-                                        <div className="receipt-order-row" key={`spa-${index}`}>
-                                            <span>{order.name} × {order.quantity}</span>
-                                            <span>{formatPeso(order.total)}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                            {itemOrders.length > 0 && (
-                                <div className="receipt-orders-group">
-                                    <p className="receipt-orders-title">Add-ons requested</p>
-                                    {itemOrders.map((order, index) => (
-                                        <div className="receipt-order-row" key={`item-${index}`}>
-                                            <span>{order.name} × {order.quantity}</span>
-                                            <span>{formatPeso(order.total)}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                            <div className="receipt-order-row receipt-order-total">
-                                <span>Add-ons total</span>
-                                <span>{formatPeso(orderTotal(foodOrders) + orderTotal(spaOrders) + orderTotal(itemOrders))}</span>
-                            </div>
-                        </div>
-                    )}
+                    {/* One ledger rather than a section per kind: it is read top
+                        to bottom and has to arrive at the total, which section
+                        headings above a grand total actively work against. */}
+                    <div className="receipt-orders">
+                        <p className="receipt-orders-title">Cost breakdown</p>
+
+                        <CostRow
+                            label={booking.isGroup ? 'Accommodation' : booking.accomodationName}
+                            note={
+                                booking.isGroup
+                                    ? groupUnitsLabel(booking.units)
+                                    : booking.unitId
+                            }
+                            value={units != null ? formatPeso(units) : 'To be advised'}
+                        />
+
+                        {entranceTotal > 0 && (
+                            <CostRow
+                                label="Entrance fees"
+                                note={entranceNotes(booking)}
+                                value={formatPeso(entranceTotal)}
+                            />
+                        )}
+
+                        {foodOrders.map((order, index) => (
+                            <CostRow
+                                key={`food-${index}`}
+                                label={`Food · ${order.name}`}
+                                note={order.quantity ? `× ${order.quantity}` : null}
+                                value={formatPeso(order.total)}
+                            />
+                        ))}
+                        {spaOrders.map((order, index) => (
+                            <CostRow
+                                key={`spa-${index}`}
+                                label={`Spa · ${order.name}`}
+                                note={order.quantity ? `× ${order.quantity}` : null}
+                                value={formatPeso(order.total)}
+                            />
+                        ))}
+                        {itemOrders.map((order, index) => (
+                            <CostRow
+                                key={`item-${index}`}
+                                label={`Add-on · ${order.name}`}
+                                note={order.quantity ? `× ${order.quantity}` : null}
+                                value={formatPeso(order.total)}
+                            />
+                        ))}
+
+                        <CostRow
+                            label="Total cost of booking"
+                            note="units, entrance and add-ons"
+                            value={formatPeso(stayTotal)}
+                            variant="receipt-order-total"
+                        />
+                        <CostRow
+                            label={`Down payment (${Math.round(DOWNPAYMENT_RATE * 100)}%)`}
+                            value={formatPeso(expected)}
+                        />
+                        {/* The figure the desk collects on arrival — what the
+                            balance actually is, not half the total, once part
+                            payments and a paid-full mark are taken off. */}
+                        <CostRow
+                            label={dueOnArrival > 0 ? 'Balance on arrival' : 'Settled'}
+                            note={credited > 0 ? `${formatPeso(credited)} received` : null}
+                            value={formatPeso(dueOnArrival)}
+                        />
+                    </div>
 
                     <div className="receipt-stage">
                         {missingImage && (
