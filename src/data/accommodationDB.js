@@ -65,6 +65,7 @@ import {
     SUPABASE_SETUP_MESSAGE,
 } from '../lib/supabaseClient.js'
 import { getOwnerToken, isOwnerTokenPersistent, forgetOwnerToken } from './bookingOwner.js'
+import { isMaintenanceDow, isMaintenanceDate } from './maintenanceDays.js'
 
 // ---------------------------------------------------------------- constants
 
@@ -1275,25 +1276,72 @@ export function getAvailability(idOrPrefix, checkIn = new Date(), checkOut = nul
     return null
 }
 
-// Whether EVERY other active type is fully free on one date — what "Rent All
-// Resort" needs, since renting the whole resort only makes sense on a day
-// nothing else is booked. Built on the same cached per-date RPC every card
-// already uses (getAvailability), so this costs nothing new: one call for the
-// date (all types come back together), read back per type.
+// Whether EVERY other active type is free for the WHOLE stay — what "Rent All
+// Resort" needs, since renting the whole resort only makes sense over a stay
+// nothing else is booked during, not just on the first night of it. Built on
+// the same cached range-aware RPC every card already uses for its own
+// availability (getAvailability), so this costs nothing new: one call per
+// type for the range (all types come back together on the first call), read
+// back per type.
 //
 // `excludeTypeId` leaves the rent-all card itself out of its own check — it
 // owns no physical units to conflict with. Returns null while any type's
 // answer is still in flight (same "don't know yet" the cards already show as
 // "Availability TBA"), so a caller can tell "not free" from "not answered".
-export function isResortFreeOn(date, scheduleKey, excludeTypeId = null){
+export function isResortFreeForStay(checkIn, checkOut = null, scheduleKey = null, excludeTypeId = null){
     let allFree = true
     for (const type of ACCOMMODATION_TYPES){
         if (type.id === excludeTypeId) continue
-        const availability = getAvailability(type.id, date, null, scheduleKey)
+        const availability = getAvailability(type.id, checkIn, checkOut, scheduleKey)
         if (availability == null) return null
         if (availability.available < availability.total) allFree = false
     }
     return allFree
+}
+
+function isClosedDay(date){
+    return isMaintenanceDow(date.getDay()) || isMaintenanceDate(date)
+}
+
+// Up to `limit` upcoming check-in dates, starting the day after `from`, where
+// renting the whole resort would actually be possible — every other type free
+// for a stay of `nightsGap` nights (0 for a same-day schedule like Day Time).
+// What the Rent All card recommends once it finds itself blocked on the dates
+// the guest actually picked.
+//
+// A client-side day-by-day walk, not a database RPC — there is no server-side
+// "find N free resort-wide windows" query, but isResortFreeForStay() is cheap
+// per day (it reads the same cache the walk itself is filling in as it goes),
+// so this simply asks the question `maxDays` times at most and keeps the
+// first `limit` yeses.
+//
+// Closed days are skipped outright, weekly pattern or one-off — a
+// "recommendation" the maintenance-day rule would refuse at Reserve is worse
+// than no recommendation at all.
+export function findResortFreeDates(from, nightsGap, scheduleKey, excludeTypeId = null, { maxDays = 30, limit = 3 } = {}){
+    if (from == null) return []
+    const results = []
+    for (let offset = 1; offset <= maxDays && results.length < limit; offset++){
+        const candidateCheckIn = new Date(normalizeDate(from) + offset * DAY_MS)
+        if (isClosedDay(candidateCheckIn)) continue
+
+        let touchesClosure = false
+        for (let n = 1; n <= nightsGap; n++){
+            if (isClosedDay(new Date(normalizeDate(candidateCheckIn) + n * DAY_MS))){
+                touchesClosure = true
+                break
+            }
+        }
+        if (touchesClosure) continue
+
+        const candidateCheckOut = nightsGap > 0
+            ? new Date(normalizeDate(candidateCheckIn) + nightsGap * DAY_MS)
+            : null
+        if (isResortFreeForStay(candidateCheckIn, candidateCheckOut, scheduleKey, excludeTypeId) === true){
+            results.push(candidateCheckIn)
+        }
+    }
+    return results
 }
 
 // --- local computations over the rows this session can see -----------------

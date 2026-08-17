@@ -1,17 +1,11 @@
 /* Persons-with-disability counter — same stepper as kids and seniors, so the
-   three subset counts read as one group in step 3. */
+   four independent counts read as one group in step 3. */
 .pwd-field{
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 6px;
     font-family: 'Cormorant Garamond', serif;
-}
-
-/* Grayed out until a guest count (pax) is set */
-.pwd-field-disabled{
-    opacity: 0.5;
-    pointer-events: none;
 }
 
 .pwd-field-label{

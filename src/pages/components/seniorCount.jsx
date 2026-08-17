@@ -13,26 +13,22 @@ const MAX_SENIORS = 20
 // made to the guest always matches what the totals actually do.
 // Button-only stepper (no typing) to keep the value clean.
 //
-// Seniors are a subset of the total guests, so callers pass:
-//   • disabled — true until at least one guest (pax) is set; grays the stepper.
-//   • max      — the most seniors allowed (remaining pax after kids).
-export default function SeniorCount({ seniors, onSeniorsChange, disabled = false, max = MAX_SENIORS }){
+// An independent count, not a subset of Number of Adults — the party's total
+// (booking.jsx's totalGuests) is adults + kids + seniors + pwd added together.
+export default function SeniorCount({ seniors, onSeniorsChange }){
     const [internalSeniors, setInternalSeniors] = useState(0)
     const current = seniors ?? internalSeniors
-    const ceiling = Math.min(MAX_SENIORS, max)
-    const inactive = disabled
 
-    const clamp = (value) => Math.min(ceiling, Math.max(MIN_SENIORS, value))
+    const clamp = (value) => Math.min(MAX_SENIORS, Math.max(MIN_SENIORS, value))
 
     const step = (delta) => {
-        if (inactive) return
         const next = clamp(current + delta)
         setInternalSeniors(next)
         onSeniorsChange?.(next)
     }
 
     return (
-        <div className={`senior-field${inactive ? ' senior-field-disabled' : ''}`}>
+        <div className="senior-field">
             <label className="senior-field-label" id="senior-count-label">
                 Senior Citizens
             </label>
@@ -43,7 +39,7 @@ export default function SeniorCount({ seniors, onSeniorsChange, disabled = false
                     className="senior-step"
                     aria-label="Remove one senior citizen"
                     onClick={() => step(-1)}
-                    disabled={inactive || current <= MIN_SENIORS}
+                    disabled={current <= MIN_SENIORS}
                 >
                     &minus;
                 </button>
@@ -57,7 +53,7 @@ export default function SeniorCount({ seniors, onSeniorsChange, disabled = false
                     className="senior-step"
                     aria-label="Add one senior citizen"
                     onClick={() => step(1)}
-                    disabled={inactive || current >= ceiling}
+                    disabled={current >= MAX_SENIORS}
                 >
                     +
                 </button>
@@ -68,19 +64,15 @@ export default function SeniorCount({ seniors, onSeniorsChange, disabled = false
             <p className="senior-note" role="note">
                 <span className="senior-note-dot" aria-hidden="true"></span>
                 <span className="senior-note-body">
-                    {disabled ? (
-                        <>Set the <strong>number of guests</strong> first — seniors are counted within your guest total.</>
+                    {SENIOR_DISCOUNT_IN_SYSTEM ? (
+                        <>Senior citizens get <strong>{SENIOR_DISCOUNT_LABEL} off</strong> the entrance fee. Please
+                        present a <strong>Senior Citizen ID</strong> or other valid ID upon
+                        check-in for validation.</>
                     ) : (
-                        SENIOR_DISCOUNT_IN_SYSTEM ? (
-                            <>Senior citizens get <strong>{SENIOR_DISCOUNT_LABEL} off</strong> the entrance fee. Please
-                            present a <strong>Senior Citizen ID</strong> or other valid ID upon
-                            check-in for validation.</>
-                        ) : (
-                            <>The senior discount is <strong>given at the resort</strong>, so the total
-                            you see here is at the full rate. Tell us how many seniors are coming
-                            and present a <strong>Senior Citizen ID</strong> at check-in — it comes
-                            off the balance you settle on-site.</>
-                        )
+                        <>The senior discount is <strong>given at the resort</strong>, so the total
+                        you see here is at the full rate. Tell us how many seniors are coming
+                        and present a <strong>Senior Citizen ID</strong> at check-in — it comes
+                        off the balance you settle on-site.</>
                     )}
                 </span>
             </p>

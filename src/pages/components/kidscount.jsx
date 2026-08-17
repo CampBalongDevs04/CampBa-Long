@@ -1,33 +1,34 @@
 import { useState } from 'react'
 import './css/kidsCount.css'
+import { KIDS_DISCOUNT_IN_SYSTEM, KIDS_DISCOUNT_LABEL } from '../../data/entranceFee.js'
 
 const MIN_KIDS = 0
 const MAX_KIDS = 20
 
-// Kids aged 7 and below have no entrance fee, so this only tracks a headcount —
-// it never feeds into the price. The stepper is button-only (no typing) to keep
-// the value clean. Works controlled (kids/onKidsChange) or standalone.
+// A headcount, and — while the discount is given at the resort rather than by
+// this system — ONLY a headcount. The front desk applies the discount against
+// this number, so a guest who does not declare their kids here has nothing
+// for staff to work from. The note below says which of the two worlds we are
+// in by reading the constant, so the promise made to the guest always
+// matches what the totals actually do (see KIDS_DISCOUNT_RATE).
+// Button-only stepper (no typing) to keep the value clean.
 //
-// Kids are a subset of the total guests, so callers pass:
-//   • disabled — true until at least one guest (pax) is set; grays the stepper.
-//   • max      — the most kids allowed (remaining pax after seniors).
-export default function KidsCount({ kids, onKidsChange, disabled = false, max = MAX_KIDS }){
+// An independent count, not a subset of Number of Adults — the party's total
+// (booking.jsx's totalGuests) is adults + kids + seniors + pwd added together.
+export default function KidsCount({ kids, onKidsChange }){
     const [internalKids, setInternalKids] = useState(0)
     const current = kids ?? internalKids
-    const ceiling = Math.min(MAX_KIDS, max)
-    const inactive = disabled
 
-    const clamp = (value) => Math.min(ceiling, Math.max(MIN_KIDS, value))
+    const clamp = (value) => Math.min(MAX_KIDS, Math.max(MIN_KIDS, value))
 
     const step = (delta) => {
-        if (inactive) return
         const next = clamp(current + delta)
         setInternalKids(next)
         onKidsChange?.(next)
     }
 
     return (
-        <div className={`kids-field${inactive ? ' kids-field-disabled' : ''}`}>
+        <div className="kids-field">
             <label className="kids-field-label" id="kids-count-label">
                 Number of Kids
             </label>
@@ -38,7 +39,7 @@ export default function KidsCount({ kids, onKidsChange, disabled = false, max = 
                     className="kids-step"
                     aria-label="Remove one kid"
                     onClick={() => step(-1)}
-                    disabled={inactive || current <= MIN_KIDS}
+                    disabled={current <= MIN_KIDS}
                 >
                     &minus;
                 </button>
@@ -52,7 +53,7 @@ export default function KidsCount({ kids, onKidsChange, disabled = false, max = 
                     className="kids-step"
                     aria-label="Add one kid"
                     onClick={() => step(1)}
-                    disabled={inactive || current >= ceiling}
+                    disabled={current >= MAX_KIDS}
                 >
                     +
                 </button>
@@ -63,10 +64,14 @@ export default function KidsCount({ kids, onKidsChange, disabled = false, max = 
             <p className="kids-note" role="note">
                 <span className="kids-note-dot" aria-hidden="true"></span>
                 <span className="kids-note-body">
-                    {disabled ? (
-                        <>Set the <strong>number of guests</strong> first — kids are counted within your guest total.</>
+                    Only <strong>7 years old and below</strong>.{' '}
+                    {KIDS_DISCOUNT_IN_SYSTEM ? (
+                        <>Kids get <strong>{KIDS_DISCOUNT_LABEL} off</strong> the entrance fee. Please
+                        present ID for validation upon check-in.</>
                     ) : (
-                        <>Only <strong>7 years old and below</strong> — kids in this age range have no entrance fee.</>
+                        <>The kids' discount is <strong>given at the resort</strong>, so the total
+                        you see here is at the full rate. Tell us how many kids are coming —
+                        it comes off the balance you settle on-site.</>
                     )}
                 </span>
             </p>

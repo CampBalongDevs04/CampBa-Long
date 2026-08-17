@@ -7,7 +7,7 @@ import TimeSelector from './components/timeSelector'
 import ScheduleNote from './components/scheduleNote'
 import AccomodationList from './components/accomodationList'
 import AddonPicker from './components/addonPicker'
-import { getAccomodationOptions, isFreeEntranceEligible, isAddonEligible, findRentAllOption } from '../data/accomodationOptions.js'
+import { getAccomodationOptions, isFreeEntranceEligible, isAddonEligible, findRentAllOption, getFitNote } from '../data/accomodationOptions.js'
 import { useResortAddonItems } from '../data/menuDB.js'
 import PaxInput from './components/paxInput'
 import KidsCount from './components/kidscount'
@@ -60,10 +60,7 @@ function isValidEmail(email){
     return EMAIL_COM_RE.test(String(email ?? '').trim())
 }
 
-// `action`, when given, renders beside the title itself (e.g. the Rent All
-// Resort toggle next to "Dates & Schedule") rather than inside the step body
-// — it's an action ON the step, not a field belonging to it.
-function StepHeader({ index, action }){
+function StepHeader({ index }){
     const step = bookingStep(BOOKING_STEP_IDS[index])
     return(
         <header className="booking-step-header">
@@ -71,7 +68,6 @@ function StepHeader({ index, action }){
             <div className="booking-step-heading">
                 <div className="booking-step-title-row">
                     <h2 className="booking-step-title" id={step.id}>{step.title}</h2>
-                    {action}
                 </div>
                 {step.subtitle && <p className="booking-step-sub">{step.subtitle}</p>}
             </div>
@@ -88,12 +84,11 @@ export default function Booking(){
     const { page, activeTrust } = useBookingPage()
     // Subscribed for the same reason AccomodationList is: staff toggling an
     // accommodation's "Offer this on the booking page" checkbox (or editing a
-    // rate) already updates the underlying catalog live via realtime — but
-    // without this, THIS component (which decides whether the Rent All Resort
-    // button renders at all, via rentAllExists below) never re-renders to
-    // notice. AccomodationList re-rendering on its own was masking the same
-    // gap for the carousel; the button sits one level up, in the parent that
-    // never subscribed.
+    // rate) already updates the underlying catalog live via realtime, and
+    // `accommodationOptions`/`cartLines`/`quote` below are all computed
+    // directly in THIS component from that catalog — a child re-rendering on
+    // its own (AccomodationList has its own subscription) does not force this
+    // parent to re-run and pick up the change too.
     useAccommodationDB()
     const [selectedTime, setSelectedTime] = useState(null)
     const [dates, setDates] = useState({ checkIn: null, checkOut: null })
@@ -104,12 +99,10 @@ export default function Booking(){
         location.state?.accomodationId ? { [location.state.accomodationId]: 1 } : {}
     )
     const [droppedUnitNote, setDroppedUnitNote] = useState(null)
-    // Renting the whole resort as one block instead of picking units: locks
-    // the Accommodation step to the "Rent All Resort" card, the calendar to
-    // dates nothing else is booked on, and Number of Guests to that card's
-    // capacity. See handleToggleRentAll and the effect that keeps the cart
-    // and pax in sync with it below.
-    const [rentAllMode, setRentAllMode] = useState(false)
+    // `pax` is ADULTS specifically — kids, seniors and PWD guests are their
+    // own independent counts now, not carved out of this one (see
+    // totalGuests below, which is what unit capacity and entrance-fee
+    // pricing actually need: the whole party, everyone included).
     const [pax, setPax] = useState(null)
     const [kids, setKids] = useState(0)
     const [seniors, setSeniors] = useState(0)
@@ -143,12 +136,13 @@ export default function Booking(){
     // is filtered out — see handleSelectTime, which is what actually removes
     // it from `cart` itself.
     const accommodationOptions = getAccomodationOptions(rateGroup)
-    // Schedule-aware (drives auto-select/auto-pax below) vs schedule-agnostic
-    // (just "does this resort even offer a Rent All card", which decides
-    // whether the toggle button shows at all — a guest with no schedule
-    // picked yet should still see the button).
+    // Which catalog row this schedule's Rent All card resolves to, if any —
+    // feeds the mutual-exclusion swap in handleCartQtyChange and the
+    // entrance-quota copy below. `rentAllMode` reads straight off the cart
+    // rather than being tracked separately: the card the guest picked IS the
+    // mode, there is nothing else to keep in sync.
     const rentAllOption = findRentAllOption(accommodationOptions)
-    const rentAllExists = findRentAllOption(getAccomodationOptions(null)) != null
+    const rentAllMode = rentAllOption != null && (cart[rentAllOption.id] ?? 0) > 0
     const cartLines = Object.entries(cart)
         .filter(([, qty]) => qty > 0)
         .map(([id, qty]) => ({ id, qty, option: accommodationOptions.find((item) => item.id === id) ?? null }))
@@ -198,6 +192,20 @@ export default function Booking(){
     // handed, below.
     const freeEntranceQuota = rentAllMode ? RENT_ALL_FREE_ENTRANCE_PAX : DEFAULT_FREE_ENTRANCE_QUOTA
 
+    // Everyone in the party — computeEntranceFee()/entrance_breakdown() (the
+    // server's copy of the same formula) both expect "pax" to mean the whole
+    // group, then work out kids'/seniors' shares from within it. Adults is
+    // now just one of four independent counts, so this is what has to be
+    // handed in as "pax" everywhere pricing or unit capacity is decided, to
+    // keep charging exactly what this system already charges today.
+    const totalGuests = (pax ?? 0) + kids + seniors + pwd
+
+    // Whether the WHOLE party fits the cart (or, with nothing picked yet, a
+    // suggestion of what would) — shown once, above Total Guests, rather than
+    // repeated against the adults field alone (see paxInput.jsx's own note on
+    // why it moved).
+    const guestNote = getFitNote(totalGuests, cartLines, accommodationOptions)
+
     // The whole stay's arithmetic, in one place: how many nights the dates
     // come to, the unit rates multiplied across them, the entrance fees
     // multiplied the same way, and what that makes the down payment. The
@@ -208,7 +216,7 @@ export default function Booking(){
         checkIn: dates.checkIn,
         checkOut: effectiveCheckOut,
         cartLines,
-        pax: pax ?? 0,
+        pax: totalGuests,
         kids,
         seniors,
         freeEntranceEligible: cartFreeEntranceEligible,
@@ -272,6 +280,13 @@ export default function Booking(){
         )
     }
 
+    // Renting the whole resort and picking individual units are mutually
+    // exclusive rates — AccomodationList enforces this itself, the same way
+    // it already does for the shared tent pool: the "+" on whichever side
+    // isn't the cart's current pick is disabled with an explanatory message
+    // (exclusiveLocked/canAdd), so a qty>0 request never reaches here for a
+    // card that conflicts with what's already selected. This is a plain
+    // per-id merge, same as any other cart edit.
     function handleCartQtyChange(id, qty){
         setCart((current) => {
             const next = { ...current }
@@ -281,23 +296,6 @@ export default function Booking(){
         })
         setDroppedUnitNote(null)
         setBookingError(null)
-    }
-
-    // Seniors, PWD guests and kids are all subsets of the total guests (pax),
-    // and the three together can never exceed it. If the guest count drops
-    // below the specials already picked, trim them to fit in that order —
-    // seniors keep their places first, then PWD, then kids take what is left.
-    // The order only decides who survives a shrinking party; it carries no
-    // money, since none of the three is discounted by this system today.
-    function handlePaxChange(nextPax){
-        setPax(nextPax)
-        const cap = nextPax ?? 0
-        const nextSeniors = Math.min(seniors, cap)
-        const nextPwd = Math.min(pwd, cap - nextSeniors)
-        const nextKids = Math.min(kids, cap - nextSeniors - nextPwd)
-        if (nextSeniors !== seniors) setSeniors(nextSeniors)
-        if (nextPwd !== pwd) setPwd(nextPwd)
-        if (nextKids !== kids) setKids(nextKids)
     }
 
     // A check-in whose very next day is a closure forces Day Time — the
@@ -337,57 +335,17 @@ export default function Booking(){
         }
     }
 
-    // Turning it on hands the guest a fixed, non-customizable cart: the sync
-    // below replaces whatever was in it with the Rent All card. Pax, kids,
-    // seniors and PWD are left for the guest to declare, same as any other
-    // booking — renting the whole resort no longer waives per-head entrance
-    // for the whole party, only for the first RENT_ALL_FREE_ENTRANCE_PAX (see
-    // freeEntranceQuota above), so those counts still matter to the total.
-    // Turning it off hands everything back — cart, pax and the three counts
-    // clear so the guest starts picking again rather than inheriting a
-    // leftover value from whichever mode they just left. Cleared
-    // unconditionally either way since both directions want a clean slate,
-    // just for different reasons.
-    function handleToggleRentAll(){
-        setRentAllMode((current) => !current)
-        setCart({})
-        setPax(null)
-        setKids(0)
-        setSeniors(0)
-        setPwd(0)
-        setDroppedUnitNote(null)
-        setBookingError(null)
-    }
-
-    // Keeps the cart locked to the Rent All card while rentAllMode is on,
-    // including staying in sync when the guest switches Day Time <-> an
-    // overnight schedule (rateGroup changes which accommodation_types row
-    // backs that card, via rentAllOption above). If the card isn't offered
-    // under whichever schedule ends up picked, rentAllOption is null and this
-    // does nothing — handleSelectTime has already dropped it from the cart
-    // and left droppedUnitNote explaining why, the same message any other
-    // unit not offered under a schedule gets.
-    //
-    // Adjusted during render rather than in an effect — React's own pattern
-    // for state that has to follow a derived value (see BookingCalendar's
-    // CalendarPanel, which does the same for its month view following the
-    // `selected` prop) — so a schedule switch doesn't paint one stale frame
-    // with the old cart before snapping to the new one.
-    const rentAllSignal = rentAllMode && rentAllOption ? rentAllOption.id : null
-    const [lastRentAllSignal, setLastRentAllSignal] = useState(null)
-    if (rentAllSignal !== lastRentAllSignal) {
-        setLastRentAllSignal(rentAllSignal)
-        if (rentAllSignal && rentAllOption) {
-            setCart({ [rentAllOption.id]: 1 })
-        }
-    }
-
     // AddonPicker is hidden below once cartAddonEligible goes false (e.g. the
     // guest drops the Teepee from a Teepee + Table and Chairs cart, leaving
     // only the excluded unit) — but hiding it doesn't erase whatever was
     // already picked. Without this, reserve() would still submit those picks
-    // for a cart that no longer has anything to attach them to. Same
-    // during-render pattern as rentAllSignal above.
+    // for a cart that no longer has anything to attach them to.
+    //
+    // Adjusted during render rather than in an effect — React's own pattern
+    // for state that has to follow a derived value (see BookingCalendar's
+    // CalendarPanel, which does the same for its month view following the
+    // `selected` prop) — so a cart change doesn't paint one stale frame with
+    // AddonPicker still showing before it disappears.
     const [lastCartAddonEligible, setLastCartAddonEligible] = useState(true)
     if (cartAddonEligible !== lastCartAddonEligible) {
         setLastCartAddonEligible(cartAddonEligible)
@@ -431,17 +389,19 @@ export default function Booking(){
             : !isValidEmail(guest.email)
                 ? 'Please enter a valid email address (e.g. juan@gmail.com).'
                 : null,
-        pax: pax ? null : 'Please enter the number of guests.',
+        pax: pax ? null : 'Please enter the number of adults.',
     }
 
     // A group larger than the cart's COMBINED capacity is the one pax rule
     // that blocks the booking — that's how many people the selected units
-    // physically hold, together. Under capacity is deliberately allowed (the
-    // rate is per unit, not per head); PaxInput just notes it. Not a "missing
-    // step": every field is filled, the numbers simply don't work together.
-    const capacityIssue = pax != null && cartUnitCount > 0 && !cartUnlimited && pax > cartCapacity
+    // physically hold, together. Judged on totalGuests, not adults alone:
+    // kids/seniors/PWD guests still take up a physical spot. Under capacity
+    // is deliberately allowed (the rate is per unit, not per head); PaxInput
+    // just notes it. Not a "missing step": every field is filled, the
+    // numbers simply don't work together.
+    const capacityIssue = pax != null && cartUnitCount > 0 && !cartUnlimited && totalGuests > cartCapacity
         ? `Your selected accommodation${cartUnitCount > 1 ? 's hold' : ' holds'} up to ${cartCapacity} pax combined.`
-            + ` Lower your guest count or add another unit for your group of ${pax}.`
+            + ` Lower your guest count or add another unit for your group of ${totalGuests}.`
         : null
 
     // Turns AddonPicker's picks into real orders, right after the booking
@@ -514,7 +474,8 @@ export default function Booking(){
                 checkIn: dates.checkIn,
                 checkOut,
                 guest,
-                pax,
+                // The whole party, not just adults — see totalGuests above.
+                pax: totalGuests,
                 kids,
                 seniors,
                 pwd,
@@ -590,7 +551,8 @@ export default function Booking(){
             checkIn: dates.checkIn,
             checkOut,
             guest,
-            pax,
+            // The whole party, not just adults — see totalGuests above.
+            pax: totalGuests,
             kids,
             seniors,
             pwd,
@@ -701,28 +663,13 @@ export default function Booking(){
                 <div className="booking-layout">
                     <div className="booking-steps">
                         <section className="booking-step" aria-labelledby="step-schedule">
-                            <StepHeader
-                                index={0}
-                                action={rentAllExists && (
-                                    <button
-                                        type="button"
-                                        className={`booking-rentall-toggle${rentAllMode ? ' active' : ''}`}
-                                        onClick={handleToggleRentAll}
-                                        aria-pressed={rentAllMode}
-                                    >
-                                        {rentAllMode ? 'Rent All Resort ✓' : 'Rent All Resort'}
-                                    </button>
-                                )}
-                            />
+                            <StepHeader index={0} />
                             <div className="booking-step-body">
                                 <BookingCalendar
                                     checkIn={dates.checkIn}
                                     checkOut={dates.checkOut}
                                     sameDayCheckout={sameDayCheckout}
                                     onChange={handleDatesChange}
-                                    restrictToFree={rentAllMode}
-                                    scheduleKey={scheduleKey}
-                                    excludeTypeId={rentAllOption?.id ?? null}
                                 />
 
                                 <TimeSelector
@@ -765,7 +712,6 @@ export default function Booking(){
                                     rateGroup={rateGroup}
                                     scheduleKey={scheduleKey}
                                     droppedUnitNote={droppedUnitNote}
-                                    rentAllMode={rentAllMode}
                                 />
 
                                 {/* Same reveal pattern as StayLength under the
@@ -791,38 +737,41 @@ export default function Booking(){
                             <div className="booking-step-body">
                                 <PaxInput
                                     pax={pax}
-                                    onPaxChange={handlePaxChange}
+                                    onPaxChange={setPax}
                                     cartLines={cartLines}
                                     guest={guest}
                                     onGuestChange={setGuest}
-                                    rateGroup={rateGroup}
                                     fieldErrors={guestFieldErrors}
                                     showErrors={attemptedConfirm}
                                 />
 
-                                {/* Each ceiling is the party minus the other
-                                    two, so the three declared counts can never
-                                    add up to more people than are coming. */}
-                                <KidsCount
-                                    kids={kids}
-                                    onKidsChange={setKids}
-                                    disabled={!pax}
-                                    max={(pax ?? 0) - seniors - pwd}
-                                />
+                                {/* Four independent counts now, not one total
+                                    carved into subsets — totalGuests below is
+                                    just their sum. */}
+                                <KidsCount kids={kids} onKidsChange={setKids} />
 
-                                <SeniorCount
-                                    seniors={seniors}
-                                    onSeniorsChange={setSeniors}
-                                    disabled={!pax}
-                                    max={(pax ?? 0) - kids - pwd}
-                                />
+                                <SeniorCount seniors={seniors} onSeniorsChange={setSeniors} />
 
-                                <PwdCount
-                                    pwd={pwd}
-                                    onPwdChange={setPwd}
-                                    disabled={!pax}
-                                    max={(pax ?? 0) - kids - seniors}
-                                />
+                                <PwdCount pwd={pwd} onPwdChange={setPwd} />
+
+                                {/* Whether the whole party fits sits here, right
+                                    above the total it's actually about, rather
+                                    than under the adults field alone — see
+                                    paxInput.jsx's getFitNote. */}
+                                {guestNote && (
+                                    <div className={`pax-note pax-note-${guestNote.tone}`} role="status">
+                                        <span className="pax-note-dot"></span>
+                                        <p className="pax-note-body">
+                                            <strong className="pax-note-heading">{guestNote.title}.</strong>{' '}
+                                            {guestNote.text}
+                                        </p>
+                                    </div>
+                                )}
+
+                                <div className="guest-total">
+                                    <span className="guest-total-label">Total Guests</span>
+                                    <span className="guest-total-value">{totalGuests}</span>
+                                </div>
                             </div>
                         </section>
 
@@ -881,6 +830,7 @@ export default function Booking(){
                         kids={kids}
                         seniors={seniors}
                         pwd={pwd}
+                        totalGuests={totalGuests}
                         rentAllMode={rentAllMode}
                         freeEntranceQuota={freeEntranceQuota}
                         addonLines={addonLines}

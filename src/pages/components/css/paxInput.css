@@ -164,8 +164,10 @@
     color: var(--leaf);
 }
 
-/* Past the selected unit's capacity: the count is allowed on screen so the
-   note can explain it, but it reads as a problem rather than a valid entry. */
+/* Required field left blank at Confirm — same red the rest of the form's
+   validation errors use. Capacity is no longer flagged here at all: whether
+   the WHOLE party fits is the fit-note's job now (booking.jsx), shown once
+   above Total Guests rather than repeated against the adults field alone. */
 .pax-count-over{
     border-color: #B24A3A;
     color: #8F3A2D;
@@ -177,15 +179,13 @@
     border-color: #B24A3A;
 }
 
-.pax-counter-hint-over{
-    font-weight: 600;
-    color: #8F3A2D;
-}
-
-/* Fit note */
+/* Fit note — rendered in booking.jsx now, a direct child of .booking-step-body
+   rather than nested inside .guest-info, so the 648px cap that used to come
+   from that parent has to live here instead. */
 .pax-note{
     box-sizing: border-box;
     width: 100%;
+    max-width: 648px;
     display: flex;
     align-items: baseline;
     gap: 10px;

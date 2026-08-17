@@ -193,6 +193,90 @@ export function getPaxFit(pax, option){
     return 'fit'
 }
 
+// `cartLines` is one entry per selected accommodation type — { id, qty,
+// option } — since a guest can now put more than one type (and more than one
+// of a type) in the cart. Capacity is judged on the COMBINED total, not any
+// one line.
+//
+// `totalGuests` — not just adults — is what a unit has to physically fit:
+// kids, seniors and PWD guests still take up a spot in the unit even though
+// none of them feed booking.jsx's Number of Adults field (see its
+// totalGuests, adults + kids + seniors + pwd added together).
+export function getFitNote(totalGuests, cartLines, options){
+    if (!totalGuests) return null
+
+    // Units that hold this group comfortably, and — as a fallback — the ones
+    // that hold them at all, even if the group is under the usual size.
+    // Tent Pitching is excluded from suggestions: it has no capacity ceiling,
+    // so it always "fits" and isn't a meaningful size-based recommendation.
+    const suggestable = options.filter((item) => item.id !== 'tent-pitching')
+    const fitting = suggestable.filter((item) => getPaxFit(totalGuests, item) === 'fit')
+    const roomy = suggestable.filter((item) => getPaxFit(totalGuests, item) !== 'over')
+
+    if (cartLines.length > 0){
+        const unlimited = cartLines.some((line) => line.option.maxPax == null)
+        const capacity = unlimited
+            ? null
+            : cartLines.reduce((sum, line) => sum + line.option.maxPax * line.qty, 0)
+        const names = cartLines
+            .map((line) => `${line.option.name}${line.qty > 1 ? ` ×${line.qty}` : ''}`)
+            .join(', ')
+        const plural = cartLines.length > 1 || cartLines[0].qty > 1
+
+        // Over capacity — the units cannot physically take them, so this is a
+        // blocking warning, not a hint. Confirm is held until it's resolved
+        // (booking.jsx's capacityIssue).
+        if (!unlimited && totalGuests > capacity){
+            const alternatives = (fitting.length > 0 ? fitting : roomy)
+                .map((item) => item.name)
+                .join(', ')
+            return {
+                tone: 'unfit',
+                title: 'A bigger selection would suit you better',
+                text: `${names} ${plural ? 'hold' : 'holds'} up to ${capacity} pax combined`
+                    + `, which is a little snug for your group of ${totalGuests}.`
+                    + (alternatives ? ` You might add: ${alternatives}.` : ' Message us and we’ll help you find the right fit.'),
+            }
+        }
+
+        // Under the usual group size — allowed, the rate is per unit. Only
+        // spelled out for a single type: once the cart mixes different units,
+        // "usually set up for" stops being one meaningful number.
+        if (!unlimited && cartLines.length === 1 && cartLines[0].option.minPax != null){
+            const [line] = cartLines
+            if (totalGuests < line.option.minPax * line.qty){
+                return {
+                    tone: 'warn',
+                    title: 'Smaller group? No problem',
+                    text: `${names} ${plural ? 'are' : 'is'} usually set up for ${line.option.pax}${line.qty > 1 ? ' each' : ''},`
+                        + ` but you're welcome to book for ${totalGuests}`
+                        + ` — just note the rate is per unit, so the full price still applies.`,
+                }
+            }
+        }
+
+        return {
+            tone: 'fit',
+            title: 'Good fit',
+            text: `${names} ${plural ? 'are' : 'is'} fit for your group of ${totalGuests}.`,
+        }
+    }
+
+    if (roomy.length === 0){
+        return {
+            tone: 'unfit',
+            title: 'Let’s find you a fit',
+            text: `We don't have a single accomodation that fits ${totalGuests} pax — message us and we'll help arrange something for your group.`,
+        }
+    }
+
+    return {
+        tone: 'info',
+        title: 'Suggested for you',
+        text: `For ${totalGuests} pax: ${(fitting.length > 0 ? fitting : roomy).map((item) => item.name).join(', ')}.`,
+    }
+}
+
 // Cards for a given rate group ('day' | 'overnight'), merged with that
 // group's price/pax. With no group (no schedule picked yet) every unit is
 // returned with price/pax left null, so the UI can show its own

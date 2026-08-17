@@ -1,96 +1,15 @@
 import { useState } from 'react'
 import '../components/css/paxInput.css'
-import { getAccomodationOptions, getPaxFit } from '../../data/accomodationOptions.js'
 
 // Floor for the counter. There is no ceiling: a unit's own minPax/maxPax
-// shapes the note below rather than the counter itself, so the guest is
-// always allowed to type the real size of their group and be told how it
-// sits against the unit(s) they picked (see getFitNote/overCapacity).
+// shapes the fit note in booking.jsx (getFitNote, accomodationOptions.js)
+// rather than the counter itself, so the guest is always allowed to type the
+// real size of their group and be told how it sits against the unit(s) they
+// picked.
 const MIN_PAX = 1
 
-// `cartLines` is one entry per selected accommodation type — { id, qty,
-// option } — since a guest can now put more than one type (and more than one
-// of a type) in the cart. Capacity is judged on the COMBINED total, not any
-// one line.
-function getFitNote(pax, cartLines, options){
-    if (!pax) return null
-
-    // Units that hold this group comfortably, and — as a fallback — the ones
-    // that hold them at all, even if the group is under the usual size.
-    // Tent Pitching is excluded from suggestions: it has no capacity ceiling,
-    // so it always "fits" and isn't a meaningful size-based recommendation.
-    const suggestable = options.filter((item) => item.id !== 'tent-pitching')
-    const fitting = suggestable.filter((item) => getPaxFit(pax, item) === 'fit')
-    const roomy = suggestable.filter((item) => getPaxFit(pax, item) !== 'over')
-
-    if (cartLines.length > 0){
-        const unlimited = cartLines.some((line) => line.option.maxPax == null)
-        const capacity = unlimited
-            ? null
-            : cartLines.reduce((sum, line) => sum + line.option.maxPax * line.qty, 0)
-        const names = cartLines
-            .map((line) => `${line.option.name}${line.qty > 1 ? ` ×${line.qty}` : ''}`)
-            .join(', ')
-        const plural = cartLines.length > 1 || cartLines[0].qty > 1
-
-        // Over capacity — the units cannot physically take them, so this is a
-        // blocking warning, not a hint. Confirm is held until it's resolved
-        // (booking.jsx's capacityIssue).
-        if (!unlimited && pax > capacity){
-            const alternatives = (fitting.length > 0 ? fitting : roomy)
-                .map((item) => item.name)
-                .join(', ')
-            return {
-                tone: 'unfit',
-                title: 'A bigger selection would suit you better',
-                text: `${names} ${plural ? 'hold' : 'holds'} up to ${capacity} pax combined`
-                    + `, which is a little snug for your group of ${pax}.`
-                    + (alternatives ? ` You might add: ${alternatives}.` : ' Message us and we’ll help you find the right fit.'),
-            }
-        }
-
-        // Under the usual group size — allowed, the rate is per unit. Only
-        // spelled out for a single type: once the cart mixes different units,
-        // "usually set up for" stops being one meaningful number.
-        if (!unlimited && cartLines.length === 1 && cartLines[0].option.minPax != null){
-            const [line] = cartLines
-            if (pax < line.option.minPax * line.qty){
-                return {
-                    tone: 'warn',
-                    title: 'Smaller group? No problem',
-                    text: `${names} ${plural ? 'are' : 'is'} usually set up for ${line.option.pax}${line.qty > 1 ? ' each' : ''},`
-                        + ` but you're welcome to book for ${pax}`
-                        + ` — just note the rate is per unit, so the full price still applies.`,
-                }
-            }
-        }
-
-        return {
-            tone: 'fit',
-            title: 'Good fit',
-            text: `${names} ${plural ? 'are' : 'is'} fit for your group of ${pax}.`,
-        }
-    }
-
-    if (roomy.length === 0){
-        return {
-            tone: 'unfit',
-            title: 'Let’s find you a fit',
-            text: `We don't have a single accomodation that fits ${pax} pax — message us and we'll help arrange something for your group.`,
-        }
-    }
-
-    return {
-        tone: 'info',
-        title: 'Suggested for you',
-        text: `For ${pax} pax: ${(fitting.length > 0 ? fitting : roomy).map((item) => item.name).join(', ')}.`,
-    }
-}
-
-export default function PaxInput({ pax, onPaxChange, cartLines, guest, onGuestChange, rateGroup, fieldErrors, showErrors }){
-    const options = getAccomodationOptions(rateGroup)
+export default function PaxInput({ pax, onPaxChange, cartLines, guest, onGuestChange, fieldErrors, showErrors }){
     const lines = cartLines ?? []
-    const note = getFitNote(pax, lines, options)
     const errors = fieldErrors ?? {}
 
     // Booking.jsx knows WHAT is wrong with a field (guestFieldErrors); this
@@ -122,11 +41,9 @@ export default function PaxInput({ pax, onPaxChange, cartLines, guest, onGuestCh
     const step = (delta) => onPaxChange?.(clamp((pax ?? 0) + delta))
     const setField = (field) => (e) => onGuestChange?.({ ...guest, [field]: e.target.value })
 
-    const overCapacity = limited && pax != null && pax > capacity
     const capacityTitle = limited
         ? `Your selected accommodation${lines.length > 1 ? 's take' : ' takes'} up to ${capacity}.`
         : undefined
-    const rangeLabel = limited ? `${capacity}` : null
 
     return(
         <div className="guest-info">
@@ -181,12 +98,12 @@ export default function PaxInput({ pax, onPaxChange, cartLines, guest, onGuestCh
                 </div>
 
                 <div className="pax-field">
-                    <label className="pax-field-label" htmlFor="pax">Number of Guests</label>
+                    <label className="pax-field-label" htmlFor="pax">Number of Adults</label>
                     <div className="pax-counter">
                         <button
                             type="button"
                             className="pax-step"
-                            aria-label="Remove one guest"
+                            aria-label="Remove one adult"
                             onClick={() => step(-1)}
                             disabled={!pax || pax <= MIN_PAX}
                         >
@@ -194,13 +111,13 @@ export default function PaxInput({ pax, onPaxChange, cartLines, guest, onGuestCh
                         </button>
 
                         <input
-                            className={`pax-count${overCapacity || paxRequiredError ? ' pax-count-over' : ''}`}
+                            className={`pax-count${paxRequiredError ? ' pax-count-over' : ''}`}
                             type="number"
                             id="pax"
                             min={MIN_PAX}
-                            aria-invalid={(overCapacity || paxRequiredError) || undefined}
+                            aria-invalid={paxRequiredError || undefined}
                             placeholder="0"
-                            aria-label="Number of guests"
+                            aria-label="Number of adults"
                             value={pax ?? ''}
                             onChange={(e) => {
                                 const value = e.target.value
@@ -212,33 +129,29 @@ export default function PaxInput({ pax, onPaxChange, cartLines, guest, onGuestCh
                         <button
                             type="button"
                             className="pax-step"
-                            aria-label="Add one guest"
+                            aria-label="Add one adult"
                             onClick={() => step(1)}
                             title={capacityTitle}
                         >
                             +
                         </button>
 
-                        <span
-                            className={`pax-counter-hint${overCapacity ? ' pax-counter-hint-over' : ''}`}
-                            title={capacityTitle}
-                        >
-                            {limited ? `pax · fits ${rangeLabel}` : 'pax'}
+                        {/* "fits N" is the WHOLE party's capacity (kids/seniors/
+                            PWD included) — kept as a hover tooltip via
+                            capacityTitle rather than crammed next to a count
+                            that only shows adults, so it can't be misread as
+                            "N adults fit" when N is really everyone's ceiling.
+                            Not tinted red on its own either: whether the WHOLE
+                            party fits is now the fit-note's job, shown once
+                            above Total Guests in booking.jsx, not repeated
+                            here against a field that only ever holds adults. */}
+                        <span className="pax-counter-hint" title={capacityTitle}>
+                            adults
                         </span>
                     </div>
                     {paxRequiredError && <p className="pax-field-error" role="alert">{paxRequiredError}</p>}
                 </div>
             </div>
-
-            {note && (
-                <div className={`pax-note pax-note-${note.tone}`} role="status">
-                    <span className="pax-note-dot"></span>
-                    <p className="pax-note-body">
-                        <strong className="pax-note-heading">{note.title}.</strong>{' '}
-                        {note.text}
-                    </p>
-                </div>
-            )}
         </div>
     )
 }

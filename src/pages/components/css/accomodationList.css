@@ -144,17 +144,6 @@
     color: var(--forest);
 }
 
-/* Rent Resort mode: no +/- stepper, just a fixed "this is the pick" label
-   filling the row the stepper would otherwise occupy. */
-.accomodation-card-qty-locked{
-    flex: 1;
-    text-align: center;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.2px;
-    color: var(--forest);
-}
-
 .accomodation-card-image{
     position: relative;
     width: 100%;
@@ -326,12 +315,18 @@
    up what was left, in this guest's own cart. A dark wash over the whole
    card, rather than the paler fully-booked fade, reads as "someone's holding
    this" vs. "gone" — accurate, since it's the guest's own other pick holding
-   it, one qty change away from freeing back up. */
-.accomodation-card.pool-locked{
+   it, one qty change away from freeing back up.
+   .exclusive-locked shares the same treatment for the same reason, just a
+   different holder: Rent All Resort and the individual units are mutually
+   exclusive picks (see handleCartQtyChange in booking.jsx), so whichever
+   side isn't the cart's current pick reads exactly the same way. */
+.accomodation-card.pool-locked,
+.accomodation-card.exclusive-locked{
     cursor: not-allowed;
 }
 
-.accomodation-card.pool-locked::after{
+.accomodation-card.pool-locked::after,
+.accomodation-card.exclusive-locked::after{
     content: '';
     position: absolute;
     inset: 0;
@@ -341,8 +336,24 @@
     pointer-events: none;
 }
 
-.accomodation-card.pool-locked .accomodation-card-available{
+.accomodation-card.pool-locked .accomodation-card-available,
+.accomodation-card.exclusive-locked .accomodation-card-available{
     color: #e8e2d0;
+    font-weight: 600;
+    font-style: normal;
+}
+
+/* Rent All Resort, blocked because some OTHER unit type is already booked
+   during the picked stay — its own stock is fine, so this reads softer than
+   fully-booked (informational: try different dates, not gone) and gold
+   rather than red, matching the "still checking / try again" tone used
+   elsewhere on the page rather than the "sold out" one. */
+.accomodation-card.rentall-blocked{
+    opacity: 0.75;
+}
+
+.accomodation-card.rentall-blocked .accomodation-card-available{
+    color: var(--gold);
     font-weight: 600;
     font-style: normal;
 }

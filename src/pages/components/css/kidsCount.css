@@ -7,12 +7,6 @@
     font-family: 'Cormorant Garamond', serif;
 }
 
-/* Grayed out until a guest count (pax) is set */
-.kids-field-disabled{
-    opacity: 0.5;
-    pointer-events: none;
-}
-
 .kids-field-label{
     font-size: 14px;
     font-weight: 600;
