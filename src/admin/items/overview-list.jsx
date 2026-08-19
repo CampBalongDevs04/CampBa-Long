@@ -89,10 +89,14 @@ export default function OverviewList({ filter = 'all', emptyTitle, emptyText }) 
                 const spaTotal = orderTotal(booking.spaOrders)
                 // The amount shown must match the label beside it — a
                 // "Down Payment" row showing the full price is misleading.
+                // A paid-full booking reads `stayTotal` (the whole stay, not
+                // just the unit rate — see fromRow()), discounted down to
+                // `settlementCollected` if a senior/PWD/kids discount was
+                // honored at settlement (settleBookingPayment()).
                 const displayAmount =
                     booking.payment === 'down-payment' && booking.downpayment != null
                         ? booking.downpayment
-                        : booking.total
+                        : booking.settlementCollected ?? booking.stayTotal ?? booking.total
                 return (
                     <div key={booking.id} className="booking-card">
                         <div className="booking-row-top">

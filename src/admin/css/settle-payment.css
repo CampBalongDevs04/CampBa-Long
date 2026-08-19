@@ -1,0 +1,85 @@
+/* ---------- Settle Payment — discount verification rows ----------
+   Sits inside .receipt-modal alongside the reused .receipt-orders /
+   .receipt-order-row classes from receipt-viewer.css; only the per-head
+   steppers below have no existing counterpart in that file. */
+.settle-discounts {
+    flex-shrink: 0;
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(198, 161, 91, 0.3);
+}
+
+.settle-discounts-hint {
+    margin: 0 0 10px;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: rgba(10, 22, 14, 0.6);
+}
+
+.settle-step-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+}
+
+.settle-step-row + .settle-step-row {
+    border-top: 1px dashed rgba(198, 161, 91, 0.3);
+}
+
+.settle-step-label {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    font-size: 0.88rem;
+    color: var(--forest-dark, #0a160e);
+}
+
+.settle-step-note {
+    font-size: 0.72rem;
+    color: rgba(10, 22, 14, 0.55);
+}
+
+.settle-stepper {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.settle-step-btn {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--forest-dark, #0a160e);
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.5);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.settle-step-btn:hover:not(:disabled) {
+    border-color: #c6a15b;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.settle-step-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.settle-step-value {
+    min-width: 44px;
+    text-align: center;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--forest-dark, #0a160e);
+    user-select: none;
+}

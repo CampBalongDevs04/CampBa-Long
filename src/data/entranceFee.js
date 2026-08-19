@@ -200,24 +200,33 @@ export function computeEntranceFee({
     }
 }
 
+// The instant 20260817120000_kids_discount_claimed_at_resort.sql shipped —
+// see splitFreeEntrance() below. Matches the migration's own filename
+// timestamp (YYYYMMDDHHMMSS, UTC), the same way this codebase already talks
+// about that boundary everywhere else ("a booking made before/after that
+// migration shipped").
+const KIDS_CLAIMED_AT_RESORT_SINCE = '2026-08-17T12:00:00Z'
+
 // Reads a STORED booking's freeApplied/freeSavings bucket back. A booking
-// made before 20260817120000_kids_discount_claimed_at_resort.sql shipped had
-// kids folded into that bucket alongside the 2-pax perk (see the migration's
-// header) — this recovers that historical split correctly, `kids` being its
-// own column on the row and always the kids' share, so whatever's left is
-// the perk's share.
+// made BEFORE KIDS_CLAIMED_AT_RESORT_SINCE had kids folded into that bucket
+// alongside the 2-pax perk (see that migration's header) — this recovers
+// that historical split correctly, `kids` being its own column on the row
+// and always the kids' share, so whatever's left is the perk's share.
 //
-// A booking made after that migration never puts kids in the bucket at all —
-// but this function has no way to tell an old row from a new one, so it
-// still assumes kids-first. On a new-format row with kids > 0 AND a nonzero
-// freeApplied (from the perk going to an adult or senior), it will
-// mislabel some of that perk as the kids' share even though no kid actually
-// drew from it. The row's own `total`/kids/perk figures are still correct
-// either way — only this reconstructed label can be wrong, and only for
-// bookings made after the migration above. Known, narrow, and not fixed here
-// — see that migration's header for why.
-export function splitFreeEntrance({ freeApplied = 0, freeSavings = 0, kids = 0, perHead = 0 } = {}){
-    const kidsApplied = Math.min(Math.max(0, Number(kids) || 0), Number(freeApplied) || 0)
+// A booking made AT OR AFTER that instant never puts kids in the bucket at
+// all — entrance_breakdown() keeps them out of it by construction — so
+// `createdAt` is what tells the two eras apart. Getting this wrong is not
+// cosmetic: on a new-format row, whatever freeApplied there is came from the
+// 2-pax perk going to an ADULT or senior, and mislabeling it as "kids free"
+// tells the guest their kid got a discount that was never actually given,
+// while a kid's own discount (now claimed in person, like PWD and seniors)
+// goes unmentioned entirely.
+export function splitFreeEntrance({ freeApplied = 0, freeSavings = 0, kids = 0, perHead = 0, createdAt = null } = {}){
+    const isPreKidsMigration = createdAt != null
+        && new Date(createdAt).getTime() < new Date(KIDS_CLAIMED_AT_RESORT_SINCE).getTime()
+    const kidsApplied = isPreKidsMigration
+        ? Math.min(Math.max(0, Number(kids) || 0), Number(freeApplied) || 0)
+        : 0
     const kidsFree = kidsApplied * (Number(perHead) || 0)
     return {
         kidsApplied,

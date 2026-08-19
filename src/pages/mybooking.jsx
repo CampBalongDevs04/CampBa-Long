@@ -50,6 +50,14 @@ function formatPeso(amount){
     return `₱${Number(amount ?? 0).toLocaleString('en-PH')}`
 }
 
+// `pax`/`unitSubtotal`'s `pax` field is the WHOLE party (adults + kids +
+// seniors + pwd — see accommodationDB.js's totalGuests), so adults is never
+// stored directly and has to be derived the same way computeEntranceFee()
+// derives its own `regularCount`.
+function adultsOf(entry){
+    return Math.max(0, (entry?.pax ?? 0) - (entry?.kids ?? 0) - (entry?.seniors ?? 0) - (entry?.pwd ?? 0))
+}
+
 const STATUS_LABELS = {
     pending: 'For Verification',
     upcoming: 'Upcoming',
@@ -218,9 +226,21 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, 
                     <div>
                         <p className="field-label">Guest Details</p>
                         <p className="field-value">{booking.guest?.fullName || 'Not provided'}</p>
-                        {booking.pax && <p className="field-sub">{booking.pax} guests</p>}
+                        {/* `pax` is the WHOLE party (adults + kids + seniors +
+                            pwd), not adults alone — see booking.jsx's
+                            totalGuests — so it's spelled out here rather than
+                            left to imply "adults" the way it would elsewhere. */}
+                        {booking.pax > 0 && <p className="field-sub">{booking.pax} guests total</p>}
+                        {adultsOf(booking) > 0 && (
+                            <p className="field-sub">{adultsOf(booking)} adult{adultsOf(booking) > 1 ? 's' : ''}</p>
+                        )}
+                        {/* Kids, seniors and PWD all read the same way now: the
+                            discount is given in person against an ID (or, for
+                            a kid, just by age) — nothing here is free online.
+                            See entranceFee.js's KIDS_DISCOUNT_RATE and its
+                            neighbours for why. */}
                         {booking.kids > 0 && (
-                            <p className="field-sub">{booking.kids} kids (7 &amp; below, no entrance fee)</p>
+                            <p className="field-sub">{booking.kids} kid{booking.kids > 1 ? 's' : ''} (7 &amp; below) — discount claimed at the resort</p>
                         )}
                         {/* No percentage on the line below, on purpose. This card
                             shows a booking that was priced when it was made, and
@@ -267,6 +287,7 @@ function BookingCard({ booking, onCancel, onBookAgain, onDelete, onSaveReceipt, 
                         freeSavings: booking.entrance.freeSavings,
                         kids: booking.kids,
                         perHead: booking.entrance.perHead,
+                        createdAt: booking.createdAt,
                     })
                     return (
                         <div className="booking-card-field">
@@ -482,9 +503,12 @@ function GroupBookingCard({ group, onCancel, onDelete, onSaveReceipt, payNow }){
                     <div>
                         <p className="field-label">Guest Details</p>
                         <p className="field-value">{group.guest?.fullName || 'Not provided'}</p>
-                        {group.pax && <p className="field-sub">{group.pax} guests</p>}
+                        {group.pax > 0 && <p className="field-sub">{group.pax} guests total</p>}
+                        {adultsOf(group) > 0 && (
+                            <p className="field-sub">{adultsOf(group)} adult{adultsOf(group) > 1 ? 's' : ''}</p>
+                        )}
                         {group.kids > 0 && (
-                            <p className="field-sub">{group.kids} kids (7 &amp; below, no entrance fee)</p>
+                            <p className="field-sub">{group.kids} kid{group.kids > 1 ? 's' : ''} (7 &amp; below) — discount claimed at the resort</p>
                         )}
                         {/* Same reasoning as the single-booking card: the rate
                             that priced this reservation is whatever it was on
@@ -536,6 +560,7 @@ function GroupBookingCard({ group, onCancel, onDelete, onSaveReceipt, payNow }){
                         freeSavings: group.entrance.freeSavings,
                         kids: group.kids,
                         perHead: group.entrance.perHead,
+                        createdAt: group.createdAt,
                     })
                     return (
                         <div className="booking-card-field">
