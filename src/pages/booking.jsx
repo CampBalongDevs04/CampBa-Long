@@ -10,9 +10,7 @@ import AddonPicker from './components/addonPicker'
 import { getAccomodationOptions, isFreeEntranceEligible, isAddonEligible, findRentAllOption, getFitNote } from '../data/accomodationOptions.js'
 import { useResortAddonItems } from '../data/menuDB.js'
 import PaxInput from './components/paxInput'
-import KidsCount from './components/kidscount'
-import SeniorCount from './components/seniorCount'
-import PwdCount from './components/pwdCount'
+import GuestCounts from './components/guestCounts'
 import { computeStayQuote, minNightsFrom } from '../data/extendedStay.js'
 import { DEFAULT_FREE_ENTRANCE_QUOTA, RENT_ALL_FREE_ENTRANCE_PAX } from '../data/entranceFee.js'
 import Terms from './components/terms'
@@ -374,9 +372,9 @@ export default function Booking(){
             && bookingStep(GUEST_STEP).title,
     ].filter(Boolean)
 
-    // What, specifically, is wrong with each guest field — PaxInput shows
-    // these as the red text under the box, and scrollToFirstIssue below uses
-    // them to pick which one to jump to.
+    // What, specifically, is wrong with each guest field — PaxInput (contact
+    // fields) and GuestCounts (adults) show these as the red text under the
+    // box, and scrollToFirstIssue below uses them to pick which one to jump to.
     const guestFieldErrors = {
         fullName: guest.fullName.trim() ? null : 'Please enter your full name.',
         mobile: !guest.mobile.trim()
@@ -598,7 +596,7 @@ export default function Booking(){
         const fieldId = guestFieldErrors.fullName ? 'guest-fullname'
             : guestFieldErrors.mobile ? 'guest-mobile'
             : guestFieldErrors.email ? 'guest-email'
-            : (guestFieldErrors.pax || capacityIssue) ? 'pax'
+            : (guestFieldErrors.pax || capacityIssue) ? 'gc-adults'
             : null
         document.getElementById(fieldId)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
@@ -736,28 +734,33 @@ export default function Booking(){
                             <StepHeader index={2} />
                             <div className="booking-step-body">
                                 <PaxInput
-                                    pax={pax}
-                                    onPaxChange={setPax}
-                                    cartLines={cartLines}
                                     guest={guest}
                                     onGuestChange={setGuest}
                                     fieldErrors={guestFieldErrors}
                                     showErrors={attemptedConfirm}
                                 />
 
-                                {/* Four independent counts now, not one total
-                                    carved into subsets — totalGuests below is
-                                    just their sum. */}
-                                <KidsCount kids={kids} onKidsChange={setKids} />
-
-                                <SeniorCount seniors={seniors} onSeniorsChange={setSeniors} />
-
-                                <PwdCount pwd={pwd} onPwdChange={setPwd} />
+                                {/* Four independent counts on one row, not one
+                                    total carved into subsets — totalGuests
+                                    below is just their sum. */}
+                                <GuestCounts
+                                    pax={pax}
+                                    onPaxChange={setPax}
+                                    kids={kids}
+                                    onKidsChange={setKids}
+                                    seniors={seniors}
+                                    onSeniorsChange={setSeniors}
+                                    pwd={pwd}
+                                    onPwdChange={setPwd}
+                                    cartLines={cartLines}
+                                    paxError={guestFieldErrors.pax}
+                                    showErrors={attemptedConfirm}
+                                />
 
                                 {/* Whether the whole party fits sits here, right
                                     above the total it's actually about, rather
                                     than under the adults field alone — see
-                                    paxInput.jsx's getFitNote. */}
+                                    getFitNote in accomodationOptions.js. */}
                                 {guestNote && (
                                     <div className={`pax-note pax-note-${guestNote.tone}`} role="status">
                                         <span className="pax-note-dot"></span>
