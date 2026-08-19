@@ -1,0 +1,193 @@
+/* The four headcounts as one row of cells, replacing the four stacked
+   label/stepper/paragraph blocks that used to run down the guest step.
+   Widths line up with the calendar, time selector and Total Guests (648px). */
+.guest-counts{
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 648px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-family: 'Cormorant Garamond', serif;
+    text-align: left;
+}
+
+.gc-row{
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    padding: 14px 12px;
+    border: 1px solid var(--gold-soft);
+    border-radius: 14px;
+    background-color: var(--cream-2);
+}
+
+/* Hairline dividers between cells rather than four separate boxes — the row
+   reads as one control, and the cells stay visually equal. */
+.gc-cell{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 0 4px;
+    border-left: 1px solid var(--gold-soft);
+}
+
+.gc-cell:first-child{
+    border-left: none;
+}
+
+.gc-cell-label{
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    color: var(--forest);
+    white-space: nowrap;
+}
+
+.gc-stepper{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.gc-step{
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 17px;
+    line-height: 1;
+    color: var(--forest);
+    background-color: var(--cream);
+    border: 1px solid var(--gold-soft);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gc-step:hover:not(:disabled){
+    border-color: var(--gold);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.gc-step:disabled{
+    opacity: 0.35;
+    cursor: default;
+}
+
+/* The adults input and the three read-only spans share this so the row reads
+   as four of the same control, not one input beside three labels. */
+.gc-value{
+    box-sizing: border-box;
+    width: 44px;
+    padding: 5px 0;
+    text-align: center;
+    font-family: inherit;
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--forest);
+    background-color: var(--cream);
+    border: 1px solid var(--gold-soft);
+    border-radius: 9px;
+    user-select: none;
+}
+
+.gc-value-input{
+    user-select: auto;
+    -moz-appearance: textfield;
+    appearance: textfield;
+    transition: border-color 0.2s ease;
+}
+
+.gc-value-input:focus{
+    outline: none;
+    border-color: var(--leaf);
+}
+
+.gc-value-input::-webkit-outer-spin-button,
+.gc-value-input::-webkit-inner-spin-button{
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.gc-cell-unit{
+    font-size: 12px;
+    font-style: italic;
+    line-height: 1.2;
+    color: var(--leaf);
+    text-align: center;
+}
+
+/* Required field left blank at Confirm — same red the rest of the guest form
+   uses. Capacity is not flagged here: whether the WHOLE party fits is the
+   fit-note's job, shown once above Total Guests (booking.jsx). */
+.gc-cell-error .gc-value-input{
+    border-color: #B24A3A;
+    color: #8F3A2D;
+    background-color: rgba(178, 74, 58, 0.08);
+}
+
+.gc-cell-error .gc-cell-label{
+    color: #8F3A2D;
+}
+
+.gc-error{
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #8F3A2D;
+}
+
+/* The small print from all four counters, gathered and said once. */
+.gc-notes{
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 13.5px;
+    line-height: 1.45;
+    color: var(--ink);
+}
+
+.gc-notes li{
+    position: relative;
+    padding-left: 15px;
+}
+
+.gc-notes li::before{
+    content: '';
+    position: absolute;
+    top: 0.5em;
+    left: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--gold);
+}
+
+.gc-notes strong{
+    font-weight: 700;
+    color: var(--forest);
+}
+
+/* Two-up before the cells get too narrow for "Seniors" + a 44px value. */
+@media (max-width: 560px){
+    .gc-row{
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px 8px;
+    }
+
+    /* The divider is per-column now, so it has to reset on every row start. */
+    .gc-cell:nth-child(odd){
+        border-left: none;
+    }
+}
