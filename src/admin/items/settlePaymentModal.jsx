@@ -7,11 +7,10 @@ import { settleBookingPayment, settleGroupBookingPayment, groupUnitsLabel } from
 // SENIOR_DISCOUNT_RATE / PWD_DISCOUNT_RATE / KIDS_DISCOUNT_RATE in
 // data/entranceFee.js, which stay at 0 on purpose and govern the ONLINE
 // quote only (see that file's comments). This is a client-side mirror of the
-// same rate settle_booking_payment() uses in Postgres (see
-// supabase/migrations/20260819120000_settle_booking_payment.sql) so the
-// preview here matches what gets recorded — the same deliberate
-// mirrored-arithmetic pattern computeEntranceFee()/entrance_breakdown()
-// already use elsewhere in this app.
+// same rate settle_booking_payment()/settle_group_booking_payment() use in
+// Postgres, so the preview here matches what gets recorded — the same
+// deliberate mirrored-arithmetic pattern computeEntranceFee()/
+// entrance_breakdown() already use elsewhere in this app.
 const SENIOR_SETTLEMENT_RATE = 0.20
 const PWD_SETTLEMENT_RATE = 0.20
 const KIDS_SETTLEMENT_RATE = 1.00
@@ -25,53 +24,80 @@ function orderTotal(orders) {
     return orders.reduce((sum, order) => sum + order.total, 0)
 }
 
-function CostRow({ label, note, value, variant = '' }) {
-    return (
-        <div className={`receipt-order-row${variant ? ` ${variant}` : ''}`}>
-            <span className="receipt-cost-label">
-                {label}
-                {note ? <span className="receipt-cost-note">{note}</span> : null}
-            </span>
-            <span>{value}</span>
-        </div>
-    )
-}
+// One category (senior/PWD/kids) — a single quick switch by default,
+// covering the common case in one click either way: everyone qualifies, or
+// (rarer) nobody does. `verified` starts at `count` (see the useState below)
+// so the switch reads ON out of the gate — "presented ID" is the assumption,
+// not the exception, since that's what actually happens most of the time.
+//
+// For a party bigger than one, flipping N individual switches to knock out
+// most of a category is real hassle, and losing which specific person is
+// verified (a single ON/OFF can't tell "3 of 5" apart from "5 of 5") is a
+// real gap — so "Manual selection" swaps the switch for a +/− counter,
+// still starting at `count`, so the ONLY motion needed is subtracting the
+// exceptions rather than re-building the count from zero.
+function SwitchCategory({ title, rateLabel, count, verified, setVerified, manual, setManual, disabled }) {
+    if (!count) return null
+    const allOn = verified >= count
 
-// One party count staff can dial down from "declared at booking" to "actually
-// verified" — never up past it, since the desk cannot give a discount to more
-// people than the guest brought. Absent entirely once the booking has none of
-// this kind, same as the booking form's own steppers only show what applies.
-function StepRow({ label, note, max, value, onChange }) {
-    if (!max) return null
     return (
-        <div className="settle-step-row">
-            <div className="settle-step-label">
-                <span>{label}</span>
-                {note ? <span className="settle-step-note">{note}</span> : null}
-            </div>
-            <div className="settle-stepper" role="group" aria-label={label}>
-                <button
-                    type="button"
-                    className="settle-step-btn"
-                    aria-label={`Fewer verified — ${label}`}
-                    onClick={() => onChange(Math.max(0, value - 1))}
-                    disabled={value <= 0}
-                >
-                    &minus;
-                </button>
-                <span className="settle-step-value" aria-live="polite" aria-atomic="true">
-                    {value} / {max}
-                </span>
-                <button
-                    type="button"
-                    className="settle-step-btn"
-                    aria-label={`More verified — ${label}`}
-                    onClick={() => onChange(Math.min(max, value + 1))}
-                    disabled={value >= max}
-                >
-                    +
-                </button>
-            </div>
+        <div className="settle-category">
+            <p className="settle-category-title">
+                {title}
+                <span className="settle-category-rate">{rateLabel}</span>
+                {count > 1 && (
+                    <button
+                        type="button"
+                        className="settle-manual-toggle"
+                        onClick={() => setManual(!manual)}
+                        disabled={disabled}
+                    >
+                        {manual ? 'Quick toggle' : 'Manual selection'}
+                    </button>
+                )}
+            </p>
+
+            {manual ? (
+                <div className="settle-stepper" role="group" aria-label={`${title} verified count`}>
+                    <button
+                        type="button"
+                        className="settle-stepper-btn"
+                        aria-label={`Fewer verified — ${title}`}
+                        onClick={() => setVerified(Math.max(0, verified - 1))}
+                        disabled={disabled || verified <= 0}
+                    >
+                        &minus;
+                    </button>
+                    <span className="settle-stepper-value" aria-live="polite" aria-atomic="true">
+                        {verified} / {count}
+                    </span>
+                    <button
+                        type="button"
+                        className="settle-stepper-btn"
+                        aria-label={`More verified — ${title}`}
+                        onClick={() => setVerified(Math.min(count, verified + 1))}
+                        disabled={disabled || verified >= count}
+                    >
+                        +
+                    </button>
+                </div>
+            ) : (
+                <label className={`settle-switch-chip${allOn ? ' is-on' : ''}`}>
+                    <span className="settle-switch-chip-label">
+                        {count === 1 ? 'Shown at check-in' : `All ${count} shown at check-in`}
+                    </span>
+                    <span className="settle-switch">
+                        <input
+                            type="checkbox"
+                            role="switch"
+                            checked={allOn}
+                            disabled={disabled}
+                            onChange={(e) => setVerified(e.target.checked ? count : 0)}
+                        />
+                        <span className="settle-switch-slider" aria-hidden="true" />
+                    </span>
+                </label>
+            )}
         </div>
     )
 }
@@ -87,13 +113,24 @@ function StepRow({ label, note, max, value, onChange }) {
 //
 // Every figure below (discount, amount to collect) is a PREVIEW, computed
 // the same way settle_booking_payment()/settle_group_booking_payment()
-// compute the real one server-side — the RPC is what actually decides and
-// locks in the numbers on Confirm; nothing this component computes is sent
-// as a peso amount, only the verified counts.
+// compute the real one server-side — the RPC only ever receives a per-head
+// VERIFIED COUNT (however many switches are on), never a peso figure this
+// component invents and asks Postgres to trust.
 export default function SettlePaymentModal({ booking, onClose }) {
-    const [seniorVerified, setSeniorVerified] = useState(0)
-    const [pwdVerified, setPwdVerified] = useState(0)
-    const [kidsVerified, setKidsVerified] = useState(0)
+    const seniors = booking?.seniors ?? 0
+    const pwd = booking?.pwd ?? 0
+    const kids = booking?.kids ?? 0
+
+    // Starts at the full count — see SwitchCategory's header comment.
+    const [seniorVerified, setSeniorVerified] = useState(seniors)
+    const [pwdVerified, setPwdVerified] = useState(pwd)
+    const [kidsVerified, setKidsVerified] = useState(kids)
+    // Which categories are in "manual selection" (+/−) mode rather than the
+    // default quick switch — per category, since a party can have e.g. one
+    // PWD (no need for manual) alongside five kids (where it helps).
+    const [seniorManual, setSeniorManual] = useState(false)
+    const [pwdManual, setPwdManual] = useState(false)
+    const [kidsManual, setKidsManual] = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState(null)
 
@@ -127,9 +164,15 @@ export default function SettlePaymentModal({ booking, onClose }) {
     const stayTotal = Number(booking.stayTotal ?? (unitCost ?? 0) + entranceTotal + addOnsTotal)
     const alreadyCollected = Number(booking.paidSubmitted ?? 0)
 
-    const seniors = booking.seniors ?? 0
-    const pwd = booking.pwd ?? 0
-    const kids = booking.kids ?? 0
+    // One line, not the full itemised receipt: staff already reviewed that
+    // in Proof of Payment before this booking ever got here. What this
+    // screen needs is the two totals the verify step below acts on.
+    const unitLabel = booking.isGroup ? groupUnitsLabel(booking.units) : booking.accomodationName
+    const summaryNote = [
+        unitLabel,
+        entranceTotal > 0 ? 'entrance fees' : null,
+        addOnsTotal > 0 ? 'add-ons' : null,
+    ].filter(Boolean).join(' + ')
 
     const discount = Math.round(
         perHead
@@ -162,10 +205,15 @@ export default function SettlePaymentModal({ booking, onClose }) {
                 if (e.target === e.currentTarget && !submitting) onClose?.()
             }}
         >
-            <div className="receipt-modal">
+            <div className="receipt-modal settle-modal">
                 <header className="receipt-head">
                     <div className="receipt-head-text">
-                        <h2 className="receipt-title" id="settle-payment-title">
+                        <h2 className="receipt-title settle-title" id="settle-payment-title">
+                            <svg className="settle-title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <rect x="2.5" y="6" width="19" height="13" rx="2.5" />
+                                <path d="M2.5 10.5h19" />
+                                <circle cx="16.5" cy="14.5" r="1.4" fill="currentColor" stroke="none" />
+                            </svg>
                             Settle Payment
                         </h2>
                         <p className="receipt-subtitle">
@@ -183,66 +231,62 @@ export default function SettlePaymentModal({ booking, onClose }) {
                     </button>
                 </header>
 
-                <div className="receipt-body">
-                    <div className="receipt-orders">
-                        <p className="receipt-orders-title">Cost breakdown</p>
-                        <CostRow
-                            label={booking.isGroup ? 'Accommodation' : booking.accomodationName}
-                            note={booking.isGroup ? groupUnitsLabel(booking.units) : booking.unitId}
-                            value={formatPeso(unitCost)}
-                        />
-                        {entranceTotal > 0 && (
-                            <CostRow
-                                label="Entrance fees"
-                                note={`${formatPeso(perHead)}/head · ${booking.pax ?? 0} pax`}
-                                value={formatPeso(entranceTotal)}
-                            />
-                        )}
-                        {foodOrders.map((order, index) => (
-                            <CostRow key={`food-${index}`} label={`Food · ${order.name}`} value={formatPeso(order.total)} />
-                        ))}
-                        {spaOrders.map((order, index) => (
-                            <CostRow key={`spa-${index}`} label={`Spa · ${order.name}`} value={formatPeso(order.total)} />
-                        ))}
-                        {itemOrders.map((order, index) => (
-                            <CostRow key={`item-${index}`} label={`Add-on · ${order.name}`} value={formatPeso(order.total)} />
-                        ))}
-                        <CostRow
-                            label="Total cost of booking"
-                            value={formatPeso(stayTotal)}
-                            variant="receipt-order-total"
-                        />
-                        <CostRow label="Already collected online" value={formatPeso(alreadyCollected)} />
+                <div className="receipt-body settle-body">
+                    {/* One row, two figures, side by side — not two stacked
+                        rows each with their own padding. Staff already saw
+                        the itemised breakdown in Proof of Payment; this is
+                        just enough to place the numbers below in context. */}
+                    <div className="settle-summary">
+                        <div className="settle-summary-cols">
+                            <div className="settle-summary-col">
+                                <span className="settle-summary-tag">Total</span>
+                                <span className="settle-summary-value">{formatPeso(stayTotal)}</span>
+                            </div>
+                            <div className="settle-summary-col">
+                                <span className="settle-summary-tag">Paid online</span>
+                                <span className="settle-summary-value">{formatPeso(alreadyCollected)}</span>
+                            </div>
+                        </div>
+                        <p className="settle-summary-note">{summaryNote}</p>
                     </div>
 
                     <div className="settle-discounts">
-                        <p className="receipt-orders-title">Verify discounts at settlement</p>
+                        <p className="settle-discounts-title">Verify discounts at settlement</p>
                         <p className="settle-discounts-hint">
-                            Given in person against an ID — dial up only what was actually shown at
-                            check-in. Senior and PWD are 20% off the entrance fee; kids 7 and below
-                            are free.
+                            Starts ON for everyone — flip off whoever didn't show valid ID.
                         </p>
-                        <StepRow
-                            label="Senior citizens"
-                            note={`${Math.round(SENIOR_SETTLEMENT_RATE * 100)}% off entrance`}
-                            max={seniors}
-                            value={seniorVerified}
-                            onChange={setSeniorVerified}
+
+                        <SwitchCategory
+                            title="Senior citizens"
+                            rateLabel="20% off entrance"
+                            count={seniors}
+                            verified={seniorVerified}
+                            setVerified={setSeniorVerified}
+                            manual={seniorManual}
+                            setManual={setSeniorManual}
+                            disabled={submitting}
                         />
-                        <StepRow
-                            label="PWD"
-                            note={`${Math.round(PWD_SETTLEMENT_RATE * 100)}% off entrance`}
-                            max={pwd}
-                            value={pwdVerified}
-                            onChange={setPwdVerified}
+                        <SwitchCategory
+                            title="PWD"
+                            rateLabel="20% off entrance"
+                            count={pwd}
+                            verified={pwdVerified}
+                            setVerified={setPwdVerified}
+                            manual={pwdManual}
+                            setManual={setPwdManual}
+                            disabled={submitting}
                         />
-                        <StepRow
-                            label="Kids 7 & below"
-                            note="Free"
-                            max={kids}
-                            value={kidsVerified}
-                            onChange={setKidsVerified}
+                        <SwitchCategory
+                            title="Kids 7 & below"
+                            rateLabel="Free"
+                            count={kids}
+                            verified={kidsVerified}
+                            setVerified={setKidsVerified}
+                            manual={kidsManual}
+                            setManual={setKidsManual}
+                            disabled={submitting}
                         />
+
                         {seniors + pwd + kids === 0 && (
                             <p className="settle-discounts-hint">
                                 No senior, PWD or kids guests are on this booking.
@@ -250,13 +294,15 @@ export default function SettlePaymentModal({ booking, onClose }) {
                         )}
                     </div>
 
-                    <div className="receipt-orders">
-                        <CostRow label="Discount given" value={discount > 0 ? `− ${formatPeso(discount)}` : formatPeso(0)} />
-                        <CostRow
-                            label="Amount to collect"
-                            value={formatPeso(amountToCollect)}
-                            variant="receipt-order-total"
-                        />
+                    <div className="settle-result">
+                        <div className="settle-result-row">
+                            <span>Discount</span>
+                            <span>{discount > 0 ? `− ${formatPeso(discount)}` : formatPeso(0)}</span>
+                        </div>
+                        <div className="settle-result-row settle-result-total">
+                            <span>Amount to collect</span>
+                            <span>{formatPeso(amountToCollect)}</span>
+                        </div>
                     </div>
 
                     {error && (

@@ -178,10 +178,6 @@
     font-weight: 600;
 }
 
-.col-actions {
-    text-align: right;
-}
-
 /* ---------- Badges ---------- */
 .bookings-badge {
     display: inline-block;
@@ -255,9 +251,31 @@
     color: rgba(10, 22, 14, 0.45);
 }
 
-/* ---------- Row actions ---------- */
+/* ---------- Row actions (pinned) ----------
+   Sticky to the right edge of .bookings-table-wrap's horizontal scroll —
+   Review/Approve, Mark Paid/Undo and Cancel are things staff act on
+   constantly, and scrolling the full width of the table to reach them on
+   every row (worse now that Guests spells out the full adult/senior/pwd/kid
+   breakdown) was real friction. Same treatment for the header cell, so the
+   column heading stays aligned with the pinned buttons while scrolling. */
 .col-actions {
+    position: sticky;
+    right: 0;
+    z-index: 1;
+    background: var(--cream);
+    /* A shadow cast to the left, not a hard border — reads as "this column
+       is floating above the content that just scrolled under it" without
+       needing scroll-position JS to show/hide it conditionally. */
+    box-shadow: -8px 0 8px -8px rgba(10, 22, 14, 0.18);
     white-space: nowrap;
+    text-align: right;
+}
+
+/* tr:hover sets background on the ROW, which an opaque sticky cell would
+   otherwise mask — restated here as the equivalent flat colour so the
+   pinned column still tints on hover like the rest of the row does. */
+.bookings-table tbody tr:hover td.col-actions {
+    background: #f3ecdf;
 }
 
 .col-actions .bookings-action + .bookings-action {
