@@ -258,6 +258,21 @@ export function formatClock(ms) {
     return new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
+// The stay a booking actually occupies, in one line: the day (or day range)
+// the guest booked, plus the time window of the schedule they picked —
+// 'Aug 22 · 10:00 AM - 5:00 PM'.
+//
+// This is what the kitchen and the spa need to read off an order: WHEN it has
+// to be served, which is the booking's window, not the moment the guest tapped
+// order. Both boards that show add-ons render it, so it lives here rather than
+// being written out twice and drifting.
+export function formatStayWindow(booking) {
+    const from = formatShortDate(booking.checkIn)
+    const to = formatShortDate(booking.checkOut)
+    const dates = from === to ? from : `${from} – ${to}`
+    return booking.schedule ? `${dates} · ${booking.schedule.time}` : dates
+}
+
 // --------------------------------------------------------- occupancy window
 // The JS twin of occupancy_window() in SQL. Both must agree, which is why the
 // minute offsets live in one place (STAY_SCHEDULES / stay_schedules).
