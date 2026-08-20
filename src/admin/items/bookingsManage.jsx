@@ -6,17 +6,14 @@ import {
     useAccommodationDB,
     useBookingGroups,
     getBookingStage,
-    confirmBooking,
     markBookingPaidFull,
     undoBookingPaidFull,
-    cancelBooking,
-    confirmBookingGroup,
     markBookingGroupPaidFull,
     undoGroupBookingPaidFull,
-    cancelBookingGroup,
     groupUnitsLabel,
     guestPartyLabel,
 } from '../../data/accommodationDB.js'
+import useBookingDecision from './bookingDecision'
 
 // Rows come straight from the accommodation database — the same records the
 // booking page writes. Approving one here flips it to "upcoming" for the
@@ -104,6 +101,11 @@ export default function BookingsManage() {
     // one-click markBookingPaidFull()/markBookingGroupPaidFull() when there
     // is nothing to verify.
     const [settlingId, setSettlingId] = useState(null)
+    // Approve and Reject, wired to the guest email and the popup that reports
+    // whether it reached them. Shared with the Overview tabs, which offer the
+    // same two buttons through the same receipt lightbox — see
+    // bookingDecision.jsx for why the decision does not live in this file.
+    const { approve, reject, decisionModal } = useBookingDecision()
 
     // Single-unit bookings and combined reservations, one table — each row
     // already knows which kind it is (`isGroup`), which is all the actions
@@ -186,6 +188,7 @@ export default function BookingsManage() {
                     ))}
                 </div>
             </div>
+
 
             <div className="bookings-panel">
                 {visible.length === 0 ? (
@@ -315,9 +318,7 @@ export default function BookingsManage() {
                                                         type="button"
                                                         className="bookings-action"
                                                         onClick={() =>
-                                                            b.receiptPath
-                                                                ? setReviewingId(b.id)
-                                                                : b.isGroup ? confirmBookingGroup(b.id) : confirmBooking(b.id)
+                                                            b.receiptPath ? setReviewingId(b.id) : approve(b)
                                                         }
                                                     >
                                                         {b.receiptPath ? 'Review' : 'Approve'}
@@ -371,7 +372,7 @@ export default function BookingsManage() {
                                                     <button
                                                         type="button"
                                                         className="bookings-action bookings-action-danger"
-                                                        onClick={() => (b.isGroup ? cancelBookingGroup(b.id, { asStaff: true }) : cancelBooking(b.id, { asStaff: true }))}
+                                                        onClick={() => reject(b)}
                                                     >
                                                         Cancel
                                                     </button>
@@ -393,8 +394,8 @@ export default function BookingsManage() {
                     key={reviewing.id}
                     booking={reviewing}
                     onClose={() => setReviewingId(null)}
-                    onApprove={(booking) => (booking.isGroup ? confirmBookingGroup(booking.id) : confirmBooking(booking.id))}
-                    onCancel={(booking) => (booking.isGroup ? cancelBookingGroup(booking.id, { asStaff: true }) : cancelBooking(booking.id, { asStaff: true }))}
+                    onApprove={approve}
+                    onCancel={reject}
                 />
             )}
 
@@ -405,6 +406,8 @@ export default function BookingsManage() {
                     onClose={() => setSettlingId(null)}
                 />
             )}
+
+            {decisionModal}
         </div>
     )
 }

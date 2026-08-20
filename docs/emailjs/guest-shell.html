@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{subject}}</title>
+<!--
+  ===========================================================================
+  CAMP BA-LONG — THE GUEST SHELL.  Template 2 of 2.
+  This replaces your existing auto-reply template. SAME template, SAME ID —
+  the one already in email_settings.template_autoreply. Nothing to add in
+  Supabase, no new template, no paid plan.
+  ===========================================================================
+
+  WHAT TO DO — TWO THINGS, THEN YOU ARE DONE
+
+    1. Code (</>) view: select all, delete, paste this whole file.
+       Do NOT append it under what is there now.
+
+    2. Settings tab beside the editor:
+
+           Subject      {{subject}}     <- yes, only the variable
+
+  And what NOT to touch:
+
+       To email     LEAVE IT AS IT IS. Whatever it holds — {{email}},
+                    {{from_email}}, {{to_email}}, {{user_email}},
+                    {{recipient}} — the site fills every one of those with
+                    the guest's address, so the mail reaches them either
+                    way. Only change it if it holds a fixed address, or a
+                    name outside that list.
+       From name    leave it
+       Reply To     leave it
+
+  Step 2 cannot be skipped. Subject is a dashboard setting, not something a
+  message can carry in its body: left on "We've Received Your Message", that
+  is the line a confirmed booking arrives under in the guest's inbox — and
+  for a lot of people the subject line is all they read.
+
+  WHY THIS TEMPLATE CONTAINS NO MESSAGE
+  -------------------------------------
+  The free EmailJS plan allows two templates. One is spent on the enquiry
+  that goes to the admin inbox, leaving exactly one for the guest — and
+  there are three things to tell a guest:
+
+      * "we received your message"   (contact form)
+      * "your booking is verified"   (staff Approve — carries the receipt)
+      * "rejected upon findings"     (staff Reject / Cancel)
+
+  So this holds no words of its own. It is a frame: header, slot, footer.
+  The site composes the message and sends it in. A fourth message would
+  need no change here at all.
+
+  That is why Subject is only {{subject}} and the headline is {{heading}} —
+  each message supplies its own. Hard-coding either would put "We Received
+  Your Message" at the top of a booking confirmation.
+
+  Your contact-form acknowledgement is not lost: same greeting, the same
+  copy of what they sent read back to them, the same admin hours, the same
+  sign-off. It now comes from src/lib/guestEmails.js instead of from this
+  textarea. Edit that wording there, not here.
+
+  THE ONE THING TO GET RIGHT: {{{body_html}}} HAS THREE BRACES
+  ------------------------------------------------------------
+  Not a typo. Two braces make EmailJS escape what it inserts and the guest
+  receives a wall of visible <table> tags instead of an email. Three braces
+  insert it as markup. If you retype that line, keep all three.
+
+  It is safe unescaped because every value inside was escaped leaf-by-leaf
+  when it was built — see esc() in src/lib/emailTheme.js. A guest whose name
+  contains an apostrophe or an angle bracket cannot break the layout.
+
+  WHAT IS SAFE TO EDIT HERE
+  -------------------------
+  The chrome: colours, rules, the wordmark, the address in the footer. The
+  palette matches src/lib/emailTheme.js — change a colour here and change it
+  there too, or the message and its frame will drift apart.
+-->
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
+
+  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+  body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; background-color: #efe7d4; }
+
+  .font-serif {
+    font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  }
+
+  @media screen and (max-width: 600px) {
+    .email-container { width: 100% !important; }
+    .fluid-padding { padding-left: 24px !important; padding-right: 24px !important; }
+    .stack { display: block !important; width: 100% !important; }
+  }
+</style>
+</head>
+<body style="margin:0; padding:0; background-color:#efe7d4;" class="font-serif">
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#efe7d4;">
+  <tr>
+    <td align="center" style="padding: 32px 16px;">
+
+      <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px; max-width:600px; background-color:#faf6ea; border: 1px solid #c9a227;">
+
+        <!-- Top gold double line -->
+        <tr>
+          <td style="background-color:#2f4d34; padding: 6px 0 0 0;"></td>
+        </tr>
+        <tr>
+          <td style="height:4px; line-height:4px; font-size:1px; background-color:#c9a227;">&nbsp;</td>
+        </tr>
+        <tr>
+          <td style="height:1px; line-height:1px; font-size:1px; background-color:#2f4d34;">&nbsp;</td>
+        </tr>
+
+        <!-- Header. {{heading}} is the headline the message supplies:
+             "We Received Your Message", "Your Booking Is Verified",
+             "About Your Booking". -->
+        <tr>
+          <td align="center" class="fluid-padding" style="background-color:#2f4d34; padding: 40px 40px 32px 40px;">
+            <div style="font-family:'Cormorant Garamond', Georgia, serif; color:#c9a227; font-size:13px; letter-spacing: 4px; text-transform:uppercase; margin-bottom:10px;">
+              Camp Ba-long
+            </div>
+            <div style="font-family:'Cormorant Garamond', Georgia, serif; color:#faf6ea; font-size:34px; font-weight:600; letter-spacing:1px;">
+              {{heading}}
+            </div>
+            <div style="width:70px; height:2px; background-color:#c9a227; margin: 18px auto 0 auto;"></div>
+          </td>
+        </tr>
+
+        <!-- Gold divider under header -->
+        <tr>
+          <td style="height:3px; line-height:3px; font-size:1px; background-color:#c9a227;">&nbsp;</td>
+        </tr>
+
+        <!-- ================================================================
+             THE MESSAGE. Everything that used to be here — the greeting, the
+             "copy of your message" recap, the closing note — is now composed
+             by the site and arrives in this one slot, because the same frame
+             has to carry a booking confirmation and a rejection too.
+
+             THREE BRACES. See the note at the top of this file.
+             ================================================================ -->
+        <tr>
+          <td class="fluid-padding" style="padding: 36px 44px 8px 44px;">
+            {{{body_html}}}
+          </td>
+        </tr>
+
+        <!-- Decorative close -->
+        <tr>
+          <td align="center" style="padding: 22px 0 30px 0;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="width:40px; height:1px; background-color:#c9a227; font-size:1px; line-height:1px;">&nbsp;</td>
+                <td style="padding:0 12px; font-family:'Cormorant Garamond', Georgia, serif; color:#c9a227; font-size:16px;">&#8226;&#8226;&#8226;</td>
+                <td style="width:40px; height:1px; background-color:#c9a227; font-size:1px; line-height:1px;">&nbsp;</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Gold divider -->
+        <tr>
+          <td style="height:1px; line-height:1px; font-size:1px; background-color:#2f4d34;">&nbsp;</td>
+        </tr>
+        <tr>
+          <td style="height:4px; line-height:4px; font-size:1px; background-color:#c9a227;">&nbsp;</td>
+        </tr>
+
+        <!-- Footer. {{footer_note}} is the small print, which differs between
+             a contact reply and a booking decision — hence a variable rather
+             than a sentence typed here. The address line is yours to edit. -->
+        <tr>
+          <td align="center" style="background-color:#2f4d34; padding: 26px 40px;">
+            <p style="font-family:'Cormorant Garamond', Georgia, serif; color:#faf6ea; font-size:14px; letter-spacing:1px; margin:0 0 8px 0;">
+              Camp Ba-long &nbsp;&#8226;&nbsp; Nature Farm &amp; Resort &nbsp;&#8226;&nbsp; Liliw, Laguna
+            </p>
+            <p style="font-family:'Cormorant Garamond', Georgia, serif; color:#c9a227; font-size:12px; line-height:1.6; margin:0;">
+              {{footer_note}}
+            </p>
+          </td>
+        </tr>
+
+        <!-- Bottom gold line -->
+        <tr>
+          <td style="height:4px; line-height:4px; font-size:1px; background-color:#c9a227;">&nbsp;</td>
+        </tr>
+
+      </table>
+
+    </td>
+  </tr>
+</table>
+
+</body>
+</html>

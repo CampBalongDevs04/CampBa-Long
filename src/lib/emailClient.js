@@ -1,5 +1,6 @@
 import emailjs from '@emailjs/browser'
 import { supabase, isSupabaseConfigured, SUPABASE_SETUP_MESSAGE } from './supabaseClient.js'
+import { contactAcknowledgement, shellParams } from './guestEmails.js'
 
 // Contact-form email, via EmailJS.
 //
@@ -29,6 +30,19 @@ import { supabase, isSupabaseConfigured, SUPABASE_SETUP_MESSAGE } from './supaba
 // domain there is still a 403, whatever the key's route to the browser.
 
 const SETTINGS_ROW_ID = 'contact_form'
+
+// The contact form's own fields — every column this table has had since it was
+// created, and the set the form needs and nothing more.
+const LEGACY_COLUMNS = 'service_id, public_key, template_admin, template_autoreply, admin_email'
+
+// Those plus the two booking-decision templates, added later by
+// supabase/migrations/20260820120000_booking_status_emails.sql.
+const FULL_COLUMNS =
+    LEGACY_COLUMNS + ', template_booking_confirmed, template_booking_rejected'
+
+// Postgres 'undefined_column'. What a select for the newer columns answers
+// against a database the migration has not reached yet — see fetchConfig().
+const UNDEFINED_COLUMN = '42703'
 
 // Config problems and delivery problems both surface through the same modal,
 // but they are fixed by different people in different places — one is the site
@@ -97,6 +111,16 @@ function validate(row) {
         // Only a default: the admin template can also address itself in the
         // dashboard, so an empty value here is not fatal.
         adminEmail: row.admin_email || '',
+
+        // The two booking-decision templates (see bookingEmail.js). Carried
+        // through, NOT required above: the contact form has worked without
+        // them since before the columns existed, and making it refuse to send
+        // an enquiry because a booking template is blank would break the one
+        // thing on the public home page to fix something only staff ever
+        // touch. bookingEmail.js checks its own two fields instead, at the
+        // point where their absence actually matters.
+        templateBookingConfirmed: row.template_booking_confirmed || '',
+        templateBookingRejected: row.template_booking_rejected || '',
     }
 }
 
@@ -111,11 +135,41 @@ async function fetchConfig() {
         )
     }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
         .from('email_settings')
-        .select('service_id, public_key, template_admin, template_autoreply, admin_email')
+        .select(FULL_COLUMNS)
         .eq('id', SETTINGS_ROW_ID)
         .maybeSingle()
+
+    // The two booking-template columns are OPTIONAL overrides, and the
+    // migration adding them may never be run — on the free EmailJS plan there
+    // is nothing to put in them, because both booking emails go out through
+    // the shared guest shell in template_autoreply (see bookingEmail.js).
+    //
+    // But the select above still names them, and Postgres answers 42703 for
+    // the WHOLE select when a column is absent — which would take the CONTACT
+    // FORM down, on the public home page, over two fields nothing is
+    // obliged to use. So the query is asked again without them.
+    //
+    // Deliberately narrow: only the undefined-column code retries, so a
+    // genuinely broken query still surfaces as itself.
+    if (error?.code === UNDEFINED_COLUMN) {
+        // console.info, not warn: this is a supported configuration and not a
+        // problem to go and fix. Nothing is degraded — every email still
+        // sends, the overrides simply are not available to set.
+        console.info(
+            '[Camp Ba-long] email_settings has no booking-template override ' +
+            'columns — reading the row without them. All emails still send ' +
+            'through the shared guest template. To enable the overrides (only ' +
+            'useful on a paid EmailJS plan), apply ' +
+            'supabase/migrations/20260820120000_booking_status_emails.sql.',
+        )
+        ;({ data, error } = await supabase
+            .from('email_settings')
+            .select(LEGACY_COLUMNS)
+            .eq('id', SETTINGS_ROW_ID)
+            .maybeSingle())
+    }
 
     if (error) {
         throw new EmailConfigError(
@@ -216,12 +270,27 @@ export function describeEmailError(error) {
             'are the site owner: reconnect the email service in the EmailJS ' +
             'dashboard — its access to the mailbox has expired.'
     }
+    // 422 is ONE mistake: the template's To box did not resolve to an address.
+    //
+    // It used to have an obvious cause — the guest template addressed itself
+    // with {{from_email}}, which only the contact form sends, so enquiries
+    // worked and booking emails silently did not. shellParams() in
+    // guestEmails.js now sends the guest's address under every name a To box
+    // is likely to hold ({{email}}, {{to_email}}, {{user_email}},
+    // {{from_email}}, {{recipient}}), so that particular mismatch cannot
+    // happen any more.
+    //
+    // Which means a 422 reaching here now says something narrower, and the
+    // message says it: the box is empty, or names a variable that is on none
+    // of those lists.
     if (status === 422) {
-        return 'The mail template is missing a recipient. If you are the site ' +
-            'owner: the To field of the EmailJS template has to hold a ' +
-            'placeholder the form actually sends — {{email}} for the guest ' +
-            'auto-reply, {{to_email}} for the admin copy. Anything else ' +
-            'resolves to empty and the message has nowhere to go.'
+        return 'The mail template has no recipient, so nothing was sent. If you ' +
+            'are the site owner: open EmailJS → Email Templates → your guest ' +
+            'template and look at the "To email" box beside the editor. Every ' +
+            'guest message sends the address as {{email}}, {{to_email}}, ' +
+            '{{user_email}}, {{from_email}} and {{recipient}} at once, so any ' +
+            'one of those works — this error means the box is blank, or holds ' +
+            'some other name. Put {{email}} in it, and {{subject}} in Subject.'
     }
     if (status === 429) {
         return 'Too many messages have been sent from here in a short time. ' +
@@ -302,9 +371,37 @@ export async function sendContactMessage(fields) {
 
     await emailjs.send(config.serviceId, config.templateAdmin, params, options)
 
+    // The guest copy goes through the same template as the booking emails,
+    // which is now a content-agnostic shell (docs/emailjs/guest-shell.html) —
+    // the free EmailJS plan allows two templates and the other one is the
+    // admin notification above. So the acknowledgement's wording, which used
+    // to live in the dashboard, is composed in guestEmails.js and sent as
+    // body_html / body_text.
+    //
+    // THE SPREAD ORDER IS WHAT MAKES THE SWAP SAFE. Every field the previous
+    // per-message template read ({{from_name}}, {{message}}, {{submitted_at}},
+    // {{from_email}} in its To box) is still in `params` underneath, so this
+    // code can be deployed while the dashboard still holds the OLD template
+    // and the acknowledgement keeps arriving exactly as before. Paste the
+    // shell whenever it suits; there is no window where the contact form is
+    // broken. The shell's own To box reads {{email}}, which both sets carry.
+    const guestParams = {
+        ...params,
+        ...shellParams(
+            contactAcknowledgement({
+                name: fields.name,
+                email: fields.email,
+                phone: fields.phone || 'Not provided',
+                message: fields.message,
+                submittedAt: params.submission_date,
+            }),
+            { name: fields.name, email: fields.email },
+        ),
+    }
+
     let autoReplySent = true
     try {
-        await emailjs.send(config.serviceId, config.templateAutoreply, params, options)
+        await emailjs.send(config.serviceId, config.templateAutoreply, guestParams, options)
     } catch (error) {
         autoReplySent = false
         // The raw status and text go alongside the explanation: this branch is

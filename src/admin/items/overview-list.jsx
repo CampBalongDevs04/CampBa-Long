@@ -7,12 +7,9 @@ import {
     listBookings,
     getBookingStage,
     formatShortDate,
-    confirmBooking,
-    cancelBooking,
-    confirmBookingGroup,
-    cancelBookingGroup,
     groupUnitsLabel,
 } from '../../data/accommodationDB.js'
+import useBookingDecision from './bookingDecision'
 
 // Shared panel behind every overview tab (All / Upcomming / Active /
 // Completed / Paid Full / Down Payment). Each tab is just this component with
@@ -53,6 +50,11 @@ export default function OverviewList({ filter = 'all', emptyTitle, emptyText }) 
     // Held by id so the open lightbox tracks the live row (see bookingsManage).
     const [reviewingId, setReviewingId] = useState(null)
     const reviewing = bookings.find((booking) => booking.id === reviewingId) ?? null
+    // The same Approve / Reject the Bookings tab uses — the guest is emailed
+    // and the popup says whether it reached them. This screen used to call
+    // confirmBooking() straight from the lightbox footer, so an approval made
+    // here told the guest nothing at all.
+    const { approve, reject, decisionModal } = useBookingDecision()
 
     if (bookings.length === 0) {
         return (
@@ -77,6 +79,14 @@ export default function OverviewList({ filter = 'all', emptyTitle, emptyText }) 
                     <h3 className="booking-empty-title">{emptyTitle}</h3>
                     <p className="booking-empty-text">{emptyText}</p>
                 </div>
+
+                {/* Also here, not only in the list below: approving the last
+                    row of a filtered tab empties the list, and this component
+                    returns the empty state in the same render that sets the
+                    result. Left out, the popup reporting whether the guest was
+                    emailed would be unmounted before it ever appeared — on
+                    exactly the approval staff were watching. */}
+                {decisionModal}
             </div>
         )
     }
@@ -144,10 +154,12 @@ export default function OverviewList({ filter = 'all', emptyTitle, emptyText }) 
                     key={reviewing.id}
                     booking={reviewing}
                     onClose={() => setReviewingId(null)}
-                    onApprove={(b) => (b.isGroup ? confirmBookingGroup(b.id) : confirmBooking(b.id))}
-                    onCancel={(b) => (b.isGroup ? cancelBookingGroup(b.id, { asStaff: true }) : cancelBooking(b.id, { asStaff: true }))}
+                    onApprove={approve}
+                    onCancel={reject}
                 />
             )}
+
+            {decisionModal}
         </div>
     )
 }

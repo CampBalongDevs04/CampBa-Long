@@ -1,0 +1,149 @@
+/* ---------- "Email sent" / "Email was not sent" popup ----------
+   Sits on .receipt-overlay, shared with the receipt lightbox and the settle
+   modal, so the backdrop and blur are identical across the admin board. */
+
+.email-result-modal {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 440px;
+    padding: 28px 28px 24px;
+    text-align: center;
+    background: var(--cream, #f7f3ea);
+    border: 1px solid rgba(198, 161, 91, 0.45);
+    border-radius: 18px;
+    box-shadow: 0 24px 60px -20px rgba(10, 22, 14, 0.7);
+    font-family: 'Jost', sans-serif;
+}
+
+/* The status is carried by a coloured top edge as well as the mark and the
+   wording. Three signals rather than one: staff read this at a glance, mid-
+   task, and a failure that only differs by icon colour is a failure that gets
+   waved past. */
+.email-result-modal.is-ok {
+    border-top: 4px solid #2e7d46;
+}
+
+.email-result-modal.is-warn {
+    border-top: 4px solid #b4762a;
+}
+
+.email-result-mark {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.is-ok .email-result-mark {
+    color: #2e7d46;
+    background: rgba(46, 125, 70, 0.12);
+}
+
+.is-warn .email-result-mark {
+    color: #b4762a;
+    background: rgba(180, 118, 42, 0.14);
+}
+
+.email-result-title {
+    margin: 0 0 8px;
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #1d3025;
+}
+
+.email-result-lead {
+    margin: 0 0 4px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #2a2a22;
+}
+
+.email-result-address {
+    margin: 0 0 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4c6b4f;
+    /* A long address must not widen the dialog or spill out of it. */
+    overflow-wrap: anywhere;
+}
+
+/* The reason, and the only part anyone needs to act on. Left-aligned because
+   these run to two or three lines and name a specific field to go and fix —
+   centred text is for headlines, not instructions. */
+.email-result-reason {
+    margin: 0 0 12px;
+    padding: 12px 14px;
+    text-align: left;
+    font-size: 13px;
+    line-height: 1.65;
+    color: #2a2a22;
+    background: rgba(180, 118, 42, 0.09);
+    border-left: 3px solid #b4762a;
+    border-radius: 0 8px 8px 0;
+}
+
+.email-result-detail {
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #4c6b4f;
+    background: rgba(29, 48, 37, 0.05);
+    border-radius: 8px;
+}
+
+.email-result-detail code {
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    font-size: 11px;
+    color: #1d3025;
+    background: rgba(198, 161, 91, 0.2);
+    padding: 1px 5px;
+    border-radius: 4px;
+    overflow-wrap: anywhere;
+}
+
+.email-result-followup {
+    margin: 0 0 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #b4762a;
+}
+
+.email-result-close {
+    width: 100%;
+    padding: 11px 18px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #f7f3ea;
+    background: #1d3025;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.18s ease;
+}
+
+.email-result-close:hover {
+    background: #2f4d34;
+}
+
+.email-result-close:focus-visible {
+    outline: 2px solid #c6a15b;
+    outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+    .email-result-modal {
+        padding: 22px 20px 20px;
+    }
+}
