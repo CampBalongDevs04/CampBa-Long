@@ -92,100 +92,13 @@
     color: #8F3A2D;
 }
 
-/* Guest counter — inline stepper, sits on the left */
-.pax-counter{
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 10px;
-    padding: 7px 0;
-}
-
-/* Stepper buttons — same language as the carousel arrows */
-.pax-step{
-    flex-shrink: 0;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    font-size: 18px;
-    line-height: 1;
-    color: var(--forest);
-    background-color: var(--cream);
-    border: 1px solid var(--gold-soft);
-    border-radius: 50%;
-    cursor: pointer;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.pax-step:hover:not(:disabled){
-    border-color: var(--gold);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
-}
-
-.pax-step:disabled{
-    opacity: 0.4;
-    cursor: default;
-}
-
-.pax-count{
-    box-sizing: border-box;
-    width: 56px;
-    padding: 6px 0;
-    text-align: center;
-    font-family: inherit;
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--forest);
-    background-color: var(--cream);
-    border: 1px solid var(--gold-soft);
-    border-radius: 10px;
-    -moz-appearance: textfield;
-    appearance: textfield;
-    transition: border-color 0.2s ease;
-}
-
-.pax-count:focus{
-    outline: none;
-    border-color: var(--leaf);
-}
-
-.pax-count::-webkit-outer-spin-button,
-.pax-count::-webkit-inner-spin-button{
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-.pax-counter-hint{
-    font-size: 14px;
-    font-style: italic;
-    color: var(--leaf);
-}
-
-/* Past the selected unit's capacity: the count is allowed on screen so the
-   note can explain it, but it reads as a problem rather than a valid entry. */
-.pax-count-over{
-    border-color: #B24A3A;
-    color: #8F3A2D;
-    background-color: rgba(178, 74, 58, 0.08);
-}
-
-/* …including while the guest is still typing in it. */
-.pax-count-over:focus{
-    border-color: #B24A3A;
-}
-
-.pax-counter-hint-over{
-    font-weight: 600;
-    color: #8F3A2D;
-}
-
-/* Fit note */
+/* Fit note — rendered in booking.jsx now, a direct child of .booking-step-body
+   rather than nested inside .guest-info, so the 648px cap that used to come
+   from that parent has to live here instead. */
 .pax-note{
     box-sizing: border-box;
     width: 100%;
+    max-width: 648px;
     display: flex;
     align-items: baseline;
     gap: 10px;

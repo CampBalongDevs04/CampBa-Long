@@ -104,6 +104,7 @@ function entranceNotes(booking) {
         freeSavings: entrance.freeSavings,
         kids: booking.kids,
         perHead: entrance.perHead,
+        createdAt: booking.createdAt,
     })
     return [
         entrance.perHead > 0 ? `${formatPeso(entrance.perHead)}/head` : null,
@@ -240,10 +241,18 @@ export default function ReceiptViewer({ booking, onClose, onApprove, onCancel })
     const entranceTotal = Number(booking.entrance?.total ?? 0)
     const addOnsTotal = orderTotal(foodOrders) + orderTotal(spaOrders) + orderTotal(itemOrders)
     const stayTotal = Number(booking.stayTotal ?? (units ?? 0) + entranceTotal + addOnsTotal)
-    // What the desk still collects. A booking marked paid-full is settled
-    // whatever the screenshots add up to — that flag IS staff saying so.
-    const credited = booking.payment === 'paid-full' ? stayTotal : submitted
-    const dueOnArrival = Math.max(0, Math.round((stayTotal - credited) * 100) / 100)
+    // What has been received IN TOTAL across both payments. A booking marked
+    // paid-full is settled whatever the screenshots add up to — that flag IS
+    // staff saying so — unless it was settled through settleBookingPayment(),
+    // which records the real, possibly-discounted total (stayTotal minus
+    // whatever was actually given at the desk, not just the second payment).
+    const credited = booking.payment === 'paid-full' ? (booking.settlementCollected ?? stayTotal) : submitted
+    // Paid-full always means nothing more is owed, discount or not — a
+    // settled booking's "balance" is not stayTotal minus what it actually
+    // collected, or a discount would misread as still-outstanding money.
+    const dueOnArrival = booking.payment === 'paid-full'
+        ? 0
+        : Math.max(0, Math.round((stayTotal - credited) * 100) / 100)
 
     return (
         <div

@@ -4,6 +4,7 @@ import '../components/css/bookingSummary.css'
 import { DOWNPAYMENT_RATE } from '../../data/accommodationDB.js'
 import { ENTRANCE_PER_NIGHT } from '../../data/extendedStay.js'
 import {
+    KIDS_DISCOUNT_IN_SYSTEM, KIDS_DISCOUNT_LABEL,
     PWD_DISCOUNT_IN_SYSTEM, PWD_DISCOUNT_LABEL,
     SENIOR_DISCOUNT_IN_SYSTEM, SENIOR_DISCOUNT_LABEL,
 } from '../../data/entranceFee.js'
@@ -58,7 +59,7 @@ function SummaryRow({ label, value, placeholder }){
 // showing ₱6,750 against a ₱2,250 card — the row shows the arithmetic rather
 // than just the product.
 export default function BookingSummary({
-    checkIn, checkOut, schedule, quote, guest, pax, kids, seniors, pwd, rentAllMode = false,
+    checkIn, checkOut, schedule, quote, guest, pax, kids, seniors, pwd, totalGuests = 0, rentAllMode = false,
     freeEntranceQuota = 2, addonLines = [], addonsPreviewTotal = 0,
 }){
     const {
@@ -173,13 +174,19 @@ export default function BookingSummary({
                     ))
                 )}
                 <SummaryRow
-                    label="Guests"
+                    label="Adults"
                     value={pax ? `${pax} pax` : null}
                     placeholder="Not set"
                 />
                 <SummaryRow
                     label="Kids (7 & below)"
-                    value={kids > 0 ? `${kids} — no entrance fee` : null}
+                    value={
+                        kids > 0
+                            ? KIDS_DISCOUNT_IN_SYSTEM
+                                ? `${kids} — ${KIDS_DISCOUNT_LABEL} off`
+                                : `${kids} — discount claimed at the resort`
+                            : null
+                    }
                     placeholder="None"
                 />
                 <SummaryRow
@@ -206,6 +213,14 @@ export default function BookingSummary({
                             : null
                     }
                     placeholder="None"
+                />
+                {/* Adults + kids + seniors + PWD added together — the whole
+                    party, same figure the pricing and unit-capacity checks
+                    both use (booking.jsx's totalGuests). */}
+                <SummaryRow
+                    label="Total Guests"
+                    value={totalGuests > 0 ? `${totalGuests}` : null}
+                    placeholder="Not set"
                 />
                 {/* Under a promo the standing rate is struck through beside the
                     one being charged, and what it saves gets its own line in the
@@ -294,30 +309,35 @@ export default function BookingSummary({
                     value={schedule && entrance.paxCount > 0 ? formatPeso(entrance.paxTotal) : null}
                     placeholder={schedule ? '—' : 'Set guests'}
                 />
-                {entrance.kidsCount > 0 && (
-                    <div className="summary-row summary-row-discount">
-                        <span className="summary-row-label">
-                            Free entrance ({entrance.kidsCount} pax) — kids 7 &amp; below
-                        </span>
-                        <span className="summary-row-value">
-                            {schedule ? `− ${formatPeso(entrance.kidsFree)}` : '—'}
-                        </span>
-                    </div>
-                )}
                 {entrance.perkApplied > 0 && (
                     <div className="summary-row summary-row-discount">
                         <span className="summary-row-label">
-                            Free entrance ({entrance.perkApplied} pax) — resort inclusion
+                            {/* Names the cap (freeEntranceQuota), not just how many pax
+                                happened to use it this time — Rent All's cap (20) is easy
+                                to mistake for "free for everyone" without it spelled out
+                                right on the discount line, not just in the small print
+                                below (see freeEntranceNote). */}
+                            Free entrance ({entrance.perkApplied} of first {freeEntranceQuota} pax) — resort inclusion
                         </span>
                         <span className="summary-row-value">
                             {schedule ? `− ${formatPeso(entrance.perkSavings)}` : '—'}
                         </span>
                     </div>
                 )}
-                {/* Keyed off the AMOUNT, not the senior count. With the discount
+                {/* Keyed off the AMOUNT, not the head count. With the discount
                     moved to the front desk there is nothing to subtract here,
                     and a row reading "− ₱0.00" would look like the guest had
                     been given something and then charged for it anyway. */}
+                {entrance.kidsDiscount > 0 && (
+                    <div className="summary-row summary-row-discount">
+                        <span className="summary-row-label">
+                            Kids discount ({KIDS_DISCOUNT_LABEL} × {entrance.kidsCount})
+                        </span>
+                        <span className="summary-row-value">
+                            {schedule ? `− ${formatPeso(entrance.kidsDiscount)}` : '—'}
+                        </span>
+                    </div>
+                )}
                 {entrance.seniorDiscount > 0 && (
                     <div className="summary-row summary-row-discount">
                         <span className="summary-row-label">
@@ -341,10 +361,18 @@ export default function BookingSummary({
                 />
                 <p className="summary-note-inline">
                     Entrance is charged for every guest in your group
-                    {ENTRANCE_PER_NIGHT && perNight ? ', for every night of your stay' : ''}. Kids 7 &amp;
-                    below get in free, and {freeEntranceNote} — anyone past that still pays
-                    the rate above. Half of your entrance fees is included in the down
-                    payment; the rest is settled on-site at check-in.
+                    {ENTRANCE_PER_NIGHT && perNight ? ', for every night of your stay' : ''}, and {freeEntranceNote}
+                    {' '}— anyone past that still pays the rate above. Half of your entrance
+                    fees is included in the down payment; the rest is settled on-site at
+                    check-in.
+                    {KIDS_DISCOUNT_IN_SYSTEM ? (
+                        <> Kids 7 &amp; below get <strong>{KIDS_DISCOUNT_LABEL} off</strong> the
+                        entrance fee.</>
+                    ) : (
+                        <> The <strong>kids' discount is given at the resort</strong>, not on
+                        this page — the totals above are at the full rate for kids too. It
+                        comes off the balance you settle on-site.</>
+                    )}
                     {SENIOR_DISCOUNT_IN_SYSTEM ? (
                         <> Seniors must present a Senior Citizen ID or other valid ID
                         for the discount.</>

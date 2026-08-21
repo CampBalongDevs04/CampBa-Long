@@ -4,12 +4,15 @@ import { SkeletonImage } from '../../components/skeletons/Skeleton.jsx'
 import {
     getAvailability,
     getNextAvailableDate,
+    isResortFreeForStay,
+    findResortFreeDates,
     formatShortDate,
     useAccommodationDB,
     getSchedule,
     findAccommodationType,
 } from '../../data/accommodationDB.js'
 import { getAccomodationOptions, findRentAllOption, isRentAllOption } from '../../data/accomodationOptions.js'
+import { addDays, countNights } from '../../data/extendedStay.js'
 import { useHoldCountdown } from './useHoldCountdown.js'
 import { formatCountdown } from './usePaymentWindow.js'
 
@@ -40,7 +43,7 @@ function FullyBookedLabel({ typeId, checkIn, checkOut, scheduleKey, fallback }){
 // rate card says and what a guest compares units on — and add what it comes to
 // for the stay underneath, so an extended stay never looks cheaper on the card
 // than it is in the summary.
-export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut, nights = 1, rateGroup, scheduleKey, droppedUnitNote, rentAllMode = false }){
+export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut, nights = 1, rateGroup, scheduleKey, droppedUnitNote }){
     const trackRef = useRef(null)
     // Re-renders whenever anything is booked or cancelled — anywhere in the
     // app — so the counts below are never stale.
@@ -49,25 +52,21 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
     const stayStart = checkIn ?? new Date()
     const stayEnd = checkOut ?? null
     const list = getAccomodationOptions(rateGroup)
-    // Rent Resort mode swaps the whole carousel for just the Rent All card —
-    // nothing else can be added alongside a whole-resort rental. If the
-    // schedule currently picked doesn't offer that card at all, `rentAllCard`
-    // is null and the carousel renders empty (booking.jsx's droppedUnitNote
-    // already explains why when a schedule SWITCH is what caused it).
-    //
-    // The card is also left OUT of the normal, non-Rent-All browsing list —
-    // it's only ever meant to be picked through the dedicated toggle, not
-    // added alongside (or instead of) individual units the way an ordinary
-    // card can be.
-    const rentAllCard = rentAllMode ? findRentAllOption(list) : null
-    const visibleList = rentAllMode
-        ? (rentAllCard ? [rentAllCard] : [])
-        : list.filter((item) => !isRentAllOption(item))
     const schedule = getSchedule(scheduleKey)
     const stayNights = Math.max(1, Number(nights) || 1)
     const isExtended = stayNights > 1
     const cartCount = (id) => cart?.[id] ?? 0
     const hasSelection = Object.values(cart ?? {}).some((qty) => qty > 0)
+    // Renting the whole resort and picking individual units are mutually
+    // exclusive rates (see handleCartQtyChange in booking.jsx, which enforces
+    // the swap) — these two flags are what let each card in the loop below
+    // grey out the OTHER side of that exclusivity rather than let the guest
+    // discover it only once Reserve rejects a mixed cart.
+    const rentAllOption = findRentAllOption(list)
+    const rentAllSelected = rentAllOption != null && cartCount(rentAllOption.id) > 0
+    const otherUnitsSelected = Object.keys(cart ?? {}).some(
+        (id) => id !== rentAllOption?.id && cartCount(id) > 0
+    )
 
     // Small Tent, Big Tent and Tent Pitching are three cards drawing on the
     // same 4 physical slots (see accommodationDB.js's `poolAvailable`). The
@@ -92,27 +91,24 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
     }
 
     // Bring a preselected card (e.g. coming from the home page "Book Now!")
-    // into view, and re-home the carousel every time the schedule switches OR
-    // Rent Resort mode toggles.
+    // into view, and re-home the carousel every time the schedule switches.
     //
     // `list` is the same array length or not — Day Time and the overnight
-    // schedules don't offer the same units, and Rent Resort mode swaps it
-    // down to just one card — but it's still the SAME track DOM node
-    // underneath, so the browser keeps whatever scrollLeft it had from
-    // before instead of resetting it. Left alone, switching back to Day Time
-    // after scrolling around under an overnight schedule (or turning Rent
-    // Resort back off after scrolling to find it) would leave the track
-    // exactly where that left it, showing some card other than the new
-    // list's first — with no visual hint that there's anything to the left.
+    // schedules don't offer the same units — but it's still the SAME track
+    // DOM node underneath, so the browser keeps whatever scrollLeft it had
+    // from before instead of resetting it. Left alone, switching back to Day
+    // Time after scrolling around under an overnight schedule would leave
+    // the track exactly where that left it, showing some card other than
+    // the new list's first — with no visual hint that there's anything to
+    // the left.
     //
-    // ONLY on a schedule switch or a Rent Resort toggle, not on every +/-
-    // click: `hasSelection` used to be a dependency too, so ticking a card's
-    // qty up from 0 (or the last one back down to 0) re-ran this and yanked
-    // the carousel to centre on it, or snapped it back to the first card,
-    // while the guest was still clicking. Reading `hasSelection` inside
-    // without listing it is deliberate — this render's value is what the
-    // effect closure captures, which is what "at the moment rateGroup or
-    // rentAllMode changes" means.
+    // ONLY on a schedule switch, not on every +/- click: `hasSelection` used
+    // to be a dependency too, so ticking a card's qty up from 0 (or the last
+    // one back down to 0) re-ran this and yanked the carousel to centre on
+    // it, or snapped it back to the first card, while the guest was still
+    // clicking. Reading `hasSelection` inside without listing it is
+    // deliberate — this render's value is what the effect closure captures,
+    // which is what "at the moment rateGroup changes" means.
     //
     // The TRACK is scrolled, not the card — scrollIntoView() walks every
     // scrollable ancestor including the page itself, so centring a card that
@@ -139,7 +135,7 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
             track.scrollLeft = 0
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps -- see the note above the effect
-    }, [rateGroup, rentAllMode])
+    }, [rateGroup])
 
     return(
         <div className="accomodation-list">
@@ -160,12 +156,6 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
                     Select a stay schedule above to see pricing and the units available for it.
                 </p>
             )}
-            {rateGroup && rentAllMode && !rentAllCard && (
-                <p className="accomodation-schedule-note">
-                    Renting the whole resort isn't offered on this schedule — try Day Time or an
-                    overnight schedule that has it, or turn Rent Resort off to pick units individually.
-                </p>
-            )}
             {droppedUnitNote && (
                 <p className="accomodation-dropped-note" role="status">{droppedUnitNote}</p>
             )}
@@ -179,14 +169,15 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
                     &#8249;
                 </button>
 
-                {/* One card in Rent Resort mode never fills the track's width —
-                    centred instead of sitting flush left with empty space
-                    trailing it, the way a full carousel reads. */}
+                {/* A single card (a schedule that only offers one unit type)
+                    never fills the track's width — centred instead of sitting
+                    flush left with empty space trailing it, the way a full
+                    carousel reads. */}
                 <div
-                    className={`accomodation-track${visibleList.length === 1 ? ' accomodation-track-centered' : ''}`}
+                    className={`accomodation-track${list.length === 1 ? ' accomodation-track-centered' : ''}`}
                     ref={trackRef}
                 >
-                    {visibleList.map((item) => {
+                    {list.map((item) => {
                         const unlimited = item.unlimited === true
                         const availability = unlimited
                             ? null
@@ -229,16 +220,51 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
                                 ? availability.poolAvailable - (poolCartTotals[poolId] ?? 0)
                                 : null
                         const atPoolMax = poolRemaining != null && poolRemaining <= 0
-                        const canAdd = !isFullyBooked && !atOwnMax && !atPoolMax
                         // Nothing of THIS card is in the cart, but a sibling
                         // card (same pool) already claimed every slot left —
                         // greyed out so the guest doesn't try this one too and
                         // only find out it's gone at checkout.
                         const poolLocked = !isFullyBooked && qty === 0 && atPoolMax
 
+                        // The Rent All card's own stock (usually just 1 unit)
+                        // can be fine while the resort still isn't rentable as
+                        // a whole — some OTHER type is booked during this
+                        // stay. Checked only for that one card, only once
+                        // dates are picked, and only once its own stock is
+                        // known not to be the blocker.
+                        const isThisRentAll = isRentAllOption(item)
+                        const resortFree = isThisRentAll && hasDates && !isFullyBooked
+                            ? isResortFreeForStay(stayStart, stayEnd, scheduleKey, item.id)
+                            : null
+                        const resortBlocked = isThisRentAll && resortFree === false
+                        // Just the one date, folded into the availability line
+                        // itself (`Not free for these dates · try Aug 20`) the
+                        // same way FullyBookedLabel already appends a single
+                        // next-available date below — a list of several, in a
+                        // separate row, wrapped inside this card's ~130px width
+                        // and dragged the whole carousel's height down with it
+                        // (every card stretches to match the tallest one).
+                        const recommendedDate = resortBlocked
+                            ? findResortFreeDates(
+                                addDays(stayStart, 1),
+                                countNights(stayStart, stayEnd ?? stayStart),
+                                scheduleKey,
+                                item.id,
+                                { limit: 1 },
+                            )[0] ?? null
+                            : null
+
+                        // This card can't be added because the OTHER side of
+                        // the Rent-All/individual-units exclusivity is
+                        // already the cart's pick (see handleCartQtyChange in
+                        // booking.jsx, which enforces the actual swap).
+                        const exclusiveLocked = !isFullyBooked && !resortBlocked && qty === 0
+                            && (isThisRentAll ? otherUnitsSelected : rentAllSelected)
+                        const canAdd = !isFullyBooked && !atOwnMax && !atPoolMax && !exclusiveLocked && !resortBlocked
+
                         return (
                             <div
-                                className={`accomodation-card ${qty > 0 ? 'selected' : ''} ${isFullyBooked ? 'fully-booked' : ''} ${poolLocked ? 'pool-locked' : ''}`}
+                                className={`accomodation-card ${qty > 0 ? 'selected' : ''} ${isFullyBooked ? 'fully-booked' : ''} ${poolLocked ? 'pool-locked' : ''} ${resortBlocked ? 'rentall-blocked' : ''} ${exclusiveLocked ? 'exclusive-locked' : ''}`}
                                 key={item.id}
                             >
                                 {qty > 0 && (
@@ -304,7 +330,7 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
                                             <strong>₱{(item.price * stayNights).toLocaleString('en-PH')}</strong>
                                         </span>
                                     )}
-                                    <span className={`accomodation-card-available ${unlimited || (availability && availability.available > 0 && !poolLocked) ? 'is-available' : ''}`}>
+                                    <span className={`accomodation-card-available ${unlimited || (availability && availability.available > 0 && !poolLocked && !resortBlocked && !exclusiveLocked) ? 'is-available' : ''}`}>
                                         {unlimited
                                             ? 'Available'
                                             : availability === null
@@ -319,30 +345,37 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
                                                             fallback={`Fully booked${nextAvailable ? ` · free ${formatShortDate(nextAvailable)}` : ''}`}
                                                         />
                                                     )
-                                                    : poolLocked
-                                                        ? 'Taken by your other pick'
-                                                        : poolId
-                                                            // The three tent cards share one physical pool, so
-                                                            // "3 of 3 available" on this card alone doesn't say
-                                                            // there's really only 1 patch of ground left once the
-                                                            // other two tent cards are counted in — this is that
-                                                            // shared number, the same across all three tent cards,
-                                                            // and it drops as soon as any of them lands in the cart.
-                                                            ? `${availability.available} of ${availability.total} available · ${Math.max(0, poolRemaining ?? availability.poolAvailable ?? 0)} slot${Math.max(0, poolRemaining ?? availability.poolAvailable ?? 0) === 1 ? '' : 's'} left`
-                                                            : `${availability.available} of ${availability.total} available`}
+                                                    : resortBlocked
+                                                        ? `Not free for these dates${recommendedDate ? ` · try ${formatShortDate(recommendedDate)}` : ''}`
+                                                        : exclusiveLocked
+                                                            // Kept as short as poolLocked's "Taken by
+                                                            // your other pick" below — a longer sentence
+                                                            // wraps to 2-3 lines and, since every card
+                                                            // in the row stretches to match the tallest
+                                                            // one, drags the whole carousel's height
+                                                            // down with it.
+                                                            ? (isThisRentAll ? 'Other units selected' : 'Whole resort selected')
+                                                            : poolLocked
+                                                                ? 'Taken by your other pick'
+                                                                : poolId
+                                                                    // The three tent cards share one physical pool, so
+                                                                    // "3 of 3 available" on this card alone doesn't say
+                                                                    // there's really only 1 patch of ground left once the
+                                                                    // other two tent cards are counted in — this is that
+                                                                    // shared number, the same across all three tent cards,
+                                                                    // and it drops as soon as any of them lands in the cart.
+                                                                    ? `${availability.available} of ${availability.total} available · ${Math.max(0, poolRemaining ?? availability.poolAvailable ?? 0)} slot${Math.max(0, poolRemaining ?? availability.poolAvailable ?? 0) === 1 ? '' : 's'} left`
+                                                                    : `${availability.available} of ${availability.total} available`}
                                     </span>
                                 </div>
                                 <div className="accomodation-card-qty">
-                                    {rentAllMode ? (
-                                        // No +/- here — renting the whole resort is a
-                                        // single fixed pick, not a quantity a guest can
-                                        // dial up or down. booking.jsx's effect is what
-                                        // keeps this card at qty 1 in the cart.
-                                        <span className="accomodation-card-qty-locked" aria-live="polite">
-                                            {qty > 0 ? 'Selected — whole resort' : 'Selecting the whole resort…'}
-                                        </span>
-                                    ) : (
-                                    <>
+                                    {/* Same +/- every card has, including Rent All and a
+                                        blocked Rent All — its own count just reads as a
+                                        whole-resort pick rather than a unit tally, and "+"
+                                        is already disabled here by canAdd (own stock via
+                                        atOwnMax, or resortBlocked). Keeping "-" live is what
+                                        lets a guest undo a Rent All pick: this card has no
+                                        other way back to browsing units individually. */}
                                     <button
                                         type="button"
                                         className="accomodation-card-qty-step"
@@ -353,7 +386,7 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
                                         &minus;
                                     </button>
                                     <span className="accomodation-card-qty-count" aria-live="polite">
-                                        {qty} {qty === 1 ? 'unit' : 'units'}
+                                        {isThisRentAll ? 'Whole resort' : `${qty} ${qty === 1 ? 'unit' : 'units'}`}
                                     </span>
                                     <button
                                         type="button"
@@ -364,8 +397,6 @@ export default function AccomodationList({ cart, onQtyChange, checkIn, checkOut,
                                     >
                                         +
                                     </button>
-                                    </>
-                                    )}
                                 </div>
                             </div>
                         )

@@ -4,7 +4,7 @@ import {
     useBookingGroups,
     listBookingsWithAddons,
     getBookingStage,
-    formatShortDate,
+    formatStayWindow,
     hasStaffSession,
 } from '../../data/accommodationDB.js'
 
@@ -43,13 +43,6 @@ function formatOrderedAt(orderedAt) {
         hour: 'numeric',
         minute: '2-digit',
     })
-}
-
-function stayLabel(booking) {
-    const from = formatShortDate(booking.checkIn)
-    const to = formatShortDate(booking.checkOut)
-    const dates = from === to ? from : `${from} – ${to}`
-    return booking.schedule ? `${dates} · ${booking.schedule.time}` : dates
 }
 
 function OrderGroup({ title, lines, total }) {
@@ -145,7 +138,7 @@ export default function AddonOrderPanel({ kind = 'all', emptyTitle, emptyText })
                         </div>
                         <p className="orderService-meta">
                             {booking.code ?? booking.id} · {booking.accomodationName}
-                            {booking.unitId ? ` · ${booking.unitId}` : ''} — {stayLabel(booking)}
+                            {booking.unitId ? ` · ${booking.unitId}` : ''} — {formatStayWindow(booking)}
                         </p>
 
                         <OrderGroup title="Food ordered" lines={food} total={foodTotal} />

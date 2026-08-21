@@ -60,12 +60,13 @@ function round2(amount){
 
 const RATE_LABEL = `${DOWNPAYMENT_RATE * 100}%`
 
-function ChargeRow({ label, sub, value, tone }){
+function ChargeRow({ label, sub, note, value, tone }){
     return (
         <div className={`pay-row${tone ? ` pay-row-${tone}` : ''}`}>
             <span className="pay-row-label">
                 {label}
                 {sub && <span className="pay-row-sub">{sub}</span>}
+                {note && <span className="pay-row-note">{note}</span>}
             </span>
             <span className="pay-row-value">{value}</span>
         </div>
@@ -386,6 +387,19 @@ export default function BookingPayment({
                             <ChargeRow
                                 label="Balance on-site"
                                 sub={`the other ${RATE_LABEL} — ${formatPeso(stayTotal)} − ${formatPeso(dueNow)}`}
+                                // Senior, PWD and kids discounts are given in
+                                // person against an ID (see entranceFee.js) —
+                                // this is quoted at the full rate, so only a
+                                // party that actually has one of those guests
+                                // stands to see it come down. Shown here, not
+                                // as a promised amount, since the desk decides
+                                // it — see settlePaymentModal.jsx on the admin
+                                // side for where that discount is verified.
+                                note={
+                                    (booking.seniors ?? 0) + (booking.pwd ?? 0) + (booking.kids ?? 0) > 0
+                                        ? 'This balance may be lower once a senior, PWD, or kids discount is verified at check-in.'
+                                        : null
+                                }
                                 value={formatPeso(onSiteBalance)}
                             />
                         </ChargeGroup>

@@ -169,40 +169,6 @@ html{
     color: var(--forest);
 }
 
-/* Rent All Resort toggle, next to the "Dates & Schedule" title. Tinted leaf
-   green rather than white so it reads as its own control, not another trust
-   badge; the "on" state fills solid forest so the mode is unmistakable. */
-.booking-rentall-toggle{
-    flex-shrink: 0;
-    padding: 7px 18px;
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    color: var(--forest);
-    background-color: rgba(76, 107, 79, 0.14);
-    border: 1.5px solid var(--leaf);
-    border-radius: 999px;
-    cursor: pointer;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease;
-}
-
-.booking-rentall-toggle:hover{
-    background-color: rgba(76, 107, 79, 0.24);
-    border-color: var(--forest);
-}
-
-.booking-rentall-toggle.active{
-    color: #FFFFFF;
-    background-color: var(--forest);
-    border-color: var(--forest);
-}
-
-.booking-rentall-toggle.active:hover{
-    background-color: var(--forest-dark);
-    border-color: var(--forest-dark);
-}
-
 .booking-step-sub{
     margin: 0;
     font-size: 15px;
@@ -214,6 +180,35 @@ html{
     flex-direction: column;
     align-items: flex-start;
     gap: 24px;
+}
+
+/* Adults + kids + seniors + PWD added together — sits under the four
+   steppers in step 3, matching the "Total Guests" row the summary sidebar
+   shows alongside it. */
+.guest-total{
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 648px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-radius: 14px;
+    border: 1px solid var(--gold-soft);
+    background-color: var(--cream-2);
+    font-family: 'Cormorant Garamond', serif;
+}
+
+.guest-total-label{
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--forest);
+}
+
+.guest-total-value{
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--forest);
 }
 
 /* ---- time selector (lives inside step 1) ---- */

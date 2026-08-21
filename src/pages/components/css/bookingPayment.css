@@ -141,6 +141,17 @@
     color: rgba(22, 41, 30, 0.55);
 }
 
+/* A caveat on the figure beside it, not the arithmetic behind it — set apart
+   from .pay-row-sub by weight (italic) rather than size, so "the other 50%"
+   and "may be lower" don't read as the same kind of statement. */
+.pay-row-note {
+    margin-top: 2px;
+    font-size: 0.74rem;
+    font-style: italic;
+    line-height: 1.4;
+    color: rgba(22, 41, 30, 0.55);
+}
+
 .pay-row-value {
     font-weight: 600;
     white-space: nowrap;

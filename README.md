@@ -144,10 +144,13 @@ More detail on the data layer: [`src/data/README-accommodation.md`](src/data/REA
 Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in your hosting
 provider's environment-variable settings, then redeploy.
 
-Set `VITE_SITE_ORIGIN` to the real domain at the same time. Until it is set,
-every canonical link, the sitemap and the Facebook share image point at a
-placeholder domain — `npm run build` prints a yellow warning while that is
-still the case.
+When the site moves to its real domain, edit `SITE_ORIGIN` in
+[`src/lib/seoConfig.js`](src/lib/seoConfig.js) — that one constant is what
+`robots.txt`, `sitemap.xml`, every canonical link and the Facebook share image
+are built from. `VITE_SITE_ORIGIN` is **not** read by anything; it used to
+override that constant and twice shipped the wrong share image, so the override
+was removed. `npm run build` warns if the variable is still set in the hosting
+environment.
 
 **[`docs/deployment.md`](docs/deployment.md) is the full guide**: which of
 `vercel.json` / `netlify.toml` / the nginx snippet to keep, the one routing
