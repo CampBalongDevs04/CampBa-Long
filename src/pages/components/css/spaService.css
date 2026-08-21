@@ -135,6 +135,7 @@ html{
 .spa-how-to-header .lotus-divider{
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 14px;
 }
 .spa-how-to-header .lotus-divider .rule{
@@ -252,6 +253,7 @@ html{
 .spa-service-header .lotus-divider{
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 14px;
 }
 .spa-service-header .lotus-divider .rule{
@@ -455,6 +457,7 @@ html{
 .spa-hilot-header .lotus-divider{
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 14px;
 }
 .spa-hilot-header .lotus-divider .rule{

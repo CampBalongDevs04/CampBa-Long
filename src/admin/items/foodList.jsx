@@ -17,7 +17,9 @@ import {
 } from '../../data/menuDB.js'
 import {
     useAccommodationDB,
-    listAddonOrders,
+    useBookingGroups,
+    listBookingsWithAddons,
+    formatStayWindow,
     hasStaffSession,
 } from '../../data/accommodationDB.js'
 
@@ -45,26 +47,35 @@ const NEW_SIZE_OPTION = '__new_size__'
 // so it reads the admin list — an item switched off has to stay visible HERE to
 // be switchable back on, while staying invisible on the guest page.
 
-function formatOrderedAt(orderedAt) {
-    if (!orderedAt) return ''
-    const date = new Date(orderedAt)
-    if (Number.isNaN(date.getTime())) return ''
-    return date.toLocaleString('en-PH', {
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-    })
+// The most recent line on a ticket, so a card floats to the top the moment the
+// guest adds anything to it — the same "newest first" the flat list had, kept
+// now that a card stands for several orders rather than one.
+function newestOrderedAt(lines) {
+    return lines.reduce((newest, line) => {
+        const at = new Date(line.orderedAt ?? 0).getTime()
+        return Number.isNaN(at) ? newest : Math.max(newest, at)
+    }, 0)
 }
 
 function UserOrders() {
     useAccommodationDB()
-    const orders = listAddonOrders('food')
+    // listBookingsWithAddons() reads combined reservations too, and those live
+    // in their own store — same subscription pair as addonOrderPanel.jsx.
+    useBookingGroups()
+
+    // ONE CARD PER BOOKING, not per dish. This used to read listAddonOrders(),
+    // which is a flat list of lines, so a guest who ordered four things showed
+    // up as four identical-looking cards with their name repeated on each —
+    // the kitchen had to reassemble the ticket by eye. A ticket IS the unit of
+    // work here, so the lines are grouped back under the stay that placed them.
+    const entries = [...listBookingsWithAddons('food')].sort(
+        (a, b) => newestOrderedAt(b.food) - newestOrderedAt(a.food)
+    )
 
     return (
         <aside className="foodlist-orders">
             <h3 className="foodlist-section-title">User Orders</h3>
-            {orders.length === 0 ? (
+            {entries.length === 0 ? (
                 <div className="foodlist-orders-empty">
                     <svg
                         viewBox="0 0 24 24"
@@ -88,25 +99,53 @@ function UserOrders() {
                 </div>
             ) : (
                 <div className="foodlist-orders-rows">
-                    {orders.map((order) => (
-                        <article key={order.key} className="foodlist-order-card">
-                            <div className="foodlist-order-top">
-                                <span className="foodlist-order-guest">{order.guestName}</span>
-                                <span className="foodlist-order-date">{formatOrderedAt(order.orderedAt)}</span>
-                            </div>
-                            <div className="foodlist-order-line">
-                                <span className="foodlist-order-item">
-                                    {order.name} <span className="foodlist-order-qty">×{order.quantity}</span>
-                                </span>
-                                <span className="foodlist-order-total">{formatMenuPrice(order.total)}</span>
-                            </div>
-                            {/* Which stay the kitchen is cooking for. */}
-                            <p className="foodlist-order-booking">
-                                {order.code}
-                                {order.unitId ? ` · ${order.unitId}` : ''}
-                            </p>
-                        </article>
-                    ))}
+                    {entries.map(({ booking, food, foodTotal }) => {
+                        // Guest, code and unit come off the LINE rather than
+                        // the booking: addonLines() already resolves those for
+                        // a combined reservation, which carries no unit of its
+                        // own. Every entry here has at least one line.
+                        const head = food[0]
+                        return (
+                            <article key={booking.id} className="foodlist-order-card">
+                                <div className="foodlist-order-top">
+                                    <span className="foodlist-order-guest">{head.guestName}</span>
+                                </div>
+                                {/* WHEN IT IS SERVED — the day the guest booked
+                                    and the schedule they picked. The card used
+                                    to stamp the moment the order was placed,
+                                    which tells the kitchen nothing about when
+                                    to cook it. */}
+                                <p className="foodlist-order-serving">{formatStayWindow(booking)}</p>
+
+                                <ul className="foodlist-order-lines">
+                                    {food.map((line) => (
+                                        <li key={line.key} className="foodlist-order-line">
+                                            <span className="foodlist-order-item">
+                                                {line.name}{' '}
+                                                <span className="foodlist-order-qty">
+                                                    ×{line.quantity}
+                                                </span>
+                                            </span>
+                                            <span className="foodlist-order-total">
+                                                {formatMenuPrice(line.total)}
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+
+                                {/* Which stay the kitchen is cooking for. */}
+                                <p className="foodlist-order-foot">
+                                    <span className="foodlist-order-booking">
+                                        {head.code}
+                                        {head.unitId ? ` · ${head.unitId}` : ''}
+                                    </span>
+                                    <strong className="foodlist-order-sum">
+                                        {formatMenuPrice(foodTotal)}
+                                    </strong>
+                                </p>
+                            </article>
+                        )
+                    })}
                 </div>
             )}
         </aside>

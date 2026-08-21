@@ -1,19 +1,19 @@
 import { useMemo, useState } from 'react'
 import '../css/bookings-manage.css'
 import ReceiptViewer from './receiptViewer'
+import SettlePaymentModal from './settlePaymentModal'
 import {
     useAccommodationDB,
     useBookingGroups,
     getBookingStage,
-    confirmBooking,
     markBookingPaidFull,
-    cancelBooking,
-    confirmBookingGroup,
+    undoBookingPaidFull,
     markBookingGroupPaidFull,
-    cancelBookingGroup,
+    undoGroupBookingPaidFull,
     groupUnitsLabel,
     guestPartyLabel,
 } from '../../data/accommodationDB.js'
+import useBookingDecision from './bookingDecision'
 
 // Rows come straight from the accommodation database — the same records the
 // booking page writes. Approving one here flips it to "upcoming" for the
@@ -94,6 +94,18 @@ export default function BookingsManage() {
     // lightbox follows the live row — approving it there repaints the footer
     // instead of leaving a stale Approve button behind.
     const [reviewingId, setReviewingId] = useState(null)
+    // The booking (single unit OR a combined reservation) staff are settling
+    // a discount against, same held-by-id shape as reviewingId above. Only
+    // ever set for a booking with a senior/PWD/kids count — see the Mark
+    // Paid handler below, which skips this modal in favour of the old
+    // one-click markBookingPaidFull()/markBookingGroupPaidFull() when there
+    // is nothing to verify.
+    const [settlingId, setSettlingId] = useState(null)
+    // Approve and Reject, wired to the guest email and the popup that reports
+    // whether it reached them. Shared with the Overview tabs, which offer the
+    // same two buttons through the same receipt lightbox — see
+    // bookingDecision.jsx for why the decision does not live in this file.
+    const { approve, reject, decisionModal } = useBookingDecision()
 
     // Single-unit bookings and combined reservations, one table — each row
     // already knows which kind it is (`isGroup`), which is all the actions
@@ -120,6 +132,7 @@ export default function BookingsManage() {
     )
 
     const reviewing = rows.find((b) => b.id === reviewingId) ?? null
+    const settling = rows.find((b) => b.id === settlingId) ?? null
 
     const visible = useMemo(() => {
         const q = query.trim().toLowerCase()
@@ -175,6 +188,7 @@ export default function BookingsManage() {
                     ))}
                 </div>
             </div>
+
 
             <div className="bookings-panel">
                 {visible.length === 0 ? (
@@ -304,9 +318,7 @@ export default function BookingsManage() {
                                                         type="button"
                                                         className="bookings-action"
                                                         onClick={() =>
-                                                            b.receiptPath
-                                                                ? setReviewingId(b.id)
-                                                                : b.isGroup ? confirmBookingGroup(b.id) : confirmBooking(b.id)
+                                                            b.receiptPath ? setReviewingId(b.id) : approve(b)
                                                         }
                                                     >
                                                         {b.receiptPath ? 'Review' : 'Approve'}
@@ -318,20 +330,49 @@ export default function BookingsManage() {
                                                     right above it for. The reservation only leaves
                                                     "pending" once that first receipt has actually
                                                     been approved. */}
-                                                {b.stage !== 'cancelled' && b.stage !== 'pending' && b.payment !== 'paid-full' && (
-                                                    <button
-                                                        type="button"
-                                                        className="bookings-action"
-                                                        onClick={() => (b.isGroup ? markBookingGroupPaidFull(b.id) : markBookingPaidFull(b.id))}
-                                                    >
-                                                        Mark Paid
-                                                    </button>
+                                                {b.stage !== 'cancelled' && b.stage !== 'pending' && (
+                                                    b.payment === 'paid-full' ? (
+                                                        // Reverts to down-payment and clears any
+                                                        // settlement_* figures — see
+                                                        // undoBookingPaidFull()/undoGroupBookingPaidFull().
+                                                        // No confirm dialog, matching Cancel below:
+                                                        // staff here already have unguarded write
+                                                        // access to this row either way.
+                                                        <button
+                                                            type="button"
+                                                            className="bookings-action"
+                                                            onClick={() => (b.isGroup ? undoGroupBookingPaidFull(b.id) : undoBookingPaidFull(b.id))}
+                                                        >
+                                                            Undo
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            className="bookings-action"
+                                                            onClick={() => {
+                                                                // A group's kids/seniors/pwd counts live only on
+                                                                // the group row (never per member unit — see
+                                                                // book_stay_group()), so this same check covers
+                                                                // both shapes: settlePaymentModal.jsx branches on
+                                                                // booking.isGroup itself once open. Nothing to
+                                                                // verify skips the modal for either shape too —
+                                                                // there is no discount for staff to confirm.
+                                                                const hasDiscountable =
+                                                                    (b.seniors ?? 0) + (b.pwd ?? 0) + (b.kids ?? 0) > 0
+                                                                if (hasDiscountable) setSettlingId(b.id)
+                                                                else if (b.isGroup) markBookingGroupPaidFull(b.id)
+                                                                else markBookingPaidFull(b.id)
+                                                            }}
+                                                        >
+                                                            Mark Paid
+                                                        </button>
+                                                    )
                                                 )}
                                                 {b.stage !== 'cancelled' && b.stage !== 'completed' && (
                                                     <button
                                                         type="button"
                                                         className="bookings-action bookings-action-danger"
-                                                        onClick={() => (b.isGroup ? cancelBookingGroup(b.id, { asStaff: true }) : cancelBooking(b.id, { asStaff: true }))}
+                                                        onClick={() => reject(b)}
                                                     >
                                                         Cancel
                                                     </button>
@@ -353,10 +394,20 @@ export default function BookingsManage() {
                     key={reviewing.id}
                     booking={reviewing}
                     onClose={() => setReviewingId(null)}
-                    onApprove={(booking) => (booking.isGroup ? confirmBookingGroup(booking.id) : confirmBooking(booking.id))}
-                    onCancel={(booking) => (booking.isGroup ? cancelBookingGroup(booking.id, { asStaff: true }) : cancelBooking(booking.id, { asStaff: true }))}
+                    onApprove={approve}
+                    onCancel={reject}
                 />
             )}
+
+            {settling && (
+                <SettlePaymentModal
+                    key={settling.id}
+                    booking={settling}
+                    onClose={() => setSettlingId(null)}
+                />
+            )}
+
+            {decisionModal}
         </div>
     )
 }

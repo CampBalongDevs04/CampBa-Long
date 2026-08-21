@@ -5,9 +5,9 @@
 //  plus the resort's name, address and phone. Read by three places that must
 //  never disagree with each other:
 //
-//    components/Seo.jsx        the tags in the live page's <head>
-//    scripts/generate-seo.mjs  robots.txt and sitemap.xml
-//    scripts/prerender.mjs     the per-route HTML a crawler is served
+//    components/Seo.jsx          the tags in the live page's <head>
+//    scripts/seo-postbuild.mjs   robots.txt, sitemap.xml, and the per-route
+//                                HTML a link-preview crawler is served
 //
 //  Two of those run in Node, before React exists, which is why this file
 //  imports NOTHING. No React, no supabase, no browser globals. Adding an
@@ -25,31 +25,36 @@
 // ============================================================================
 
 // ----------------------------------------------------------------------------
-//  TODO — set this to the real domain before the first production deploy.
+//  The one place the site's public address is written down.
 // ----------------------------------------------------------------------------
 //  Canonical links, the sitemap and the og:image URL are all absolute, because
 //  the specs require it: a crawler reads og:image out of context and has no
-//  page to resolve a relative path against. Facebook simply drops a share image
-//  it cannot resolve, so this being wrong shows up as a link preview with no
-//  picture rather than as an error anyone would notice.
+//  page to resolve a relative path against. Facebook, Messenger and Viber all
+//  drop a share image they cannot fetch, so a wrong value here does not look
+//  like an error — it looks like a link preview with no picture, and nothing on
+//  the site itself gives any hint why.
 //
-//  The placeholder below is deliberately obvious. Nothing breaks while it is
-//  here — the site runs, the tags render — so the cost of forgetting is only
-//  that the tags point at a domain nobody owns. Grep for `example` before
-//  going live. Set SITE_ORIGIN in the host's environment to override it
-//  without editing this file.
+//  THIS IS A CONSTANT, ON PURPOSE. It used to read VITE_SITE_ORIGIN first, and
+//  twice in a row that indirection is what broke the share image: Vercel's
+//  environment has VITE_SITE_ORIGIN set to `https://campba-long.vercel.app`,
+//  while the deployment is actually served at `camp-ba-long.vercel.app`. One
+//  hyphen apart, both entirely plausible, and the wrong one 404s every request.
+//  Because the env var outranked the value written here, editing this file
+//  changed the local build and nothing about the deployed one — the tags looked
+//  correct in dist/ and shipped wrong.
+//
+//  An override that silently outranks the source of truth is worth less than
+//  the bugs it causes. To change the domain — when a real one replaces the
+//  vercel.app address — edit the line below. That is the whole procedure, and
+//  it is a one-line diff in the file the sitemap and share tags already read.
+//
+//  Whatever it is set to, confirm the share image actually loads there before
+//  trusting it. This is the check that would have caught both failures:
+//
+//      curl -I https://<host>/urlimage.jpg     # expect 200, image/jpeg
 //
 //  No trailing slash: every path below starts with one.
-//  Read through globalThis rather than as a bare `process`: this file is loaded
-//  both by the bundler, where `process` does not exist and naming it is a
-//  ReferenceError, and by the build scripts, where it does. `globalThis.process`
-//  is a plain property lookup and is simply undefined in the browser.
-export const SITE_ORIGIN = (
-    // Vite inlines this at build time; unset in dev, which is fine.
-    import.meta.env?.VITE_SITE_ORIGIN ||
-    globalThis.process?.env?.VITE_SITE_ORIGIN ||
-    'https://www.example-campbalong.com'
-).replace(/\/+$/, '')
+export const SITE_ORIGIN = 'https://camp-ba-long.vercel.app'
 
 export const SITE_NAME = 'Camp Ba-long Nature Farm & Resort'
 export const SITE_SHORT_NAME = 'Camp Ba-long'
@@ -60,10 +65,18 @@ export const DEFAULT_LOCALE = 'en_PH'
 // changes on every build that touches it, and a link already shared on
 // Facebook would point at a file that no longer exists. public/ is copied
 // through untouched, so this URL is stable for the life of the domain.
+//
+// JPEG rather than PNG, and 1200px wide rather than the source's 1904px,
+// because a share image is judged by whether it arrives at all. The same
+// picture as a PNG is 1.25 MB; WhatsApp stops generating a thumbnail somewhere
+// around 300 KB and shows a bare link instead. 1200x630 is the ratio every
+// preview card is designed around — this is 1200x573, the source's own ratio,
+// which Facebook crops by a few pixels top and bottom rather than letterboxing.
 export const OG_IMAGE = {
-    path: '/og-image.png',
-    width: 1366,
-    height: 651,
+    path: '/urlimage.jpg',
+    type: 'image/jpeg',
+    width: 1200,
+    height: 573,
     alt: 'Camp Ba-long Nature Farm & Resort in Liliw, Laguna',
 }
 
@@ -108,8 +121,11 @@ export const BUSINESS = {
 // ----------------------------------------------------------------------------
 //  This list and the <Route> table in App.jsx describe the same set of pages.
 //  App.jsx keeps its own PUBLIC_PATHS set because it needs one before this file
-//  exists in the bundle graph; the test at the bottom of scripts/prerender.mjs
-//  is what stops the two from drifting apart silently.
+//  exists in the bundle graph; assertRoutesMatchApp() in
+//  scripts/seo-postbuild.mjs compares the two on every build and fails it if
+//  they disagree. That matters because the drift is otherwise silent: a public
+//  route missing from this table is a page that is live, linked, and absent
+//  from the sitemap forever.
 //
 //  Lengths are not arbitrary. Google truncates a title around 60 characters and
 //  a description around 155, measured in pixels rather than characters, so

@@ -91,7 +91,15 @@ function accommodationSummary(booking){
 // Everything the sheet says, worked out once. Nothing here is fetched: the
 // booking row is already in hand, so saving works offline and cannot reach
 // another guest's reservation.
-function buildReceipt(booking, statusLabel, savedAt){
+//
+// Exported because the confirmation email renders the same receipt as HTML
+// (see src/lib/receiptEmailBody.js). It returns plain data — sections, rows,
+// already-formatted strings — with no canvas in it, so a second renderer can
+// read it without pulling in any of the drawing below. Keeping the two on one
+// model is the point: a charge line added here appears in the email and in
+// the saved PNG at once, instead of the emailed receipt quietly falling
+// behind the one the guest downloads.
+export function buildReceipt(booking, statusLabel, savedAt){
     const rate = (booking.price ?? booking.unitSubtotal) != null
         ? Number(booking.price ?? booking.unitSubtotal)
         : null

@@ -193,6 +193,147 @@ export function getPaxFit(pax, option){
     return 'fit'
 }
 
+// Which "family" a unit belongs to, for suggestion purposes only. A group
+// that outgrows a Teepee should be pointed at Table and Chairs or a bigger
+// A-House — not at Cottage, Pavillion or Rent All Resort — and a group that
+// outgrows Tent Pitching should be pointed at Small/Big Tent, not at a house.
+// Ids are the hardcoded ones from ACCOMMODATION_TYPES above (staff can rename
+// or re-price a unit from the dashboard, but not change its id), so this
+// stays correct even as rates change. A unit with no entry here (a
+// dashboard-added type nothing above anticipated, or Rent All Resort) simply
+// has no family and is only ever offered as the cross-catalog last resort in
+// getFitNote below — never cycled to as if it were "one size up".
+const ACCOMMODATION_FAMILY = {
+    teepee: 'house',
+    table: 'house',
+    small: 'house',
+    medium: 'house',
+    family: 'house',
+    'tent-small': 'tent',
+    'tent-large': 'tent',
+    'tent-pitching': 'tent',
+    cottage: 'cottage',
+    pavilion: 'cottage',
+}
+
+function accommodationFamily(item){
+    return item ? ACCOMMODATION_FAMILY[item.id] ?? null : null
+}
+
+// Alternatives worth suggesting from `pool`: ones that fit properly if any
+// exist, otherwise ones that are at least not over capacity (a smaller group
+// is still bookable — see getPaxFit's 'under').
+function pickAlternatives(totalGuests, pool){
+    const fitting = pool.filter((item) => getPaxFit(totalGuests, item) === 'fit')
+    if (fitting.length > 0) return fitting
+    return pool.filter((item) => getPaxFit(totalGuests, item) !== 'over')
+}
+
+// `cartLines` is one entry per selected accommodation type — { id, qty,
+// option } — since a guest can now put more than one type (and more than one
+// of a type) in the cart. Capacity is judged on the COMBINED total, not any
+// one line.
+//
+// `totalGuests` — not just adults — is what a unit has to physically fit:
+// kids, seniors and PWD guests still take up a spot in the unit even though
+// none of them feed booking.jsx's Number of Adults field (see its
+// totalGuests, adults + kids + seniors + pwd added together).
+export function getFitNote(totalGuests, cartLines, options){
+    if (!totalGuests) return null
+
+    const rentAll = options.find(isRentAllOption) ?? null
+    // Tent Pitching is excluded from suggestions: it has no capacity ceiling,
+    // so it always "fits" and isn't a meaningful size-based recommendation.
+    // Rent All Resort is priced for the whole property, not "one size up" —
+    // it's held out of the normal pool and only offered by alternativesFor()
+    // below once nothing sized right is left anywhere in the catalog.
+    const suggestable = options.filter((item) => item.id !== 'tent-pitching' && !isRentAllOption(item))
+
+    // What's already in the cart pins which family gets suggested: a Teepee
+    // that's outgrown points at Table and Chairs or a bigger A-House, a
+    // Cottage points at Pavillion, Tent Pitching or a Tent points at the
+    // other tent sizes — never straight at an unrelated category or at Rent
+    // All Resort while a same-family option would still do.
+    const cartFamilies = new Set(cartLines.map((line) => accommodationFamily(line.option)).filter(Boolean))
+    const sameFamily = cartFamilies.size > 0
+        ? suggestable.filter((item) => cartFamilies.has(accommodationFamily(item)))
+        : suggestable
+
+    // Same-family alternatives first; only widen to the rest of the catalog
+    // if the guest's own family has nothing left, and only reach for Rent
+    // All Resort if even that comes up empty.
+    function alternativesFor(pax){
+        let pool = pickAlternatives(pax, sameFamily)
+        if (pool.length === 0 && cartFamilies.size > 0) pool = pickAlternatives(pax, suggestable)
+        if (pool.length === 0 && rentAll) pool = [rentAll]
+        return pool
+    }
+
+    if (cartLines.length > 0){
+        const unlimited = cartLines.some((line) => line.option.maxPax == null)
+        const capacity = unlimited
+            ? null
+            : cartLines.reduce((sum, line) => sum + line.option.maxPax * line.qty, 0)
+        const names = cartLines
+            .map((line) => `${line.option.name}${line.qty > 1 ? ` ×${line.qty}` : ''}`)
+            .join(', ')
+        const plural = cartLines.length > 1 || cartLines[0].qty > 1
+
+        // Over capacity — the units cannot physically take them, so this is a
+        // blocking warning, not a hint. Confirm is held until it's resolved
+        // (booking.jsx's capacityIssue). The fix is always a bigger or
+        // additional UNIT — never asking the guest to trim their own party,
+        // so there is no "reduce your guest count" wording here.
+        if (!unlimited && totalGuests > capacity){
+            const alternatives = alternativesFor(totalGuests).map((item) => item.name).join(', ')
+            return {
+                tone: 'unfit',
+                title: 'A bigger selection would suit you better',
+                text: `${names} ${plural ? 'hold' : 'holds'} up to ${capacity} pax combined`
+                    + `, which is a little snug for your group of ${totalGuests}.`
+                    + (alternatives ? ` You might add: ${alternatives}.` : ' Message us and we’ll help you find the right fit.'),
+            }
+        }
+
+        // Under the usual group size — allowed, the rate is per unit. Only
+        // spelled out for a single type: once the cart mixes different units,
+        // "usually set up for" stops being one meaningful number.
+        if (!unlimited && cartLines.length === 1 && cartLines[0].option.minPax != null){
+            const [line] = cartLines
+            if (totalGuests < line.option.minPax * line.qty){
+                return {
+                    tone: 'warn',
+                    title: 'Smaller group? No problem',
+                    text: `${names} ${plural ? 'are' : 'is'} usually set up for ${line.option.pax}${line.qty > 1 ? ' each' : ''},`
+                        + ` but you're welcome to book for ${totalGuests}`
+                        + ` — just note the rate is per unit, so the full price still applies.`,
+                }
+            }
+        }
+
+        return {
+            tone: 'fit',
+            title: 'Good fit',
+            text: `${names} ${plural ? 'are' : 'is'} fit for your group of ${totalGuests}.`,
+        }
+    }
+
+    const suggestions = alternativesFor(totalGuests)
+    if (suggestions.length === 0){
+        return {
+            tone: 'unfit',
+            title: 'Let’s find you a fit',
+            text: `We don't have a single accomodation that fits ${totalGuests} pax — message us and we'll help arrange something for your group.`,
+        }
+    }
+
+    return {
+        tone: 'info',
+        title: 'Suggested for you',
+        text: `For ${totalGuests} pax: ${suggestions.map((item) => item.name).join(', ')}.`,
+    }
+}
+
 // Cards for a given rate group ('day' | 'overnight'), merged with that
 // group's price/pax. With no group (no schedule picked yet) every unit is
 // returned with price/pax left null, so the UI can show its own

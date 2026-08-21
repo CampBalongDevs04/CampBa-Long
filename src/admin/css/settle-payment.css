@@ -1,0 +1,306 @@
+/* ---------- Settle Payment ----------
+   Reuses .receipt-overlay/.receipt-modal/.receipt-head/.receipt-body/
+   .receipt-foot/.receipt-btn* from receipt-viewer.css for the shell;
+   everything below is specific to this modal's condensed summary + the
+   switch-per-head verification. Deliberately tight on padding — this is
+   meant to fit one screen with no scrolling, and receipt-viewer.css's own
+   header/footer padding (sized for a taller, image-heavy modal) was the
+   single biggest thing pushing it past that. */
+
+.settle-modal {
+    max-width: 480px;
+}
+
+.settle-modal .receipt-head {
+    padding: 14px 20px 10px;
+}
+
+.settle-modal .receipt-foot {
+    padding: 10px 20px;
+}
+
+.settle-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.settle-title-icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    color: #2c7a44;
+}
+
+/* ---------- Condensed cost summary — total and paid-online side by side,
+   one row, not two stacked rows each paying for their own padding. Staff
+   already reviewed the itemised breakdown in Proof of Payment before a
+   booking ever reaches this screen. */
+.settle-summary {
+    flex-shrink: 0;
+    padding: 10px 20px;
+    border-bottom: 1px solid rgba(198, 161, 91, 0.3);
+}
+
+.settle-summary-cols {
+    display: flex;
+    gap: 20px;
+}
+
+.settle-summary-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.settle-summary-tag {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: rgba(10, 22, 14, 0.5);
+}
+
+.settle-summary-value {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--forest-dark, #0a160e);
+}
+
+.settle-summary-note {
+    margin: 4px 0 0;
+    font-size: 0.72rem;
+    color: rgba(10, 22, 14, 0.55);
+}
+
+/* ---------- Verify section ---------- */
+.settle-discounts {
+    flex-shrink: 0;
+    padding: 10px 20px;
+    border-bottom: 1px solid rgba(198, 161, 91, 0.3);
+}
+
+.settle-discounts-title {
+    margin: 0 0 3px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: rgba(10, 22, 14, 0.55);
+}
+
+.settle-discounts-hint {
+    margin: 0 0 8px;
+    font-size: 0.76rem;
+    line-height: 1.3;
+    color: rgba(10, 22, 14, 0.6);
+}
+
+.settle-category + .settle-category {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(198, 161, 91, 0.3);
+}
+
+.settle-category-title {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0 0 6px;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--forest-dark, #0a160e);
+}
+
+.settle-category-rate {
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: rgba(10, 22, 14, 0.55);
+}
+
+/* Swaps a category between its quick switch and the +/− counter — pushed to
+   the far right of the title row, small enough not to compete with it. */
+.settle-manual-toggle {
+    margin-left: auto;
+    padding: 2px 9px;
+    font-family: inherit;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #2c7a44;
+    background: rgba(44, 122, 68, 0.08);
+    border: 1px solid rgba(44, 122, 68, 0.3);
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s ease;
+}
+
+.settle-manual-toggle:hover:not(:disabled) {
+    background: rgba(44, 122, 68, 0.16);
+}
+
+.settle-manual-toggle:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* The +/− counter "Manual selection" reveals — starts at the full count
+   (see settlePaymentModal.jsx), so the only motion is subtracting the
+   exceptions rather than rebuilding the count from zero. */
+.settle-stepper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.settle-stepper-btn {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 0.95rem;
+    line-height: 1;
+    color: var(--forest-dark, #0a160e);
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.5);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.settle-stepper-btn:hover:not(:disabled) {
+    border-color: #c6a15b;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.settle-stepper-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.settle-stepper-value {
+    min-width: 46px;
+    text-align: center;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--forest-dark, #0a160e);
+    user-select: none;
+}
+
+.settle-switch-chip {
+    /* inline-flex, not flex — flex is block-level and, as the sole child of
+       .settle-category now that per-head chips are gone, would stretch to
+       fill the full row instead of sizing to its own content. */
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px 5px 12px;
+    background: #fff;
+    border: 1px solid rgba(198, 161, 91, 0.4);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.settle-switch-chip.is-on {
+    border-color: rgba(44, 122, 68, 0.5);
+    background: rgba(44, 122, 68, 0.07);
+}
+
+.settle-switch-chip-label {
+    font-size: 0.78rem;
+    color: var(--forest-dark, #0a160e);
+    white-space: nowrap;
+}
+
+.settle-switch {
+    flex-shrink: 0;
+    display: inline-flex;
+    position: relative;
+}
+
+.settle-switch input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.settle-switch-slider {
+    position: relative;
+    width: 32px;
+    height: 18px;
+    border-radius: 999px;
+    background: rgba(10, 22, 14, 0.22);
+    transition: background 0.18s ease;
+}
+
+.settle-switch-slider::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(10, 22, 14, 0.35);
+    transition: transform 0.18s ease;
+}
+
+.settle-switch input:checked + .settle-switch-slider {
+    background: #2c7a44;
+}
+
+.settle-switch input:checked + .settle-switch-slider::after {
+    transform: translateX(14px);
+}
+
+.settle-switch input:focus-visible + .settle-switch-slider {
+    outline: 2px solid var(--gold, #c6a15b);
+    outline-offset: 2px;
+}
+
+.settle-switch input:disabled + .settle-switch-slider {
+    opacity: 0.55;
+}
+
+/* ---------- Result — the number staff actually act on, set apart with its
+   own tint so it reads as the answer, not one more line in a list. ---------- */
+.settle-result {
+    flex-shrink: 0;
+    padding: 10px 20px;
+    background: rgba(44, 122, 68, 0.06);
+}
+
+.settle-result-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 2px 0;
+    font-size: 0.84rem;
+    color: var(--forest-dark, #0a160e);
+}
+
+.settle-result-total {
+    margin-top: 2px;
+    padding-top: 6px;
+    border-top: 1px dashed rgba(44, 122, 68, 0.35);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #2c7a44;
+}
+
+@media (max-width: 480px) {
+    .settle-category-title {
+        flex-wrap: wrap;
+    }
+
+    .settle-manual-toggle {
+        margin-left: 0;
+    }
+}

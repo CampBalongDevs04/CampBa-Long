@@ -1,3 +1,5 @@
+import './css/lotusDivider.css';
+
 export default function LotusDividerIcon() {
     return (
         <div className="lotus-divider">

@@ -154,6 +154,8 @@ function Seo({ path, noindex = false, extraSchema = [], title, description }) {
         upsertMeta('property', 'og:url', canonical || absoluteUrl(path || '/'))
         upsertMeta('property', 'og:locale', DEFAULT_LOCALE)
         upsertMeta('property', 'og:image', image)
+        upsertMeta('property', 'og:image:secure_url', image)
+        upsertMeta('property', 'og:image:type', OG_IMAGE.type)
         upsertMeta('property', 'og:image:width', OG_IMAGE.width)
         upsertMeta('property', 'og:image:height', OG_IMAGE.height)
         upsertMeta('property', 'og:image:alt', OG_IMAGE.alt)
@@ -162,6 +164,7 @@ function Seo({ path, noindex = false, extraSchema = [], title, description }) {
         upsertMeta('name', 'twitter:title', pageTitle)
         upsertMeta('name', 'twitter:description', pageDescription)
         upsertMeta('name', 'twitter:image', image)
+        upsertMeta('name', 'twitter:image:alt', OG_IMAGE.alt)
 
         // A page nobody should index is a page nobody should read the schema of
         // either — describing it only invites it into a knowledge panel.

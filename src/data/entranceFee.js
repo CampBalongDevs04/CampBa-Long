@@ -3,15 +3,17 @@
 // Seniors and kids are a SUBSET of the total guest count (pax), not extra
 // heads, so `pax` is the whole party and every head in it starts out charged:
 //   • Regular guests pay the full rate.
-//   • Senior citizens are charged the full rate HERE — their discount is
-//     given at the resort, not by this system. See SENIOR_DISCOUNT_RATE.
-//   • Kids 7 & below are exempt — always free, regardless of the perk below.
+//   • Senior citizens and kids 7 & below are BOTH charged the full rate HERE
+//     — their discounts are given at the resort, not by this system. See
+//     SENIOR_DISCOUNT_RATE / KIDS_DISCOUNT_RATE below.
 //   • The rate card also waives entrance for up to 2 pax per booking ("free
 //     entrance for 2 pax"), on units where that inclusion applies — see
-//     FREE_ENTRANCE_EXCLUDED_UNITS in data/accomodationOptions.js.
+//     FREE_ENTRANCE_EXCLUDED_UNITS in data/accomodationOptions.js. Kids do
+//     NOT draw from this pool (see KIDS_DISCOUNT_RATE for why) — it is only
+//     ever handed to regular or senior heads, same as before.
 //
-// A party of 4 with one kid on the Day rate is therefore 4 × ₱150 = ₱600, less
-// the kid's ₱150 → ₱450 (before the 2-pax perk further reduces it below).
+// A party of 4 with one kid on the Day rate is therefore 4 × ₱150 = ₱600
+// (the 2-pax perk, if this booking qualifies for it, reduces it further below).
 // THE SYSTEM NO LONGER APPLIES A SENIOR DISCOUNT.
 // -----------------------------------------------
 // The resort gives it at the front desk instead, against the ID the guest
@@ -64,6 +66,27 @@ export const PWD_DISCOUNT_RATE = 0
 export const PWD_DISCOUNT_IN_SYSTEM = PWD_DISCOUNT_RATE > 0
 export const PWD_DISCOUNT_LABEL = `${Math.round(PWD_DISCOUNT_RATE * 100)}%`
 
+// KIDS 7 & BELOW
+// --------------
+// Used to be an unconditional, always-on exemption computed here — every kid
+// was simply free, full stop. Now the same three-constant shape as seniors
+// and PWD above: zero here means a kid is charged the full entrance rate
+// online and the discount is given at the front desk, same as the other two.
+//
+// Kids still do NOT draw from the 2-pax "resort inclusion" perk below —
+// they're their own carved-out count in computeEntranceFee(), same as
+// before, just no longer automatically zeroed out. Folding them into the
+// perk's shared, capped pool instead would be a regression: a party of 1
+// adult + 2 kids would go from "everyone free" (kids exempt outright, the
+// adult using the 2-pax perk) to "only 2 of the 3 heads get it," which could
+// land on the two kids and leave the paying adult with nothing.
+//
+// `kids` is still carried on the booking, the receipt and the admin list —
+// the desk cannot give a discount it cannot see.
+export const KIDS_DISCOUNT_RATE = 0
+export const KIDS_DISCOUNT_IN_SYSTEM = KIDS_DISCOUNT_RATE > 0
+export const KIDS_DISCOUNT_LABEL = `${Math.round(KIDS_DISCOUNT_RATE * 100)}%`
+
 // ON "FREE ENTRANCE FOR 2 PAX" — AND RENT ALL RESORT'S OWN, BIGGER QUOTA
 // ------------------------------------------------------------------------
 // This perk used to be advertised in INCLUSIONS and subtracted here ON TOP OF
@@ -71,13 +94,17 @@ export const PWD_DISCOUNT_LABEL = `${Math.round(PWD_DISCOUNT_RATE * 100)}%`
 // already free — so a party of 4 with one child was charged for a single head
 // (₱150) where ₱450 was owed. It was removed rather than fixed at the time.
 //
-// It's back, implemented so it can't stack with the kids' exemption: kids are
-// already free on their own, so the quota is only ever handed to non-kid
-// heads (regular first, since that's the bigger saving, then seniors if the
-// party has fewer non-kid heads than the quota). A senior head that gets the
-// perk is fully waived instead of just getting the senior discount, so it's
-// dropped from the senior count before the discount is calculated — otherwise
-// that head would be discounted twice.
+// Kids stay OUT of this pool, same as before — the quota is only ever handed
+// to regular or senior heads (regular first, since that's the bigger saving,
+// then seniors if the party has fewer non-kid heads than the quota). Folding
+// kids into this shared, capped pool instead of leaving them purely
+// rate-based (like seniors and PWD) would be a regression: a party of 1
+// adult + 2 kids would go from "everyone free" (kids exempt outright, the
+// adult using the 2-pax perk) to "only 2 of the 3 heads get it," which could
+// land on the two kids and leave the paying adult with nothing. A senior head
+// that gets the perk is fully waived instead of just getting the senior
+// discount, so it's dropped from the senior count before the discount is
+// calculated — otherwise that head would be discounted twice.
 //
 // The quota is 2 for an ordinary unit booking — the rate card's standing
 // inclusion — but Rent All Resort has its own, bigger one: the rate card only
@@ -85,14 +112,15 @@ export const PWD_DISCOUNT_LABEL = `${Math.round(PWD_DISCOUNT_RATE * 100)}%`
 // whole-resort booking, not the entire party regardless of size. Callers pass
 // whichever quota applies via `freeQuota`; booking.jsx is what decides which
 // one that is. The SQL twin, entrance_breakdown() in
-// supabase/migrations/20260815150000_rent_all_free_entrance_quota.sql, takes
-// the same parameter — change one, change the other.
+// supabase/migrations/20260817120000_kids_discount_claimed_at_resort.sql,
+// takes the same parameter — change one, change the other.
 //
-// `freeApplied` / `freeSavings` are the combined "free entrance" bucket the
-// receipt, My Bookings and the admin export have always read (kids + the
-// perk, matching what's stored in entrance_free_applied/entrance_free_savings).
-// `kidsFree`/`kidsCount` and `perkApplied`/`perkSavings` are the two components
-// of that bucket, for screens that want to show them as separate line items.
+// `freeApplied` / `freeSavings` are the 2-pax perk ALONE now — what the
+// receipt, My Bookings and the admin export read as entrance_free_applied/
+// entrance_free_savings. Kids no longer contribute to this bucket (see
+// KIDS_DISCOUNT_RATE above); a booking made before this change still has
+// them folded in, since that row's total was genuinely computed that way at
+// the time.
 //
 // Returns a full entrance-fee breakdown. `paxTotal` is every head at the full
 // rate and the deductions come off it, so a screen can list the charges and
@@ -133,14 +161,17 @@ export function computeEntranceFee({
     const perkFromSenior = perkApplied - perkFromRegular
     const payingSeniorCount = seniorCount - perkFromSenior
 
-    // Every head at the full rate, then everything that comes off it.
+    // Every head at the full rate, then everything that comes off it. Kids'
+    // own discount sits beside the senior one — both zero today, both a
+    // straight rate off the full charge rather than an unconditional waiver.
     const paxTotal = totalPax * rate
-    const kidsFree = kidsCount * rate
+    const kidsGross = kidsCount * rate
+    const kidsDiscount = kidsGross * KIDS_DISCOUNT_RATE
     const perkSavings = perkApplied * rate
     const seniorGross = payingSeniorCount * rate
     const seniorDiscount = seniorGross * SENIOR_DISCOUNT_RATE
 
-    const total = Math.max(0, paxTotal - kidsFree - perkSavings - seniorDiscount)
+    const total = Math.max(0, paxTotal - perkSavings - kidsDiscount - seniorDiscount)
 
     return {
         perHead: rate,
@@ -148,31 +179,54 @@ export function computeEntranceFee({
         paxTotal,
         regularCount,
         regularTotal: (regularCount - perkFromRegular) * rate,
+        kidsCount,
+        kidsGross,
+        kidsDiscount,
+        kidsNet: kidsGross - kidsDiscount,
         // Only the still-paying seniors — the ones the discount below
         // actually applies to.
         seniorCount: payingSeniorCount,
         seniorGross,
         seniorDiscount,
         seniorNet: seniorGross - seniorDiscount,
-        kidsCount,
-        kidsFree,
         perkApplied,
         perkSavings,
-        // Combined free-entrance bucket: kids + the 2-pax perk.
-        freeApplied: kidsCount + perkApplied,
-        freeSavings: kidsFree + perkSavings,
-        payingHeads: totalPax - kidsCount - perkApplied,
+        // The 2-pax perk alone now — kids no longer contribute (see
+        // KIDS_DISCOUNT_RATE above).
+        freeApplied: perkApplied,
+        freeSavings: perkSavings,
+        payingHeads: totalPax - perkApplied,
         total,
     }
 }
 
-// Historical bookings only ever had the combined freeApplied/freeSavings
-// bucket stored (see above), not the kids/perk split. `kids` is its own
-// column on the booking row and is always the kids' share, so whatever is
-// left in the combined bucket is the perk's share — this recovers the split
-// for screens (My Bookings, the receipt image) reading a saved booking back.
-export function splitFreeEntrance({ freeApplied = 0, freeSavings = 0, kids = 0, perHead = 0 } = {}){
-    const kidsApplied = Math.min(Math.max(0, Number(kids) || 0), Number(freeApplied) || 0)
+// The instant 20260817120000_kids_discount_claimed_at_resort.sql shipped —
+// see splitFreeEntrance() below. Matches the migration's own filename
+// timestamp (YYYYMMDDHHMMSS, UTC), the same way this codebase already talks
+// about that boundary everywhere else ("a booking made before/after that
+// migration shipped").
+const KIDS_CLAIMED_AT_RESORT_SINCE = '2026-08-17T12:00:00Z'
+
+// Reads a STORED booking's freeApplied/freeSavings bucket back. A booking
+// made BEFORE KIDS_CLAIMED_AT_RESORT_SINCE had kids folded into that bucket
+// alongside the 2-pax perk (see that migration's header) — this recovers
+// that historical split correctly, `kids` being its own column on the row
+// and always the kids' share, so whatever's left is the perk's share.
+//
+// A booking made AT OR AFTER that instant never puts kids in the bucket at
+// all — entrance_breakdown() keeps them out of it by construction — so
+// `createdAt` is what tells the two eras apart. Getting this wrong is not
+// cosmetic: on a new-format row, whatever freeApplied there is came from the
+// 2-pax perk going to an ADULT or senior, and mislabeling it as "kids free"
+// tells the guest their kid got a discount that was never actually given,
+// while a kid's own discount (now claimed in person, like PWD and seniors)
+// goes unmentioned entirely.
+export function splitFreeEntrance({ freeApplied = 0, freeSavings = 0, kids = 0, perHead = 0, createdAt = null } = {}){
+    const isPreKidsMigration = createdAt != null
+        && new Date(createdAt).getTime() < new Date(KIDS_CLAIMED_AT_RESORT_SINCE).getTime()
+    const kidsApplied = isPreKidsMigration
+        ? Math.min(Math.max(0, Number(kids) || 0), Number(freeApplied) || 0)
+        : 0
     const kidsFree = kidsApplied * (Number(perHead) || 0)
     return {
         kidsApplied,

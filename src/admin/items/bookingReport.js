@@ -201,8 +201,12 @@ function totalDue(entry) {
 // What has actually been collected. Derived from the payment state rather than
 // the receipt amounts, because bookings taken before receipts were itemised
 // carry no amounts at all and would read as unpaid.
+//
+// A paid-full booking normally means the full totalDue() came in — unless it
+// was settled through settleBookingPayment() with a senior/PWD/kids discount
+// honored at the desk, in which case settlementCollected is the real figure.
 function collected(entry) {
-    if (entry.payment === 'paid-full') return totalDue(entry)
+    if (entry.payment === 'paid-full') return entry.settlementCollected ?? totalDue(entry)
     if (entry.payment === 'down-payment') return Number(entry.downpayment ?? 0)
     return 0
 }
@@ -247,7 +251,8 @@ function summarise(rows) {
             totals.collected += collected(entry)
             totals.discounts +=
                 Number(entry.entrance?.seniorDiscount ?? 0) +
-                Number(entry.entrance?.freeSavings ?? 0)
+                Number(entry.entrance?.freeSavings ?? 0) +
+                Number(entry.settlementDiscount ?? 0)
             return totals
         },
         { count: 0, cancelled: 0, due: 0, collected: 0, discounts: 0 },

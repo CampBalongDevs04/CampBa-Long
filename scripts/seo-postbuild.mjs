@@ -39,7 +39,7 @@
 // ============================================================================
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -63,22 +63,85 @@ if (!existsSync(join(DIST, 'index.html'))) {
     process.exit(1)
 }
 
-// The placeholder in seoConfig.js is harmless in a preview build and fatal in a
-// real one: every canonical link and every og:image would point at a domain
-// nobody owns, which is worse than shipping none at all — a wrong canonical
-// tells Google the real page is a copy of somebody else's.
+// The origin in seoConfig.js is what every canonical link, every sitemap <loc>
+// and the og:image URL are built from, and getting it wrong leaves no trace in
+// dist/: the tags are all present and well-formed, they just name the wrong
+// site. A wrong canonical is worse than a missing one — it tells Google the
+// real page is a copy of somebody else's.
 //
-// A warning rather than an error, because it must still be possible to build
-// and inspect the site before the domain exists. It is loud enough to notice.
-const usingPlaceholderOrigin = SITE_ORIGIN.includes('example')
-if (usingPlaceholderOrigin) {
+// Warnings rather than errors, because building against a domain that is not
+// live yet has to stay possible. They are loud enough to notice.
+
+if (SITE_ORIGIN.includes('example')) {
     console.warn(
         `\n\x1b[33m[seo] Building with the placeholder domain ${SITE_ORIGIN}.\x1b[0m\n` +
         `Canonical links, the sitemap and the share image all point there.\n` +
-        `Before the first real deploy set VITE_SITE_ORIGIN=https://your-domain\n` +
-        `in the hosting provider's environment, or edit SITE_ORIGIN in\n` +
-        `src/lib/seoConfig.js.\n`,
+        `Set the real domain by editing SITE_ORIGIN in src/lib/seoConfig.js.\n`,
     )
+}
+
+// The trap below is the one that has already cost this site its share image
+// twice. SITE_ORIGIN used to fall back to VITE_SITE_ORIGIN; that indirection
+// shipped the wrong host, so the fallback was removed — but a stale
+// VITE_SITE_ORIGIN can still be sitting in Vercel's project settings, and
+// anyone moving the site to a new domain will very reasonably set it there,
+// deploy, and get a sitemap full of the OLD address with nothing complaining.
+//
+// So if the environment names a different origin than the file does, say
+// plainly which one won.
+const envOrigin = process.env.VITE_SITE_ORIGIN?.replace(/\/$/, '')
+if (envOrigin && envOrigin !== SITE_ORIGIN) {
+    console.warn(
+        `\n\x1b[33m[seo] VITE_SITE_ORIGIN is set to ${envOrigin} — and is being ignored.\x1b[0m\n` +
+        `Nothing reads that variable any more. This build is for ${SITE_ORIGIN},\n` +
+        `taken from SITE_ORIGIN in src/lib/seoConfig.js. Edit that one line to\n` +
+        `change the domain, then delete the variable so the two cannot disagree.\n`,
+    )
+}
+
+// The sitemap can only be as complete as the table it is generated from, and
+// that failure is silent in the worst way: add a public route to App.jsx,
+// forget seoConfig.js, and the page is live, linked, and invisible to every
+// crawler forever. Nothing about dist/ looks wrong — the sitemap is valid, it
+// is just short by one URL.
+//
+// App.jsx keeps its own PUBLIC_PATHS set (it needs one before seoConfig.js is
+// in the bundle graph), which makes the two lists the thing to compare.
+//
+// Parsed with a regex over source, which is only defensible because the target
+// is one literal line in one file in this repo. If it stops matching that is
+// reported as a SKIPPED check rather than a passed one — a guard that quietly
+// stops guarding is worse than no guard at all.
+function assertRoutesMatchApp() {
+    const source = readFileSync(join(ROOT, 'src', 'App.jsx'), 'utf8')
+    const literal = source.match(/const PUBLIC_PATHS = new Set\(\[([^\]]*)\]\)/)
+
+    if (!literal) {
+        console.warn(
+            `\n\x1b[33m[seo] Could not find PUBLIC_PATHS in src/App.jsx.\x1b[0m\n` +
+            `The sitemap was NOT checked against the app's routes. Either the set\n` +
+            `was renamed or it is no longer written on one line — fix the regex in\n` +
+            `scripts/seo-postbuild.mjs so this check does its job again.\n`,
+        )
+        return
+    }
+
+    const appPaths = [...literal[1].matchAll(/'([^']+)'/g)].map((m) => m[1])
+    const routePaths = ROUTES.map((route) => route.path)
+
+    const missing = appPaths.filter((path) => !routePaths.includes(path))
+    const stale = routePaths.filter((path) => !appPaths.includes(path))
+
+    if (missing.length || stale.length) {
+        throw new Error([
+            'src/App.jsx and the ROUTES table in src/lib/seoConfig.js disagree.',
+            '',
+            ...missing.map((p) => `  ${p} is a public route with no entry in ROUTES — it would be missing from the sitemap and served the home page's tags.`),
+            ...stale.map((p) => `  ${p} is in ROUTES but is not a route in App.jsx — the sitemap would advertise a URL that 404s.`),
+            '',
+            'Add the missing entry (title, description, priority, changefreq), or remove the stale one.',
+        ].join('\n'))
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -209,6 +272,11 @@ async function writeHtml(template, route) {
     html = replaceMeta(html, 'property', 'og:description', route.description)
     html = replaceMeta(html, 'property', 'og:url', canonical)
     html = replaceMeta(html, 'property', 'og:image', image)
+    // Redundant for anything written this decade — og:image is already https —
+    // but Viber's scraper is old and reads secure_url in preference. It costs a
+    // line and it is the difference between a preview with a picture and one
+    // without on the app this resort's guests actually share links in.
+    html = replaceMeta(html, 'property', 'og:image:secure_url', image)
     html = replaceMeta(html, 'name', 'twitter:title', route.title)
     html = replaceMeta(html, 'name', 'twitter:description', route.description)
     html = replaceMeta(html, 'name', 'twitter:image', image)
@@ -248,6 +316,10 @@ async function writeHtml(template, route) {
 // ----------------------------------------------------------------------------
 
 async function main() {
+    // Before anything is written: a sitemap missing a page is the one failure
+    // here that leaves nothing behind in dist/ to notice it by.
+    assertRoutesMatchApp()
+
     // Read once, before the first write — writeHtml() overwrites
     // dist/index.html, and every later route would otherwise be built from the
     // home page's already-substituted head instead of the pristine template.

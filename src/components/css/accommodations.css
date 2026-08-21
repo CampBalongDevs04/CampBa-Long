@@ -48,6 +48,7 @@
 .acc-section .lotus-divider{
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 14px;
 }
 .acc-section .lotus-divider .rule{

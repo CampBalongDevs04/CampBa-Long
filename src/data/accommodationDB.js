@@ -65,6 +65,7 @@ import {
     SUPABASE_SETUP_MESSAGE,
 } from '../lib/supabaseClient.js'
 import { getOwnerToken, isOwnerTokenPersistent, forgetOwnerToken } from './bookingOwner.js'
+import { isMaintenanceDow, isMaintenanceDate } from './maintenanceDays.js'
 
 // ---------------------------------------------------------------- constants
 
@@ -255,6 +256,21 @@ export function formatShortDate(value) {
 // '10:00 AM' from a timestamp.
 export function formatClock(ms) {
     return new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+}
+
+// The stay a booking actually occupies, in one line: the day (or day range)
+// the guest booked, plus the time window of the schedule they picked —
+// 'Aug 22 · 10:00 AM - 5:00 PM'.
+//
+// This is what the kitchen and the spa need to read off an order: WHEN it has
+// to be served, which is the booking's window, not the moment the guest tapped
+// order. Both boards that show add-ons render it, so it lives here rather than
+// being written out twice and drifting.
+export function formatStayWindow(booking) {
+    const from = formatShortDate(booking.checkIn)
+    const to = formatShortDate(booking.checkOut)
+    const dates = from === to ? from : `${from} – ${to}`
+    return booking.schedule ? `${dates} · ${booking.schedule.time}` : dates
 }
 
 // --------------------------------------------------------- occupancy window
@@ -570,6 +586,22 @@ function fromRow(row) {
         downpayment: row.downpayment != null ? Number(row.downpayment) : null,
         total: row.price != null ? Number(row.price) : null,
         payment: row.payment,
+        // How many of this booking's own seniors/pwd/kids counts actually
+        // presented ID at settlement, and what that was worth — set once, by
+        // settle_booking_payment() (see supabase/migrations/
+        // 20260819120000_settle_booking_payment.sql). Independent of the
+        // online quote, which stays at the full rate on purpose (see
+        // entranceFee.js). Zero/null on any booking marked paid the old way,
+        // which every screen reading these treats as "the full total was
+        // collected" — the same assumption they already made before this
+        // existed.
+        settlementSeniorVerified: row.settlement_senior_verified ?? 0,
+        settlementPwdVerified: row.settlement_pwd_verified ?? 0,
+        settlementKidsVerified: row.settlement_kids_verified ?? 0,
+        settlementDiscount: Number(row.settlement_discount_total ?? 0),
+        settlementCollected:
+            row.settlement_amount_collected != null ? Number(row.settlement_amount_collected) : null,
+        settledAt: row.settled_at ?? null,
         hasReceipt: Boolean(row.receipt_url),
         // Storage path of the uploaded image, or null when there is nothing to
         // show — no receipt at all, or one of the old marker-only rows. The
@@ -717,6 +749,16 @@ function fromGroupRow(row) {
         // column, which for a single booking is really just the unit rate.
         total: Number(row.unit_subtotal ?? 0),
         payment: row.payment,
+        // Same fields, same meaning as fromRow()'s — see
+        // settle_group_booking_payment() in supabase/migrations/
+        // 20260819140000_settle_group_booking_payment.sql.
+        settlementSeniorVerified: row.settlement_senior_verified ?? 0,
+        settlementPwdVerified: row.settlement_pwd_verified ?? 0,
+        settlementKidsVerified: row.settlement_kids_verified ?? 0,
+        settlementDiscount: Number(row.settlement_discount_total ?? 0),
+        settlementCollected:
+            row.settlement_amount_collected != null ? Number(row.settlement_amount_collected) : null,
+        settledAt: row.settled_at ?? null,
         hasReceipt: Boolean(row.receipt_url),
         // Same masking rule as fromRow(): a guest (my_booking_groups()) only
         // ever sees 'pending-upload'; staff, reading the raw table, get the
@@ -774,7 +816,14 @@ export function groupUnitsLabel(units) {
 // alters the money.
 export function guestPartyLabel(booking) {
     if (!booking?.pax) return '—'
+    // `pax` is the WHOLE party (adults + kids + seniors + pwd — see
+    // booking.jsx's totalGuests), so adults isn't stored on its own and has
+    // to be derived, same as computeEntranceFee()'s regularCount — otherwise
+    // this reads as "4 pax · 2 kids" with no indication the other 2 heads
+    // are adults at all.
+    const adults = Math.max(0, booking.pax - (booking.kids ?? 0) - (booking.seniors ?? 0) - (booking.pwd ?? 0))
     const extras = [
+        adults > 0 ? `${adults} adult${adults > 1 ? 's' : ''}` : null,
         booking.seniors > 0 ? `${booking.seniors} senior${booking.seniors > 1 ? 's' : ''}` : null,
         booking.pwd > 0 ? `${booking.pwd} PWD` : null,
         booking.kids > 0 ? `${booking.kids} kid${booking.kids > 1 ? 's' : ''}` : null,
@@ -1275,25 +1324,72 @@ export function getAvailability(idOrPrefix, checkIn = new Date(), checkOut = nul
     return null
 }
 
-// Whether EVERY other active type is fully free on one date — what "Rent All
-// Resort" needs, since renting the whole resort only makes sense on a day
-// nothing else is booked. Built on the same cached per-date RPC every card
-// already uses (getAvailability), so this costs nothing new: one call for the
-// date (all types come back together), read back per type.
+// Whether EVERY other active type is free for the WHOLE stay — what "Rent All
+// Resort" needs, since renting the whole resort only makes sense over a stay
+// nothing else is booked during, not just on the first night of it. Built on
+// the same cached range-aware RPC every card already uses for its own
+// availability (getAvailability), so this costs nothing new: one call per
+// type for the range (all types come back together on the first call), read
+// back per type.
 //
 // `excludeTypeId` leaves the rent-all card itself out of its own check — it
 // owns no physical units to conflict with. Returns null while any type's
 // answer is still in flight (same "don't know yet" the cards already show as
 // "Availability TBA"), so a caller can tell "not free" from "not answered".
-export function isResortFreeOn(date, scheduleKey, excludeTypeId = null){
+export function isResortFreeForStay(checkIn, checkOut = null, scheduleKey = null, excludeTypeId = null){
     let allFree = true
     for (const type of ACCOMMODATION_TYPES){
         if (type.id === excludeTypeId) continue
-        const availability = getAvailability(type.id, date, null, scheduleKey)
+        const availability = getAvailability(type.id, checkIn, checkOut, scheduleKey)
         if (availability == null) return null
         if (availability.available < availability.total) allFree = false
     }
     return allFree
+}
+
+function isClosedDay(date){
+    return isMaintenanceDow(date.getDay()) || isMaintenanceDate(date)
+}
+
+// Up to `limit` upcoming check-in dates, starting the day after `from`, where
+// renting the whole resort would actually be possible — every other type free
+// for a stay of `nightsGap` nights (0 for a same-day schedule like Day Time).
+// What the Rent All card recommends once it finds itself blocked on the dates
+// the guest actually picked.
+//
+// A client-side day-by-day walk, not a database RPC — there is no server-side
+// "find N free resort-wide windows" query, but isResortFreeForStay() is cheap
+// per day (it reads the same cache the walk itself is filling in as it goes),
+// so this simply asks the question `maxDays` times at most and keeps the
+// first `limit` yeses.
+//
+// Closed days are skipped outright, weekly pattern or one-off — a
+// "recommendation" the maintenance-day rule would refuse at Reserve is worse
+// than no recommendation at all.
+export function findResortFreeDates(from, nightsGap, scheduleKey, excludeTypeId = null, { maxDays = 30, limit = 3 } = {}){
+    if (from == null) return []
+    const results = []
+    for (let offset = 1; offset <= maxDays && results.length < limit; offset++){
+        const candidateCheckIn = new Date(normalizeDate(from) + offset * DAY_MS)
+        if (isClosedDay(candidateCheckIn)) continue
+
+        let touchesClosure = false
+        for (let n = 1; n <= nightsGap; n++){
+            if (isClosedDay(new Date(normalizeDate(candidateCheckIn) + n * DAY_MS))){
+                touchesClosure = true
+                break
+            }
+        }
+        if (touchesClosure) continue
+
+        const candidateCheckOut = nightsGap > 0
+            ? new Date(normalizeDate(candidateCheckIn) + nightsGap * DAY_MS)
+            : null
+        if (isResortFreeForStay(candidateCheckIn, candidateCheckOut, scheduleKey, excludeTypeId) === true){
+            results.push(candidateCheckIn)
+        }
+    }
+    return results
 }
 
 // --- local computations over the rows this session can see -----------------
@@ -1859,9 +1955,77 @@ export function confirmBooking(id) {
     return patchBooking(id, { status: 'upcoming', payment: 'down-payment' })
 }
 
-// Admin recorded the balance paid on-site.
+// Admin recorded the balance paid on-site, with no senior/PWD/kids discount
+// to account for.
 export function markBookingPaidFull(id) {
     return patchBooking(id, { payment: 'paid-full' })
+}
+
+// Admin recorded the balance paid on-site, honoring a senior/PWD/kids
+// discount verified against ID at settlement. Unlike markBookingPaidFull()
+// above, this is not a plain field flip: settle_booking_payment() (see
+// supabase/migrations/20260819120000_settle_booking_payment.sql) recomputes
+// the discount and the real amount collected itself, from the booking's own
+// stored entrance_per_head and seniors/pwd/kids counts — the *Verified
+// arguments here are headcounts, capped server-side at what the booking
+// actually has, never a peso figure this function invents and asks Postgres
+// to trust.
+export async function settleBookingPayment(id, { seniorVerified = 0, pwdVerified = 0, kidsVerified = 0 } = {}) {
+    const { data, error } = await supabase.rpc('settle_booking_payment', {
+        p_booking_id: id,
+        p_senior_verified: seniorVerified,
+        p_pwd_verified: pwdVerified,
+        p_kids_verified: kidsVerified,
+    })
+    if (error) {
+        console.error('Could not settle booking payment:', error.message)
+        return { ok: false, message: error.message }
+    }
+    clearCaches()
+    applyPatch(id, fromRow(data))
+    return { ok: true }
+}
+
+// Reverts a Mark Paid — whether it was the plain flip or a settled discount
+// — back to down-payment, and clears any settlement_* figures so a later
+// Mark Paid recomputes fresh rather than reopening the modal onto stale
+// numbers. A booking only ever reaches paid-full FROM down-payment (see
+// confirmBooking(), which always sets payment to 'down-payment' the moment a
+// booking leaves 'pending' — nothing skips straight to paid-full), so that
+// is always the correct state to land back on.
+//
+// A plain write, not an RPC like settleBookingPayment() above: there is no
+// arithmetic to keep in one place here, only fields to reset — but NOT
+// through patchBooking(), because its patch object doubles as the local
+// cache patch, and the settlement_* DB columns (snake_case) don't share a
+// name with their camelCase JS fields the way `payment` coincidentally does
+// for every other patchBooking() caller.
+export async function undoBookingPaidFull(id) {
+    const { error } = await supabase.from('bookings').update({
+        payment: 'down-payment',
+        settlement_senior_verified: 0,
+        settlement_pwd_verified: 0,
+        settlement_kids_verified: 0,
+        settlement_discount_total: 0,
+        settlement_amount_collected: null,
+        settled_at: null,
+        settled_by: null,
+    }).eq('id', id)
+    if (error) {
+        console.error('Could not undo this payment:', error.message)
+        return { ok: false, message: error.message }
+    }
+    clearCaches()
+    applyPatch(id, {
+        payment: 'down-payment',
+        settlementSeniorVerified: 0,
+        settlementPwdVerified: 0,
+        settlementKidsVerified: 0,
+        settlementDiscount: 0,
+        settlementCollected: null,
+        settledAt: null,
+    })
+    return { ok: true }
 }
 
 // Staff-only, same as patchBooking() above but for the group row — and for its
@@ -1908,6 +2072,72 @@ export function confirmBookingGroup(id) {
 
 export function markBookingGroupPaidFull(id) {
     return patchBookingGroup(id, { payment: 'paid-full' })
+}
+
+// Group twin of settleBookingPayment() above — same RPC shape
+// (settle_group_booking_payment(), see supabase/migrations/
+// 20260819140000_settle_group_booking_payment.sql), against the ONE set of
+// kids/seniors/pwd counts a combined reservation has (on the group row
+// itself; member units never carry their own — see book_stay_group()).
+// The RPC mirrors `payment` onto every member row server-side, the same
+// thing patchBookingGroup() above does for every other group write, so the
+// cache is updated the same two-part way here.
+export async function settleGroupBookingPayment(id, { seniorVerified = 0, pwdVerified = 0, kidsVerified = 0 } = {}) {
+    const { data, error } = await supabase.rpc('settle_group_booking_payment', {
+        p_group_id: id,
+        p_senior_verified: seniorVerified,
+        p_pwd_verified: pwdVerified,
+        p_kids_verified: kidsVerified,
+    })
+    if (error) {
+        console.error('Could not settle group booking payment:', error.message)
+        return { ok: false, message: error.message }
+    }
+    clearCaches()
+    applyPatchGroup(id, fromGroupRow(data))
+    applyPatchMembers(id, { payment: 'paid-full' })
+    return { ok: true }
+}
+
+// Group twin of undoBookingPaidFull() above — same reasoning, and the same
+// "mirror payment onto every member unit" step settle_group_booking_payment()
+// itself does server-side, done here client-side since this is a plain write
+// rather than a call through that RPC.
+export async function undoGroupBookingPaidFull(id) {
+    const { error } = await supabase.from('booking_groups').update({
+        payment: 'down-payment',
+        settlement_senior_verified: 0,
+        settlement_pwd_verified: 0,
+        settlement_kids_verified: 0,
+        settlement_discount_total: 0,
+        settlement_amount_collected: null,
+        settled_at: null,
+        settled_by: null,
+    }).eq('id', id)
+    if (error) {
+        console.error('Could not undo this payment:', error.message)
+        return { ok: false, message: error.message }
+    }
+    const { error: membersError } = await supabase
+        .from('bookings')
+        .update({ payment: 'down-payment' })
+        .eq('group_id', id)
+    if (membersError) {
+        console.error('Could not undo the reservation\'s units:', membersError.message)
+        return { ok: false, message: membersError.message }
+    }
+    clearCaches()
+    applyPatchGroup(id, {
+        payment: 'down-payment',
+        settlementSeniorVerified: 0,
+        settlementPwdVerified: 0,
+        settlementKidsVerified: 0,
+        settlementDiscount: 0,
+        settlementCollected: null,
+        settledAt: null,
+    })
+    applyPatchMembers(id, { payment: 'down-payment' })
+    return { ok: true }
 }
 
 // Frees the unit for those dates again — from either side of the app. Staff
@@ -2363,7 +2593,13 @@ function accumulateBookingStats(entry, stats) {
     stats.totalBooking += 1
     if (stage === 'upcoming') stats.upcomming += 1
     if (stage === 'active') stats.active += 1
-    if (entry.payment === 'paid-full') stats.revenue += entry.total ?? 0
+    // `settlementCollected` is only ever set on a booking settled through
+    // settle_booking_payment() (a discount was honored) — everything else,
+    // groups included, falls back to `stayTotal`, same as this always
+    // assumed. Reads `stayTotal` now rather than `total`: `total` is the
+    // unit rate alone (see fromRow()), which undercounted every booking with
+    // an entrance fee or add-ons regardless of any discount.
+    if (entry.payment === 'paid-full') stats.revenue += entry.settlementCollected ?? entry.stayTotal ?? 0
     else if (entry.payment === 'down-payment') stats.revenue += entry.downpayment ?? 0
     if (stage === 'pending' || entry.payment === 'unpaid') stats.pendingPayment += 1
 }
