@@ -5,23 +5,50 @@ any static host will serve it — but two settings decide whether the site is
 indexable, and both are easy to get wrong in a way nothing visibly complains
 about.
 
-## Before the first production deploy
+## Moving the site to a new domain
 
-Set the real domain. Until this is done, every canonical link, the sitemap and
-the Facebook share image all point at `https://www.example-campbalong.com`,
-which nobody owns. `npm run build` prints a yellow warning whenever it is still
-the placeholder.
+Every canonical link, every `<loc>` in `sitemap.xml`, the `Sitemap:` line in
+`robots.txt` and the Facebook share image are absolute URLs built from one
+constant. Changing the domain means changing that constant:
 
-Either set an environment variable in the hosting provider:
-
-```bash
-VITE_SITE_ORIGIN=https://your-real-domain.com
+```js
+// src/lib/seoConfig.js
+export const SITE_ORIGIN = 'https://your-real-domain.com'   // no trailing slash
 ```
 
-…or edit `SITE_ORIGIN` in [`src/lib/seoConfig.js`](../src/lib/seoConfig.js).
+That is the whole procedure. Commit it and redeploy — `npm run build`
+regenerates `dist/robots.txt`, `dist/sitemap.xml` and all five pages' tags
+against the new address. Upload `dist/` and the two files are already correct;
+they are build output, so there is nothing to hand-edit and nothing to keep in
+sync afterwards.
 
-Vite inlines environment variables at **build** time. Setting this after a build
-has already run changes nothing until the next one.
+**`VITE_SITE_ORIGIN` is not read by anything.** It used to override the
+constant, and twice that indirection is what shipped a broken share image — the
+Vercel project has it set to `campba-long.vercel.app` while the site is served
+from `camp-ba-long.vercel.app`, one hyphen apart, and the env var won. The
+override was removed. If the variable is still set in the hosting provider's
+settings at build time the script now prints a yellow warning saying it is being
+ignored; delete it so the two cannot disagree again.
+
+### Check it actually took
+
+After the deploy, against the new domain:
+
+```bash
+curl -s https://your-real-domain.com/robots.txt
+curl -s https://your-real-domain.com/sitemap.xml
+curl -I https://your-real-domain.com/urlimage.jpg
+```
+
+The first two must name the new domain, not the old one. The third is the share
+image and must return `200` with `image/jpeg` — a 404 there is why a Messenger
+link preview arrives with no picture, and nothing on the site itself hints at
+why.
+
+Then submit `https://your-real-domain.com/sitemap.xml` in Google Search Console.
+Leave the old address serving until the new one is indexed: its canonical tags
+now point at the new domain, which is what moves the ranking across rather than
+splitting it.
 
 The Supabase and admin-path variables in `.env.example` are required too — the
 build refuses to run without them. See the header of `vite.config.js`.

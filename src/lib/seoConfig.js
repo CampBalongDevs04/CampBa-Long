@@ -5,9 +5,9 @@
 //  plus the resort's name, address and phone. Read by three places that must
 //  never disagree with each other:
 //
-//    components/Seo.jsx        the tags in the live page's <head>
-//    scripts/generate-seo.mjs  robots.txt and sitemap.xml
-//    scripts/prerender.mjs     the per-route HTML a crawler is served
+//    components/Seo.jsx          the tags in the live page's <head>
+//    scripts/seo-postbuild.mjs   robots.txt, sitemap.xml, and the per-route
+//                                HTML a link-preview crawler is served
 //
 //  Two of those run in Node, before React exists, which is why this file
 //  imports NOTHING. No React, no supabase, no browser globals. Adding an
@@ -121,8 +121,11 @@ export const BUSINESS = {
 // ----------------------------------------------------------------------------
 //  This list and the <Route> table in App.jsx describe the same set of pages.
 //  App.jsx keeps its own PUBLIC_PATHS set because it needs one before this file
-//  exists in the bundle graph; the test at the bottom of scripts/prerender.mjs
-//  is what stops the two from drifting apart silently.
+//  exists in the bundle graph; assertRoutesMatchApp() in
+//  scripts/seo-postbuild.mjs compares the two on every build and fails it if
+//  they disagree. That matters because the drift is otherwise silent: a public
+//  route missing from this table is a page that is live, linked, and absent
+//  from the sitemap forever.
 //
 //  Lengths are not arbitrary. Google truncates a title around 60 characters and
 //  a description around 155, measured in pixels rather than characters, so
