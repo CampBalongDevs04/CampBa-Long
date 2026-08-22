@@ -2654,6 +2654,8 @@ function addonLines(booking, kind) {
             : booking.accomodationName,
         unitId: booking.isGroup ? null : booking.unitId,
         checkIn: booking.checkIn,
+        checkOut: booking.checkOut,
+        schedule: booking.schedule,
         stage: getBookingStage(booking),
         // Null on orders placed before the catalog existed, and on a line whose
         // menu row has since been deleted — the name is still the truth of what
