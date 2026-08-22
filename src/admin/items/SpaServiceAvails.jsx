@@ -3,6 +3,7 @@ import {
     useAccommodationDB,
     summariseAddonOrders,
     hasStaffSession,
+    formatStayWindow,
 } from '../../data/accommodationDB.js'
 import { useSpaServices } from '../../data/menuDB.js'
 
@@ -16,18 +17,6 @@ function formatPeso(amount) {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     })}`
-}
-
-function formatOrderedAt(orderedAt) {
-    if (!orderedAt) return ''
-    const date = new Date(orderedAt)
-    if (Number.isNaN(date.getTime())) return ''
-    return date.toLocaleString('en-PH', {
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-    })
 }
 
 export default function SpaServiceAvails() {
@@ -110,7 +99,7 @@ export default function SpaServiceAvails() {
                                         <span className="spa-avail-guest-name">{line.guestName}</span>
                                         <span className="spa-avail-guest-meta">
                                             {line.code} · ×{line.quantity}
-                                            {line.orderedAt ? ` · ${formatOrderedAt(line.orderedAt)}` : ''}
+                                            {line.checkIn ? ` · ${formatStayWindow(line)}` : ''}
                                         </span>
                                     </li>
                                 ))}
