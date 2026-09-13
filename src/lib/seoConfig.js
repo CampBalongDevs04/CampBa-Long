@@ -54,7 +54,12 @@
 //      curl -I https://<host>/urlimage.jpg     # expect 200, image/jpeg
 //
 //  No trailing slash: every path below starts with one.
-export const SITE_ORIGIN = 'https://camp-ba-long.vercel.app'
+//
+//  The www host, not the bare campba-long.com: Vercel answers the bare domain
+//  with a 308 to www. A canonical or sitemap <loc> that redirects is a URL
+//  Google will not index as written, and Search Console reports every one of
+//  them as "Page with redirect".
+export const SITE_ORIGIN = 'https://www.campba-long.com'
 
 export const SITE_NAME = 'Camp Ba-long Nature Farm & Resort'
 export const SITE_SHORT_NAME = 'Camp Ba-long'
