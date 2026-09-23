@@ -11,7 +11,7 @@ import {
     saveAccommodationRate,
     deleteAccommodationRate,
 } from '../../data/accommodationDB.js'
-import { resolveAccommodationImage } from '../../data/accomodationOptions.js'
+import { resolveAccommodationImage, freeEntrancePaxFor } from '../../data/accomodationOptions.js'
 import {
     usePromoMarquee,
     loadPromoMarquee,
@@ -55,7 +55,18 @@ function typeFields(values) {
                 ? 'Unit ids are built from it: AHS → AHS-01, AHS-02.'
                 : 'Fixed once units exist — bookings point at ids built from it.',
         },
-        
+        {
+            // The rate card's "free entrance for N pax". The booking page
+            // quotes it and the database bills it — both read this one number.
+            name: 'freeEntrancePax',
+            label: 'Free entrance (pax)',
+            type: 'number',
+            placeholder: '2',
+            help: 'How many guests enter free when this is booked. 0 = no free entrance. '
+                + 'Anyone past this pays the entrance fee. A booking with several '
+                + 'accommodations gets the highest number among them, not the total.',
+        },
+
         {
             name: 'imageUrl',
             label: 'Photo',
@@ -170,6 +181,8 @@ const BLANK_TYPE = {
     name: '',
     prefix: '',
     total: 1,
+    // The rate card's standing inclusion — same as the column default.
+    freeEntrancePax: '2',
     imageUrl: '',
     gallery: [],
     description: '',
@@ -184,6 +197,7 @@ function typeToDraft(type) {
         name: type.name,
         prefix: type.prefix,
         total: String(type.total),
+        freeEntrancePax: String(freeEntrancePaxFor(type)),
         imageUrl: type.imageUrl ?? '',
         gallery: type.gallery ?? [],
         description: type.description ?? '',
@@ -305,6 +319,10 @@ export default function AccommodationManage() {
                                         {type.poolId && type.poolId !== type.id && (
                                             <> · shares the <strong>{type.poolId}</strong> slots</>
                                         )}
+                                        {' · '}
+                                        {freeEntrancePaxFor(type) > 0
+                                            ? <>free entrance for <strong>{freeEntrancePaxFor(type)} pax</strong></>
+                                            : 'no free entrance'}
                                     </p>
                                     {/* The single most likely reason a newly added
                                         accommodation is nowhere to be seen: a unit

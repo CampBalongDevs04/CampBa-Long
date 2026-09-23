@@ -38,6 +38,12 @@ const NO_ENTRANCE = {
     perkApplied: 0, perkSavings: 0, seniorCount: 0, seniorDiscount: 0, total: 0,
 }
 
+// 'Tent Pitching, Cottage or Pavilion' — for the "not applicable for" note.
+function listWithOr(names){
+    if (names.length <= 1) return names.join('')
+    return `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}`
+}
+
 function SummaryRow({ label, value, placeholder }){
     return(
         <div className="summary-row">
@@ -60,7 +66,7 @@ function SummaryRow({ label, value, placeholder }){
 // than just the product.
 export default function BookingSummary({
     checkIn, checkOut, schedule, quote, guest, pax, kids, seniors, pwd, totalGuests = 0, rentAllMode = false,
-    freeEntranceQuota = 2, addonLines = [], addonsPreviewTotal = 0,
+    freeEntranceQuota = 0, noFreeEntranceNames = [], addonLines = [], addonsPreviewTotal = 0,
 }){
     const {
         nights = 1,
@@ -84,16 +90,27 @@ export default function BookingSummary({
     const perNight = schedule != null && schedule.sameDay !== true
 
     // Built as one string rather than inline in the JSX below: the dynamic
-    // half of the sentence (Rent All's bigger quota vs. the standing 2-pax
-    // unit inclusion) needs to sit next to real text on both sides, and
+    // half of the sentence needs to sit next to real text on both sides, and
     // splicing conditionals across JSX line breaks is exactly the kind of
     // thing that silently swallows or duplicates a space.
-    const freeEntranceNote = rentAllMode
-        ? `renting the whole resort includes free entrance for up to ${freeEntranceQuota} pax`
-            + (ENTRANCE_PER_NIGHT && perNight ? ' each night' : '')
-        : `your stay includes free entrance for up to ${freeEntranceQuota} more pax`
-            + (ENTRANCE_PER_NIGHT && perNight ? ' each night' : '')
-            + ' (not applicable for Tent Pitching, Cottage or Pavilion)'
+    //
+    // The number is the cart's own quota, set per accommodation in the
+    // dashboard — so it is only known once something is in the cart, and a
+    // cart of 0-pax units (e.g. Cottage alone) has none to promise.
+    const eachNight = ENTRANCE_PER_NIGHT && perNight ? ' each night' : ''
+    const notApplicable = noFreeEntranceNames.length > 0
+        ? ` (not applicable for ${listWithOr(noFreeEntranceNames)})`
+        : ''
+    const freeEntranceNote = lines.length === 0
+        ? `, and the accommodation you pick may include free entrance for some pax${notApplicable}`
+            + ' — anyone past that still pays the rate above.'
+        : freeEntranceQuota <= 0
+            ? ' — your selected accommodation does not include free entrance.'
+            : rentAllMode
+                ? `, and renting the whole resort includes free entrance for up to ${freeEntranceQuota} pax${eachNight}`
+                    + ' — anyone past that still pays the rate above.'
+                : `, and your stay includes free entrance for up to ${freeEntranceQuota} more pax${eachNight}${notApplicable}`
+                    + ' — anyone past that still pays the rate above.'
 
     // Towel/pillow/etc. picked in AddonPicker aren't part of `quote` (that's
     // unit + entrance only) — folded in here so the figure quoted on this
@@ -361,8 +378,8 @@ export default function BookingSummary({
                 />
                 <p className="summary-note-inline">
                     Entrance is charged for every guest in your group
-                    {ENTRANCE_PER_NIGHT && perNight ? ', for every night of your stay' : ''}, and {freeEntranceNote}
-                    {' '}— anyone past that still pays the rate above. Half of your entrance
+                    {ENTRANCE_PER_NIGHT && perNight ? ', for every night of your stay' : ''}{freeEntranceNote}
+                    {' '}Half of your entrance
                     fees is included in the down payment; the rest is settled on-site at
                     check-in.
                     {KIDS_DISCOUNT_IN_SYSTEM ? (
