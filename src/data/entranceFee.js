@@ -106,14 +106,14 @@ export const KIDS_DISCOUNT_LABEL = `${Math.round(KIDS_DISCOUNT_RATE * 100)}%`
 // discount, so it's dropped from the senior count before the discount is
 // calculated — otherwise that head would be discounted twice.
 //
-// The quota is 2 for an ordinary unit booking — the rate card's standing
-// inclusion — but Rent All Resort has its own, bigger one: the rate card only
-// waives entrance for the first RENT_ALL_FREE_ENTRANCE_PAX heads of a
-// whole-resort booking, not the entire party regardless of size. Callers pass
-// whichever quota applies via `freeQuota`; booking.jsx is what decides which
-// one that is. The SQL twin, entrance_breakdown() in
+// The quota is set per accommodation in the dashboard (Units → Manage →
+// "Free entrance"), stored as accommodation_types.free_entrance_pax. Callers
+// pass it via `freeQuota`; booking.jsx works it out for the cart with
+// cartFreeEntranceQuota() in data/accomodationOptions.js. The SQL twin,
+// entrance_breakdown() in
 // supabase/migrations/20260817120000_kids_discount_claimed_at_resort.sql,
-// takes the same parameter — change one, change the other.
+// takes the same parameter, and book_accommodation()/book_stay_group() feed it
+// from the same column — see 20260924120000_accommodation_free_entrance_pax.sql.
 //
 // `freeApplied` / `freeSavings` are the 2-pax perk ALONE now — what the
 // receipt, My Bookings and the admin export read as entrance_free_applied/
@@ -126,13 +126,17 @@ export const KIDS_DISCOUNT_LABEL = `${Math.round(KIDS_DISCOUNT_RATE * 100)}%`
 // rate and the deductions come off it, so a screen can list the charges and
 // have them add up to `total`. `perHead` is the schedule's rate (0 when no
 // schedule is chosen yet), so callers can render partial totals.
+//
+// FALLBACKS ONLY. The two numbers below are what the rate card said before
+// the quota became a dashboard setting, and are still what
+// freeEntrancePaxFor() answers for a unit with no stored value (the built-in
+// catalog, the first paint, a database without the free_entrance_pax column).
+// A live unit's quota is whatever staff set on it.
 export const DEFAULT_FREE_ENTRANCE_QUOTA = 2
 
-// Rent All Resort's own free-entrance quota — bigger than the standing 2-pax
-// unit inclusion because it covers a whole-resort party, not one unit's worth
-// of guests. Anyone past this many heads still owes the schedule's per-head
-// rate; the flat card price only ever covered getting everyone IN, not every
-// head that shows up. See the module comment above for the SQL twin.
+// Rent All Resort's quota before it was editable — bigger than the standing
+// 2-pax unit inclusion because it covers a whole-resort party. Anyone past
+// the quota still owes the schedule's per-head rate.
 export const RENT_ALL_FREE_ENTRANCE_PAX = 20
 
 export function computeEntranceFee({

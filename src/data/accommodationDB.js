@@ -892,6 +892,11 @@ async function loadCatalog() {
             total: row.total,
             image: row.image_url ?? null,
             poolId: row.pool_id ?? null,
+            // How many guests enter free with it, set in Units → Manage. Null
+            // on a database that predates *_accommodation_free_entrance_pax
+            // .sql, which freeEntrancePaxFor() answers with the old hardcoded
+            // rule — the same one that database's booking functions still bill.
+            freeEntrancePax: row.free_entrance_pax ?? null,
             // What the home page card and its "view more" modal say. Null on a
             // database that predates *_accommodation_card_content.sql, which
             // the cards answer with their built-in copy.
@@ -2839,6 +2844,7 @@ export async function loadAdminAccommodations() {
             total: row.total,
             imageUrl: row.image_url ?? null,
             poolId: row.pool_id ?? null,
+            freeEntrancePax: row.free_entrance_pax ?? null,
             description: row.description ?? '',
             features: Array.isArray(row.features) ? row.features : [],
             gallery: Array.isArray(row.gallery) ? row.gallery.filter(Boolean) : [],
@@ -2886,6 +2892,15 @@ export async function saveAccommodationType(draft) {
         return { ok: false, message: 'How many of this unit exist? Enter 1 or more.' }
     }
 
+    // A whole head count, 0 allowed — 0 is how a unit says "no free entrance".
+    // The same number book_accommodation()/book_stay_group() bill with, so the
+    // guest is charged exactly what the booking page quotes from it.
+    const freeEntrancePax = Number(draft.freeEntrancePax)
+    if (String(draft.freeEntrancePax ?? '').trim() === ''
+        || !Number.isInteger(freeEntrancePax) || freeEntrancePax < 0) {
+        return { ok: false, message: 'Free entrance: enter a whole number of guests, or 0 for none.' }
+    }
+
     const isNew = !draft.id
     const id = draft.id || slugifyId(name)
     if (!id) return { ok: false, message: 'That name has no letters or numbers in it.' }
@@ -2894,6 +2909,7 @@ export async function saveAccommodationType(draft) {
         id,
         name,
         total,
+        free_entrance_pax: freeEntrancePax,
         image_url: String(draft.imageUrl ?? '').trim() || null,
         description: String(draft.description ?? '').trim() || null,
         // The "What's Included" list, typed one per line. Blank lines are

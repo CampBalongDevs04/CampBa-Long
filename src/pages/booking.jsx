@@ -7,12 +7,13 @@ import TimeSelector from './components/timeSelector'
 import ScheduleNote from './components/scheduleNote'
 import AccomodationList from './components/accomodationList'
 import AddonPicker from './components/addonPicker'
-import { getAccomodationOptions, isFreeEntranceEligible, isAddonEligible, findRentAllOption, getFitNote } from '../data/accomodationOptions.js'
+import {
+    getAccomodationOptions, cartFreeEntranceQuota, isAddonEligible, findRentAllOption, isRentAllOption, getFitNote,
+} from '../data/accomodationOptions.js'
 import { useResortAddonItems } from '../data/menuDB.js'
 import PaxInput from './components/paxInput'
 import GuestCounts from './components/guestCounts'
 import { computeStayQuote, minNightsFrom } from '../data/extendedStay.js'
-import { DEFAULT_FREE_ENTRANCE_QUOTA, RENT_ALL_FREE_ENTRANCE_PAX } from '../data/entranceFee.js'
 import Terms from './components/terms'
 import BookingSummary from './components/bookingSummary'
 import HoldQueueNotice from './components/holdQueueNotice'
@@ -150,13 +151,22 @@ export default function Booking(){
     const cartCapacity = cartUnlimited
         ? null
         : cartLines.reduce((sum, line) => sum + line.option.maxPax * line.qty, 0)
-    // The perk rides on the booking, not any one unit: a cart only loses it
-    // when EVERY line is an excluded unit (e.g. Table and Chairs alone).
+    // How many guests enter free, set per accommodation in the dashboard
+    // (Units → Manage) — including Rent All Resort's bigger quota, which is
+    // just that card's own number. The perk rides on the booking, not any one
+    // unit: a mixed cart takes the highest number in it, so it only loses the
+    // perk when EVERY line is a 0-pax unit (e.g. Table and Chairs alone).
     // Mixing in even one eligible unit (e.g. Teepee + Table and Chairs) keeps
-    // it — the guest is still entering under a booking that includes an
-    // eligible unit, so the excluded line shouldn't disqualify the other one.
-    const cartFreeEntranceEligible =
-        cartLines.length > 0 && cartLines.some((line) => isFreeEntranceEligible(line.id))
+    // it. book_stay_group() takes the same max, so the quote is the charge.
+    const freeEntranceQuota = cartFreeEntranceQuota(cartLines)
+    const cartFreeEntranceEligible = freeEntranceQuota > 0
+
+    // Offered units that carry no free entrance at all, for the summary's
+    // "not applicable for …" note — read off the same per-unit setting, so
+    // the note follows the dashboard instead of naming a fixed list.
+    const noFreeEntranceNames = accommodationOptions
+        .filter((item) => item.freeEntrancePax === 0 && !isRentAllOption(item))
+        .map((item) => item.name)
 
     // Same "any eligible unit keeps it" shape as the free-entrance perk above:
     // AddonPicker only disappears when EVERY line in the cart is an excluded
@@ -181,14 +191,11 @@ export default function Booking(){
     const addonsPreviewTotal = addonLines.reduce((sum, line) => sum + line.total, 0)
 
     // Renting the whole resort is NOT a flat rate that covers everyone on
-    // site regardless of headcount — the rate card only waives entrance for
-    // the first RENT_ALL_FREE_ENTRANCE_PAX (20) guests. A bigger party still
+    // site regardless of headcount — only the first freeEntranceQuota guests
+    // (the Rent All card's own number, above) enter free. A bigger party still
     // owes the schedule's normal per-head rate on everyone past that, exactly
-    // like an ordinary unit booking with a bigger free-entrance quota. So the
-    // real schedule (real entranceFee) goes into the quote either way — the
-    // only thing rentAllMode changes is which quota computeEntranceFee() is
-    // handed, below.
-    const freeEntranceQuota = rentAllMode ? RENT_ALL_FREE_ENTRANCE_PAX : DEFAULT_FREE_ENTRANCE_QUOTA
+    // like an ordinary unit booking. So the real schedule (real entranceFee)
+    // goes into the quote either way.
 
     // Everyone in the party — computeEntranceFee()/entrance_breakdown() (the
     // server's copy of the same formula) both expect "pax" to mean the whole
@@ -836,6 +843,7 @@ export default function Booking(){
                         totalGuests={totalGuests}
                         rentAllMode={rentAllMode}
                         freeEntranceQuota={freeEntranceQuota}
+                        noFreeEntranceNames={noFreeEntranceNames}
                         addonLines={addonLines}
                         addonsPreviewTotal={addonsPreviewTotal}
                     />

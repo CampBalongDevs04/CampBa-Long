@@ -24,6 +24,7 @@ import {
     effectiveRatePrice,
     strikethroughRatePrice,
 } from './accommodationDB.js'
+import { DEFAULT_FREE_ENTRANCE_QUOTA, RENT_ALL_FREE_ENTRANCE_PAX } from './entranceFee.js'
 
 import houseSmall from '../assets/temp/A-House-Small.png'
 import houseMedium from '../assets/temp/A-House-Medium.png'
@@ -81,18 +82,43 @@ const ACCOMMODATION_INFO = [
     { id: 'tent-pitching', name: 'Tent Pitching', image: tentPitchingImage },
 ]
 
-// "Free entrance for 2 pax" IS a real perk (it's on the printed rate card),
-// separate from the kids-7-and-below exemption. It used to be advertised here
-// but not implemented correctly in computeEntranceFee() — it stacked on top
-// of the kids' exemption instead of using the kids as part of its 2-head
-// quota, which undercharged every group that had a child in it. See the
-// comment on computeEntranceFee() in data/entranceFee.js for how it's applied
-// now. Units in FREE_ENTRANCE_EXCLUDED_UNITS don't get the perk at all, per
-// the rate card's "not applicable for ..." notes.
+// "Free entrance for N pax" IS a real perk (it's on the printed rate card),
+// separate from the kids-7-and-below exemption. See the comment on
+// computeEntranceFee() in data/entranceFee.js for how it's applied.
+//
+// HOW MANY PAX — SET PER ACCOMMODATION IN THE DASHBOARD
+// -----------------------------------------------------
+// accommodation_types.free_entrance_pax, edited in Units → Manage. 0 means the
+// unit carries no free entrance at all (Cottage, Pavilion, Tent Pitching as
+// seeded). book_accommodation()/book_stay_group() read the same column to
+// bill, so what this quotes and what the guest is charged come from one
+// number — see supabase/migrations/20260924120000_accommodation_free_entrance_pax.sql.
+//
+// The set and the name match below are the rule the column replaced, kept
+// only as the answer for when it has no value: the fallback catalog, the first
+// paint, or a database the migration has not reached yet — whose booking
+// functions still bill this exact rule, so the quote keeps matching there too.
 export const FREE_ENTRANCE_EXCLUDED_UNITS = new Set(['tent-pitching', 'cottage', 'pavilion', 'table'])
 
-export function isFreeEntranceEligible(unitId){
-    return unitId != null && !FREE_ENTRANCE_EXCLUDED_UNITS.has(unitId)
+// How many guests enter free with one accommodation. Takes anything with an
+// `id` and `name` plus, once the catalog has loaded, `freeEntrancePax` — a
+// catalog type, a booking-page option or a dashboard row all work.
+export function freeEntrancePaxFor(item){
+    if (!item) return 0
+    const stored = item.freeEntrancePax
+    if (stored != null && Number.isFinite(Number(stored))) return Math.max(0, Math.floor(Number(stored)))
+    if (FREE_ENTRANCE_EXCLUDED_UNITS.has(item.id)) return 0
+    return isRentAllOption(item) ? RENT_ALL_FREE_ENTRANCE_PAX : DEFAULT_FREE_ENTRANCE_QUOTA
+}
+
+// The free-entrance quota for a whole cart. The perk rides on the BOOKING, not
+// on each unit — two Teepees still waive entrance for 2 pax, not 4 — so a
+// mixed cart takes the highest number in it. A unit with 0 never wins that
+// max, so it cannot take the perk away from the unit next to it: Teepee +
+// Cottage keeps the Teepee's free entrance, and only a cart made up entirely
+// of 0-pax units gets none. book_stay_group() takes the same max.
+export function cartFreeEntranceQuota(cartLines){
+    return cartLines.reduce((best, line) => Math.max(best, freeEntrancePaxFor(line.option)), 0)
 }
 
 // Physical add-ons (Towel, Pillow, Extra Bedding, Electric Fan — see
@@ -103,10 +129,10 @@ export function isFreeEntranceEligible(unitId){
 // add towels or a fan to either. Small Tent and Big Tent are NOT excluded:
 // those are resort-provided tents guests actually sleep in.
 //
-// Same membership as FREE_ENTRANCE_EXCLUDED_UNITS today, kept as its own set
-// on purpose — the two answer different questions (an entrance-fee perk vs.
-// what physical items a unit can use) and nothing guarantees they keep
-// matching as units are added or the rate card changes.
+// Same membership as FREE_ENTRANCE_EXCLUDED_UNITS, kept as its own set on
+// purpose — the two answer different questions (an entrance-fee perk vs.
+// what physical items a unit can use), and free entrance is set per unit in
+// the dashboard now, so nothing guarantees they keep matching.
 export const ADDON_EXCLUDED_UNITS = new Set(['tent-pitching', 'cottage', 'pavilion', 'table'])
 
 export function isAddonEligible(unitId){
@@ -375,6 +401,7 @@ function optionsFromDatabase(rateGroup){
                 pax: rate?.paxLabel ?? null,
                 minPax: rate?.minPax ?? null,
                 maxPax: rate?.maxPax ?? null,
+                freeEntrancePax: freeEntrancePaxFor(type),
             }
         })
 }
@@ -394,6 +421,7 @@ function optionsFromFallback(rateGroup){
                 pax: rate?.pax ?? null,
                 minPax: rate?.minPax ?? null,
                 maxPax: rate?.maxPax ?? null,
+                freeEntrancePax: freeEntrancePaxFor(item),
             }
         })
 }
