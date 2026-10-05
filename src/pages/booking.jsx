@@ -153,11 +153,11 @@ export default function Booking(){
         : cartLines.reduce((sum, line) => sum + line.option.maxPax * line.qty, 0)
     // How many guests enter free, set per accommodation in the dashboard
     // (Units → Manage) — including Rent All Resort's bigger quota, which is
-    // just that card's own number. The perk rides on the booking, not any one
-    // unit: a mixed cart takes the highest number in it, so it only loses the
+    // just that card's own number. The perk rides on each unit and the cart
+    // adds them up (2 Teepees at 2 pax each = 4 free), so it only loses the
     // perk when EVERY line is a 0-pax unit (e.g. Table and Chairs alone).
     // Mixing in even one eligible unit (e.g. Teepee + Table and Chairs) keeps
-    // it. book_stay_group() takes the same max, so the quote is the charge.
+    // it. book_stay_group() takes the same sum, so the quote is the charge.
     const freeEntranceQuota = cartFreeEntranceQuota(cartLines)
     const cartFreeEntranceEligible = freeEntranceQuota > 0
 

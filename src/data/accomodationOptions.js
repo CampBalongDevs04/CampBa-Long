@@ -111,14 +111,15 @@ export function freeEntrancePaxFor(item){
     return isRentAllOption(item) ? RENT_ALL_FREE_ENTRANCE_PAX : DEFAULT_FREE_ENTRANCE_QUOTA
 }
 
-// The free-entrance quota for a whole cart. The perk rides on the BOOKING, not
-// on each unit — two Teepees still waive entrance for 2 pax, not 4 — so a
-// mixed cart takes the highest number in it. A unit with 0 never wins that
-// max, so it cannot take the perk away from the unit next to it: Teepee +
-// Cottage keeps the Teepee's free entrance, and only a cart made up entirely
-// of 0-pax units gets none. book_stay_group() takes the same max.
+// The free-entrance quota for a whole cart. The perk rides on each UNIT, so
+// the cart adds them up — two Teepees at 2 pax each waive entrance for 4 pax,
+// not 2. A unit with 0 adds nothing, so it cannot take the perk away from the
+// unit next to it: Teepee + Cottage keeps the Teepee's 2, and only a cart made
+// up entirely of 0-pax units gets none. Rent All Resort never shares a cart
+// with another unit (see accomodationList.jsx), so it just keeps its own
+// number. book_stay_group() takes the same sum, one p_items entry per unit.
 export function cartFreeEntranceQuota(cartLines){
-    return cartLines.reduce((best, line) => Math.max(best, freeEntrancePaxFor(line.option)), 0)
+    return cartLines.reduce((total, line) => total + freeEntrancePaxFor(line.option) * (Number(line.qty) || 1), 0)
 }
 
 // Physical add-ons (Towel, Pillow, Extra Bedding, Electric Fan — see
