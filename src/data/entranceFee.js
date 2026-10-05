@@ -6,8 +6,9 @@
 //   • Senior citizens and kids 7 & below are BOTH charged the full rate HERE
 //     — their discounts are given at the resort, not by this system. See
 //     SENIOR_DISCOUNT_RATE / KIDS_DISCOUNT_RATE below.
-//   • The rate card also waives entrance for up to 2 pax per booking ("free
-//     entrance for 2 pax"), on units where that inclusion applies — see
+//   • The rate card also waives entrance for up to 2 pax per unit booked
+//     ("free entrance for 2 pax"; two units = 4 pax), on units where that
+//     inclusion applies — see
 //     FREE_ENTRANCE_EXCLUDED_UNITS in data/accomodationOptions.js. Kids do
 //     NOT draw from this pool (see KIDS_DISCOUNT_RATE for why) — it is only
 //     ever handed to regular or senior heads, same as before.
