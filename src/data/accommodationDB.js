@@ -2183,16 +2183,51 @@ export async function cancelBooking(id, { asStaff = false } = {}) {
     return { ok: true }
 }
 
-// Staff delete the row for real. A guest only clears a cancelled booking off
-// their own list — the row stays in Postgres, because a cancellation is part of
-// the resort's record and not a guest's to erase.
-export async function deleteBooking(id) {
-    if (!ownedByThisDevice(id) && staffSession) {
-        const { error } = await supabase.from('bookings').delete().eq('id', id)
+// Every receipt image a staff row points at: the latest one and each upload in
+// the history (usually the same path twice), plus — for a combined reservation
+// — anything on its member units.
+function receiptPathsOf(...rows) {
+    const paths = new Set()
+    for (const row of rows) {
+        if (row?.receiptPath) paths.add(row.receiptPath)
+        for (const entry of row?.receipts ?? []) if (entry.path) paths.add(entry.path)
+    }
+    return [...paths]
+}
+
+// After the row is gone, never before: a failed row delete must not leave a
+// live booking with its proof of payment missing. If this half fails the files
+// are merely orphaned, and the nightly receipt-orphan scan reports them.
+async function removeReceiptFiles(paths) {
+    if (paths.length === 0) return
+    const { error } = await supabase.storage.from(RECEIPT_BUCKET).remove(paths)
+    if (error) console.error('Booking deleted, but its receipt images were not:', error.message)
+}
+
+// RLS does not raise on a delete it refuses — it deletes nothing and reports
+// success. Asking for the deleted ids back is how "not on the staff roster"
+// shows up as an error instead of a row that reappears on the next reload.
+const NOTHING_DELETED =
+    'Nothing was deleted — this account may not be on the staff roster. Reload and try again.'
+
+// Staff delete the row for real, along with its receipt images. A guest only
+// clears a cancelled booking off their own list — the row stays in Postgres,
+// because a cancellation is part of the resort's record and not a guest's to
+// erase.
+//
+// `asStaff` works the way it does on cancelBooking(): the dashboard says so
+// rather than this guessing from device ownership, or a booking made on the
+// same machine staff administer from would only be dismissed, not deleted.
+export async function deleteBooking(id, { asStaff = false } = {}) {
+    if (staffSession && (asStaff || !ownedByThisDevice(id))) {
+        const receiptPaths = receiptPathsOf(bookings.find((b) => b.id === id))
+        const { data, error } = await supabase.from('bookings').delete().eq('id', id).select('id')
         if (error) {
             console.error('Could not delete booking:', error.message)
             return { ok: false, message: error.message }
         }
+        if ((data?.length ?? 0) === 0) return { ok: false, message: NOTHING_DELETED }
+        await removeReceiptFiles(receiptPaths)
     } else {
         const { error } = await supabase.rpc('dismiss_my_booking', {
             p_booking_id: id,
@@ -2242,19 +2277,29 @@ export async function cancelBookingGroup(id, { asStaff = false } = {}) {
     return { ok: true }
 }
 
-// Same as deleteBooking() above, for a combined reservation.
-export async function deleteBookingGroup(id) {
-    if (!ownedByThisDeviceGroup(id) && staffSession) {
-        const { error: unitsError } = await supabase.from('bookings').delete().eq('group_id', id)
-        if (unitsError) {
-            console.error('Could not delete reservation units:', unitsError.message)
-            return { ok: false, message: unitsError.message }
-        }
-        const { error } = await supabase.from('booking_groups').delete().eq('id', id)
+// Same as deleteBooking() above, for a combined reservation. Its member units
+// go with it: bookings.group_id is ON DELETE CASCADE, so one delete removes the
+// whole reservation or none of it.
+export async function deleteBookingGroup(id, { asStaff = false } = {}) {
+    if (staffSession && (asStaff || !ownedByThisDeviceGroup(id))) {
+        const receiptPaths = receiptPathsOf(
+            bookingGroups.find((g) => g.id === id),
+            ...bookings.filter((b) => b.groupId === id),
+        )
+        const { data, error } = await supabase
+            .from('booking_groups')
+            .delete()
+            .eq('id', id)
+            .select('id')
         if (error) {
             console.error('Could not delete reservation:', error.message)
             return { ok: false, message: error.message }
         }
+        if ((data?.length ?? 0) === 0) return { ok: false, message: NOTHING_DELETED }
+        await removeReceiptFiles(receiptPaths)
+        // The member rows the cascade just removed, so the Units board stops
+        // showing them before the next reload does.
+        bookings = bookings.filter((b) => b.groupId !== id)
     } else {
         const { error } = await supabase.rpc('dismiss_booking_group', {
             p_group_id: id,

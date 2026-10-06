@@ -46,6 +46,26 @@ export function isSiteOnMaintenance() {
     return state.isOn
 }
 
+// The switch lives in the live database, and a local checkout reads that same
+// database — so turning the blocker on for guests also blocked `npm run dev`
+// and `npm run preview`, the very places the fix is being worked on.
+//
+// A copy of the site running on this machine ignores the switch: the dev server
+// (on any host, including `vite --host` from a phone) and any build opened on
+// localhost. A real visitor never reaches the site as localhost, and the
+// production build drops the DEV half, so guests are still blocked.
+//
+// Set VITE_LOCAL_MAINTENANCE=true in .env (and restart Vite) to see the
+// maintenance page locally while working on it.
+function runsOnThisMachine() {
+    if (import.meta.env.DEV) return true
+    const host = globalThis.location?.hostname ?? ''
+    return ['localhost', '127.0.0.1', '[::1]'].includes(host) || host.endsWith('.localhost')
+}
+
+export const MAINTENANCE_BYPASSED_LOCALLY =
+    import.meta.env.VITE_LOCAL_MAINTENANCE !== 'true' && runsOnThisMachine()
+
 function text(value, fallback = '') {
     return String(value ?? '').trim() || fallback
 }

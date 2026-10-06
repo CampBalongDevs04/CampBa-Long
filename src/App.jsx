@@ -3,9 +3,10 @@ import { Routes, Route, useLocation, useNavigationType } from 'react-router'
 import './App.css'
 import Header from './components/Header.jsx'
 import SetupNotice from './components/SetupNotice.jsx'
+import LocalMaintenanceNotice from './components/LocalMaintenanceNotice.jsx'
 import CrispChat from './components/CrispChat.jsx'
 import { useIsAdminPath } from './lib/adminRoute.js'
-import { useSiteMaintenance } from './data/siteMaintenance.js'
+import { useSiteMaintenance, MAINTENANCE_BYPASSED_LOCALLY } from './data/siteMaintenance.js'
 import {
   HomeSkeleton,
   FoodMenuSkeleton,
@@ -85,15 +86,17 @@ function App() {
 
   // Staff have taken the site down (dashboard → Maintenance → Website Blocker).
   // Only the guest routes are blocked: the dashboard is where the switch lives,
-  // so blocking that too would leave nobody able to turn it back off.
+  // so blocking that too would leave nobody able to turn it back off. A copy
+  // running on this machine is never blocked — see siteMaintenance.js.
   const { isOn: siteOnMaintenance } = useSiteMaintenance()
-  const blocked = isGuestPage && siteOnMaintenance
+  const blocked = isGuestPage && siteOnMaintenance && !MAINTENANCE_BYPASSED_LOCALLY
 
   return (
     <>
       {/* Renders nothing when the keys are present, so this costs a fully
           configured site exactly one boolean check. */}
       <SetupNotice />
+      {isGuestPage && <LocalMaintenanceNotice />}
       <ScrollToTop />
       {isGuestPage && !blocked && <Header />}
       {/* Guest-facing only. Staff on the dashboard have no use for a support
