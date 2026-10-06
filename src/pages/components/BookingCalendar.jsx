@@ -93,26 +93,33 @@ function formatDate(date) {
 
 function CalendarPanel({ label, variant, selected, onSelect, minDate, maxDate, rangeStart, rangeEnd }) {
     const today = startOfDay(new Date())
-    const initialView = selected || minDate || today
+
+    // The month this panel should be showing: its own selection, or — for the
+    // check-out panel with nothing picked yet — the first night a stay from
+    // the chosen check-in can end on. The day after, not the check-in itself,
+    // so a Dec 31 check-in opens check-out on January where the choice is.
+    const anchor = selected || (minDate ? addDays(minDate, 1) : null)
+    const initialView = anchor || today
     const [viewYear, setViewYear] = useState(initialView.getFullYear())
     const [viewMonth, setViewMonth] = useState(initialView.getMonth())
 
-    // Follow a selection that was made somewhere else. The nights stepper can
-    // set a check-out several days out — "5 nights" from Oct 28 lands in
-    // November — and a panel still showing October would look like the chip
-    // had done nothing.
+    // Follow a date that was picked somewhere else. The nights stepper can set
+    // a check-out several days out — "5 nights" from Oct 28 lands in November
+    // — and picking a December check-in leaves the check-out panel empty; a
+    // panel still showing October in either case would look like nothing
+    // happened.
     //
     // Adjusted during render rather than in an effect, which is React's own
     // advice for state that has to follow a prop: an effect would paint the
-    // stale month first and then correct it. The guard is the last selection
-    // this ran for, so browsing ahead by hand afterwards is left alone.
-    const selectedTime = selected ? selected.getTime() : null
-    const [lastSelectedTime, setLastSelectedTime] = useState(selectedTime)
-    if (selectedTime !== lastSelectedTime) {
-        setLastSelectedTime(selectedTime)
-        if (selected) {
-            setViewYear(selected.getFullYear())
-            setViewMonth(selected.getMonth())
+    // stale month first and then correct it. The guard is the last anchor this
+    // ran for, so browsing ahead by hand afterwards is left alone.
+    const anchorTime = anchor ? anchor.getTime() : null
+    const [lastAnchorTime, setLastAnchorTime] = useState(anchorTime)
+    if (anchorTime !== lastAnchorTime) {
+        setLastAnchorTime(anchorTime)
+        if (anchor) {
+            setViewYear(anchor.getFullYear())
+            setViewMonth(anchor.getMonth())
         }
     }
 

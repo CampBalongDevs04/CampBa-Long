@@ -1,0 +1,77 @@
+/* ---------- "Delete this booking?" confirm ----------
+   Built on the email-result popup (same card, mark and type) so every dialog on
+   the Bookings tab reads as one family. Only the red edge and the two-button
+   footer are its own. */
+
+.delete-booking-modal {
+    border-top: 4px solid #a23a3a;
+}
+
+.delete-booking-modal .email-result-mark {
+    color: #a23a3a;
+    background: rgba(162, 58, 58, 0.12);
+}
+
+.delete-booking-modal .email-result-reason {
+    background: rgba(162, 58, 58, 0.07);
+    border-left-color: #a23a3a;
+}
+
+.delete-booking-error {
+    margin: 0 0 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 600;
+    color: #a23a3a;
+}
+
+.delete-booking-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.delete-booking-keep,
+.delete-booking-confirm {
+    flex: 1;
+    padding: 11px 14px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+
+.delete-booking-keep {
+    color: #1d3025;
+    background: transparent;
+    border: 1px solid rgba(29, 48, 37, 0.35);
+}
+
+.delete-booking-keep:hover:not(:disabled) {
+    background: rgba(29, 48, 37, 0.07);
+}
+
+.delete-booking-confirm {
+    color: #fff;
+    background: #a23a3a;
+    border: 1px solid #a23a3a;
+}
+
+.delete-booking-confirm:hover:not(:disabled) {
+    background: #862d2d;
+}
+
+.delete-booking-keep:disabled,
+.delete-booking-confirm:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.delete-booking-keep:focus-visible,
+.delete-booking-confirm:focus-visible {
+    outline: 2px solid #c6a15b;
+    outline-offset: 2px;
+}

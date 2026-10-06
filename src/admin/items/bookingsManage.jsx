@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import '../css/bookings-manage.css'
 import ReceiptViewer from './receiptViewer'
 import SettlePaymentModal from './settlePaymentModal'
+import DeleteBookingModal from './deleteBookingModal'
 import {
     useAccommodationDB,
     useBookingGroups,
@@ -25,6 +26,9 @@ const STATUS_FILTERS = [
     { id: 'upcomming', label: 'Upcomming' },
     { id: 'active', label: 'Active' },
     { id: 'completed', label: 'Completed' },
+    // Where Delete lives, so clearing out old cancellations does not mean
+    // hunting for them through All.
+    { id: 'cancelled', label: 'Cancelled' },
 ]
 
 const STATUS_BADGE = {
@@ -101,6 +105,9 @@ export default function BookingsManage() {
     // one-click markBookingPaidFull()/markBookingGroupPaidFull() when there
     // is nothing to verify.
     const [settlingId, setSettlingId] = useState(null)
+    // The cancelled booking waiting on "Delete permanently", held by id like
+    // the two above.
+    const [deletingId, setDeletingId] = useState(null)
     // Approve and Reject, wired to the guest email and the popup that reports
     // whether it reached them. Shared with the Overview tabs, which offer the
     // same two buttons through the same receipt lightbox — see
@@ -133,6 +140,7 @@ export default function BookingsManage() {
 
     const reviewing = rows.find((b) => b.id === reviewingId) ?? null
     const settling = rows.find((b) => b.id === settlingId) ?? null
+    const deleting = rows.find((b) => b.id === deletingId) ?? null
 
     const visible = useMemo(() => {
         const q = query.trim().toLowerCase()
@@ -377,6 +385,19 @@ export default function BookingsManage() {
                                                         Cancel
                                                     </button>
                                                 )}
+                                                {/* Cancelled rows only. A live booking is
+                                                    cancelled first — that is the step that
+                                                    emails the guest — and deleted after, so
+                                                    nobody loses a stay without being told. */}
+                                                {b.stage === 'cancelled' && (
+                                                    <button
+                                                        type="button"
+                                                        className="bookings-action bookings-action-danger"
+                                                        onClick={() => setDeletingId(b.id)}
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                )}
                                             </td>
                                         </tr>
                                     )
@@ -404,6 +425,15 @@ export default function BookingsManage() {
                     key={settling.id}
                     booking={settling}
                     onClose={() => setSettlingId(null)}
+                />
+            )}
+
+            {deleting && (
+                <DeleteBookingModal
+                    key={deleting.id}
+                    booking={deleting}
+                    stayLabel={`${unitLabel(deleting)} · ${formatRange(deleting)}`}
+                    onClose={() => setDeletingId(null)}
                 />
             )}
 

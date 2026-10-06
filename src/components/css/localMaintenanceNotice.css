@@ -1,0 +1,51 @@
+/* Local-only reminder that the Website Blocker is on for guests. Amber, not
+   red: nothing is broken here, it is just easy to forget.
+
+   A one-line pill in the bottom-left corner rather than a bar across the top:
+   the site header is position: fixed at top 0, so a top bar would sit over the
+   logo and nav. The bottom-right corner belongs to the chat launcher and the
+   kiosk tray. Kept to one line so it does not cover the calendar on a phone. */
+.local-mtn-notice {
+    position: fixed;
+    left: 1rem;
+    bottom: 1rem;
+    z-index: 9999;
+    max-width: calc(100vw - 6.5rem);
+
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    padding: 0.35rem 0.4rem 0.35rem 0.8rem;
+    border-radius: 999px;
+    border: 1px solid #fcd34d;
+    background: #78350f;
+    color: #fffbeb;
+    box-shadow: 0 6px 20px rgb(0 0 0 / 0.25);
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.local-mtn-notice-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.local-mtn-notice-close {
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 0;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.15);
+    color: inherit;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.local-mtn-notice-close:hover {
+    background: rgb(255 255 255 / 0.3);
+}
